@@ -16,7 +16,7 @@ nodes:
       nuclear:
       #storage techs
       battery:
-      h2_salt-cavern:
+      h2_salt_cavern:
       #hydrogen conversion techs
       electrolyser:
       H2-elec_conversion:

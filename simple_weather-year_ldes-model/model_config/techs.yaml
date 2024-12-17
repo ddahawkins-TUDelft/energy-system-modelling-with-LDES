@@ -149,7 +149,7 @@ techs:
 
 
 
-  h2_salt-cavern: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage
+  h2_salt_cavern: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage
     name: "Hydrogen Salt Cavern Storage"
     color: #TODO:
     base_tech: storage

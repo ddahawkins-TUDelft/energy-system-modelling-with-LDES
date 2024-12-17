@@ -201,7 +201,7 @@ techs:
       index: monetary
       dims: costs
 
-    H2-elec_conversion: #Conversion process is not a focus for this study, assuming a Hydrogen CCGT combusition process suffices. Natural Gas CCGT numbers (2020) taken from https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx, uplifted by 8.5% as per Freitag et al. 2024 (https://doi.org/10.1016/j.ijhydene.2024.06.164)
+    h2_elec_conversion: #Conversion process is not a focus for this study, assuming a Hydrogen CCGT combusition process suffices. Natural Gas CCGT numbers (2020) taken from https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx, uplifted by 8.5% as per Freitag et al. 2024 (https://doi.org/10.1016/j.ijhydene.2024.06.164)
       name: 'H2 to Electricity Conversion'
       color: #TODO:
       base_tech: conversion

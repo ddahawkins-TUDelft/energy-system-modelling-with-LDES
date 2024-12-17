@@ -11,14 +11,14 @@ nodes:
     techs:
       #supply techs
       solar:
-      Onshore_wind:
-      Offshore_Wind:
+      onshore_wind:
+      offshore_wind:
       nuclear:
       #storage techs
       battery:
       h2_salt_cavern:
       #hydrogen conversion techs
       electrolyser:
-      H2-elec_conversion:
+      h2_elec_conversion:
       #demand tech
       demand_power:

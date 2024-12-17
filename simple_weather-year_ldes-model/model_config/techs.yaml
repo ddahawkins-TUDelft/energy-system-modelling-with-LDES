@@ -34,6 +34,7 @@ techs:
     base_tech: supply
     carrier_out: power
     lifetime: 35
+    source_unit: per_cap
     #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
     cost_flow_cap: #CAPEX cost
       data: 560 # Euro / kW
@@ -50,6 +51,8 @@ techs:
     base_tech: supply
     carrier_out: power
     lifetime: 27
+    flow_cap_min: 0
+    source_unit: per_cap
     #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
     cost_flow_cap: #CAPEX cost
       data: 1110 # Euro / kW
@@ -70,6 +73,7 @@ techs:
     base_tech: supply
     carrier_out: power
     lifetime: 27
+    source_unit: per_cap
     #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
     cost_flow_cap: #CAPEX cost
       data: 2120 # Euro / kW
@@ -92,8 +96,7 @@ techs:
     lifetime: 40 
     flow_cap_max: 1650000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
     flow_cap_min: 1000000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
-    ramping_up: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
-    ramping_down: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
+    flow_ramping: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
     cost_flow_cap: #CAPEX cost
       data: 6926 # Euro / kW
       index: monetary
@@ -107,7 +110,7 @@ techs:
       index: monetary
       dims: costs
     cost_flow_in: #variable fuel costs
-      data: 0.00967 # Euro / kWh
+      data: 0.004378 # Euro / kWh
       index: monetary
       dims: costs
 
@@ -134,6 +137,7 @@ techs:
     flow_in_eff: 0.98
     storage_loss: 0 # No loss over time assumed, in reality more like 0.004 but considered negligible for this exercise
     lifetime: 20
+    cyclic_storage: true
     cost_storage_cap: #CAPEX cost in terms of storage energy capacity
       data: 1110 # Euro / kWh  
       index: monetary
@@ -157,6 +161,7 @@ techs:
     carrier_out: hydrogen
     # flow_cap_max: 1000 # kW
     storage_cap_max: .inf
+    cyclic_storage: true 
     # flow_cap_per_storage_cap_max: 4
     # 0.95 * 0.95 = 0.9025 round trip efficiency
     flow_out_eff: 0.99
@@ -176,6 +181,35 @@ techs:
       index: monetary
       dims: costs
 
+  hydrogen_storage_system: #combined hydrogen storage system with integrated costs for electrolyser, fuel cell/ccgt, and salt cavern
+    name: 'Hydrogen Storage System'
+    base_tech: storage
+    carrier_in: power
+    carrier_out: power
+    storage_cap_max: .inf
+    flow_out_eff: 0.5544 # 99% for salt cavern discharge * 56% combustion efficiency for h2 CCGT
+    flow_in_eff: 0.6435 # 99% for salt cavern charge * 65% electrolyser efficiency
+    lifetime: 25
+    cyclic_storage: true 
+    storage_loss: 0 #captured by charge and discharge efficiencies
+    cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
+      data: 3.19 # Euro / kWh   
+      index: monetary
+      dims: costs
+    cost_flow_cap: #CAPEX cost (electrolyser+CCGT)
+      data: 2136 # Euro / kW    #1200E/KWh electrolyser + 936 E/KWh CCGT
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs (electrolyser)
+      data: 55.156 # Euro / kW / year #24E/KWh/yr electrolyser + 31.156 E/KWh/yr CCGT
+      index: monetary
+      dims: costs
+    cost_flow_in: #variable maintenance costs (CGGT)
+      data: 0.000213 # Euro / kWh
+      index: monetary
+      dims: costs
+
+
 
   # ---------------------------------------------------------------------------------------------------------------------------------------------
   #
@@ -189,7 +223,7 @@ techs:
     base_tech: conversion
     carrier_in: power
     carrier_out: hydrogen
-    source_use_max: #TODO: Defined by available hydrogen from storage. Perhaps the solution is to remove conversion facilities and wrap these into the Hydrogen storage technology as costs/power limits attached to the flow in/flow out, etc.
+    #source_use_max: #TODO: Defined by available hydrogen from storage. Perhaps the solution is to remove conversion facilities and wrap these into the Hydrogen storage technology as costs/power limits attached to the flow in/flow out, etc.
     flow_out_eff: 0.65 #src:=IRENA, Accessed December 2024
     lifetime: 25
     cost_flow_cap: #CAPEX cost
@@ -201,27 +235,27 @@ techs:
       index: monetary
       dims: costs
 
-    h2_elec_conversion: #Conversion process is not a focus for this study, assuming a Hydrogen CCGT combusition process suffices. Natural Gas CCGT numbers (2020) taken from https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx, uplifted by 8.5% as per Freitag et al. 2024 (https://doi.org/10.1016/j.ijhydene.2024.06.164)
-      name: 'H2 to Electricity Conversion'
-      color: #TODO:
-      base_tech: conversion
-      carrier_in: hydrogen
-      carrier_out: power
-      source_use_max: #TODO: Defined by available electricity from surplus
-      flow_out_eff: 0.56  #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage,assumption for Natural Gas, seems to align with Hydrogen CCGT studies (https://doi.org/10.1115/1.4026085)
-      lifetime: 25
-      cost_flow_cap: #CAPEX cost
-        data: 936 # Euro / kW
-        index: monetary
-        dims: costs
-      cost_om_annual: #fixed O&M costs
-        data: 31.156 # Euro / kW / year
-        index: monetary
-        dims: costs
-      cost_flow_out: #variable maintenance costs
-        data: 0.000213 # Euro / kWh
-        index: monetary
-        dims: costs
+  h2_elec_conversion: #Conversion process is not a focus for this study, assuming a Hydrogen CCGT combusition process suffices. Natural Gas CCGT numbers (2020) taken from https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx, uplifted by 8.5% as per Freitag et al. 2024 (https://doi.org/10.1016/j.ijhydene.2024.06.164)
+    name: 'H2 to Electricity Conversion'
+    color: #TODO:
+    base_tech: conversion
+    carrier_in: hydrogen
+    carrier_out: power
+    #source_use_max: #TODO: Defined by available electricity from surplus
+    flow_out_eff: 0.56  #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage,assumption for Natural Gas, seems to align with Hydrogen CCGT studies (https://doi.org/10.1115/1.4026085)
+    lifetime: 25
+    cost_flow_cap: #CAPEX cost
+      data: 936 # Euro / kW
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs
+      data: 31.156 # Euro / kW / year
+      index: monetary
+      dims: costs
+    cost_flow_out: #variable maintenance costs
+      data: 0.000213 # Euro / kWh
+      index: monetary
+      dims: costs
       
 
   # ---------------------------------------------------------------------------------------------------------------------------------------------

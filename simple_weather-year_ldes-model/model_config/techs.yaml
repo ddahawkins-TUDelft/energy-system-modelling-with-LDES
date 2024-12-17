@@ -1,0 +1,274 @@
+##
+# TECHNOLOGY DEFINITIONS
+##
+
+# Technologies:   Transmission, Supply (Onshore Wind, Offshore Wind, Solar, Nuclear), Conversion (Electrolysis, H2 to Electricity), Storage (Battery, H2 Salt Cavern)
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  #
+  #                                     Templates
+  #
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+
+#Template for copper plate transmission, Not required as only a single region
+# templates:
+#   free_transmission:
+#     name: "national power transmission"
+#     color: #TODO:
+#     carrier_in: power
+#     carrier_out: power
+#     base_tech: transmission
+
+techs:
+  
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  #
+  #                                     Supply 
+  #
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  solar: #src:=https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx
+    name: "Utility Solar Power"
+    color: #TODO:
+    base_tech: supply
+    carrier_out: power
+    lifetime: 35
+    #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
+    cost_flow_cap: #CAPEX cost
+      data: 560 # Euro / kW
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs
+      data: 11.3 # Euro / kW / year
+      index: monetary
+      dims: costs
+  
+  onshore_wind: #src:=https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx
+    name: "Onshore Wind"
+    color: #TODO:
+    base_tech: supply
+    carrier_out: power
+    lifetime: 27
+    #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
+    cost_flow_cap: #CAPEX cost
+      data: 1110 # Euro / kW
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs
+      data: 16.4 # Euro / kW / year
+      index: monetary
+      dims: costs
+    cost_flow_out: #variable maintenance costs
+      data: 0.002 # Euro / kWh
+      index: monetary
+      dims: costs
+
+  offshore_wind: #src:=https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx
+    name: "Offshore Wind"
+    color: #TODO:
+    base_tech: supply
+    carrier_out: power
+    lifetime: 27
+    #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
+    cost_flow_cap: #CAPEX cost
+      data: 2120 # Euro / kW
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs
+      data: 50 # Euro / kW / year
+      index: monetary
+      dims: costs
+    cost_flow_out: #variable maintenance costs
+      data: 0.005 # Euro / kWh
+      index: monetary
+      dims: costs
+
+  nuclear: #src:= https://atb.nrel.gov/electricity/2024/nuclear#capital_expenditures_(capex)
+    name: 'Nuclear Power Plant'
+    color: #TODO:
+    base_tech: supply
+    carrier_out: power
+    lifetime: 40 
+    flow_cap_max: 1650000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+    flow_cap_min: 1000000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+    ramping_up: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
+    ramping_down: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
+    cost_flow_cap: #CAPEX cost
+      data: 6926 # Euro / kW
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs
+      data: 166 # Euro / kW / year
+      index: monetary
+      dims: costs
+    cost_flow_out: #variable maintenance costs
+      data: 0.0027 # Euro / kWh
+      index: monetary
+      dims: costs
+    cost_flow_in: #variable fuel costs
+      data: 0.00967 # Euro / kWh
+      index: monetary
+      dims: costs
+
+
+    
+
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  #
+  #                                     Storage 
+  #
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  battery: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage
+    name: "Li-ion Battery storage"
+    color: #TODO:
+    base_tech: storage
+    carrier_in: power
+    carrier_out: power
+    storage_cap_max: .inf
+    flow_cap_per_storage_cap_max: 3 #power to energy ratio, set to 3
+    flow_out_eff: 0.97
+    flow_in_eff: 0.98
+    storage_loss: 0 # No loss over time assumed, in reality more like 0.004 but considered negligible for this exercise
+    lifetime: 20
+    cost_storage_cap: #CAPEX cost in terms of storage energy capacity
+      data: 1110 # Euro / kWh  
+      index: monetary
+      dims: costs
+    # cost_om_annual: #fixed O&M costs      #!!! Omitted fixed annual O&M costs for storage as these are not currently implemented in Calliope 0.7.0.dev4
+    #   data: 0.00000057 # Euro / kWh / year #TODO, how does calliope make this in terms of kWh and not kW
+    #   index: monetary
+    #   dims: costs
+    cost_flow_out: #variable maintenance costs
+      data: 0.00021 # Euro / kWh
+      index: monetary
+      dims: costs
+
+
+
+  h2_salt-cavern: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage
+    name: "Hydrogen Salt Cavern Storage"
+    color: #TODO:
+    base_tech: storage
+    carrier_in: hydrogen
+    carrier_out: hydrogen
+    # flow_cap_max: 1000 # kW
+    storage_cap_max: .inf
+    # flow_cap_per_storage_cap_max: 4
+    # 0.95 * 0.95 = 0.9025 round trip efficiency
+    flow_out_eff: 0.99
+    flow_in_eff: 0.99
+    storage_loss: 0 # No loss over time assumed
+    lifetime: 100
+    cost_storage_cap: #CAPEX cost in terms of storage energy capacity
+      data: 3.19 # Euro / kWh   
+      index: monetary
+      dims: costs
+    # cost_om_annual: #fixed O&M costs    #!!! Omitted fixed annual O&M costs for storage as these are not currently implemented in Calliope 0.7.0.dev4
+    #   data: 0.00000006785 # Euro / kWh / year #TODO, how does calliope make this in terms of kWh and not kW
+    #   index: monetary
+    #   dims: costs
+    cost_flow_out: #variable maintenance costs
+      data: 0.00000003608 # Euro / kWh
+      index: monetary
+      dims: costs
+
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  #
+  #                                     Conversion 
+  #
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+
+  electrolyser: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-renewable-fuels
+    name: "PEM Electrolyser"
+    color: #TODO:
+    base_tech: conversion
+    carrier_in: power
+    carrier_out: hydrogen
+    source_use_max: #TODO: Defined by available hydrogen from storage. Perhaps the solution is to remove conversion facilities and wrap these into the Hydrogen storage technology as costs/power limits attached to the flow in/flow out, etc.
+    flow_out_eff: 0.65 #src:=IRENA, Accessed December 2024
+    lifetime: 25
+    cost_flow_cap: #CAPEX cost
+      data: 1200 # Euro / kW
+      index: monetary
+      dims: costs
+    cost_om_annual: #fixed O&M costs
+      data: 24 # Euro / kW / year
+      index: monetary
+      dims: costs
+
+    H2-elec_conversion: #Conversion process is not a focus for this study, assuming a Hydrogen CCGT combusition process suffices. Natural Gas CCGT numbers (2020) taken from https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx, uplifted by 8.5% as per Freitag et al. 2024 (https://doi.org/10.1016/j.ijhydene.2024.06.164)
+      name: 'H2 to Electricity Conversion'
+      color: #TODO:
+      base_tech: conversion
+      carrier_in: hydrogen
+      carrier_out: power
+      source_use_max: #TODO: Defined by available electricity from surplus
+      flow_out_eff: 0.56  #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage,assumption for Natural Gas, seems to align with Hydrogen CCGT studies (https://doi.org/10.1115/1.4026085)
+      lifetime: 25
+      cost_flow_cap: #CAPEX cost
+        data: 936 # Euro / kW
+        index: monetary
+        dims: costs
+      cost_om_annual: #fixed O&M costs
+        data: 31.156 # Euro / kW / year
+        index: monetary
+        dims: costs
+      cost_flow_out: #variable maintenance costs
+        data: 0.000213 # Euro / kWh
+        index: monetary
+        dims: costs
+      
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  #
+  #                                     Demand 
+  #
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  demand_power:
+    name: "Power demand"
+    color: #TODO:
+    base_tech: demand
+    carrier_in: power
+    #Demand time series is defined by the time_varying_parameters.csv file and implemented in model.yaml.
+
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  #
+  #                                     Transmission 
+  #
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  # region1_to_region2:
+  #   from: region1
+  #   to: region2
+  #   name: "AC power transmission"
+  #   color: "#8465A9"
+  #   base_tech: transmission
+  #   carrier_in: power
+  #   carrier_out: power
+  #   flow_out_eff: 0.85
+  #   lifetime: 25
+  #   flow_cap_max: 10000
+
+  # region1_to_region1_1:
+  #   from: region1
+  #   to: region1_1
+  #   template: free_transmission
+  # region1_to_region1_2:
+  #   from: region1
+  #   to: region1_2
+  #   template: free_transmission
+  # region1_to_region1_3:
+  #   from: region1
+  #   to: region1_3
+  #   template: free_transmission
+
+

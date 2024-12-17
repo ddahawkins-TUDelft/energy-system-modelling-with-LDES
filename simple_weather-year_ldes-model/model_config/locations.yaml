@@ -1,0 +1,24 @@
+##
+# nodes
+##
+
+# Super simplified, single node model representing the Netherlands.
+
+nodes:
+  netherlands:
+    # latitude: unnecessary for a single node model
+    # longitude: unnecessary for a single node model
+    techs:
+      #supply techs
+      solar:
+      Onshore_wind:
+      Offshore_Wind:
+      nuclear:
+      #storage techs
+      battery:
+      h2_salt-cavern:
+      #hydrogen conversion techs
+      electrolyser:
+      H2-elec_conversion:
+      #demand tech
+      demand_power:

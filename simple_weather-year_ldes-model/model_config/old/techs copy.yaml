@@ -1,0 +1,156 @@
+##
+# TECHNOLOGY DEFINITIONS
+##
+
+# Note: --8<--start:'' and --8<--end:'' is used in tutorial documentation only
+
+# --8<-- [start:free-transmission]
+templates:
+  free_transmission:
+    name: "national power transmission"
+    color: "#6783E3"
+    carrier_in: power
+    carrier_out: power
+    base_tech: transmission
+# --8<-- [end:free-transmission]
+
+techs:
+  ##
+  # Supply
+  # (incl: Onshore_Wind,Offshore_Wind,Solar,Nuclear,H2_Conversion)
+  ##
+
+  # --8<-- [start:csp]
+  solar:
+    name: "Utility Solar Power"
+    color: "#F9CF22"
+    base_tech: supply
+    carrier_out: power
+    source_unit: per_area
+    include_storage: True
+    storage_cap_max: 614033
+    flow_cap_per_storage_cap_max: 1
+    storage_loss: 0.002
+    flow_out_eff: 0.4
+    flow_out_parasitic_eff: 0.9
+    area_use_max: .inf
+    flow_cap_max: 10000
+    lifetime: 25
+  # --8<-- [end:csp]
+
+  ##
+  # Storage
+  # (incl: battery,h2_saltcavern)
+  ##
+  # --8<-- [start:battery]
+  battery:
+    name: "Li-ion Battery storage"
+    color: "#3B61E3"
+    base_tech: storage
+    carrier_in: power
+    carrier_out: power
+    # flow_cap_max: 1000 # kW TODO
+    storage_cap_max: .inf
+    flow_cap_per_storage_cap_max: 3 #power to energy ratio, set to 3
+    # 0.95 * 0.95 = 0.9025 round trip efficiency
+    flow_out_eff: 0.97
+    flow_in_eff: 0.98
+    storage_loss: 0 # No loss over time assumed, in reality more like 0.004 but considered negligible for this exercise
+    lifetime: 25
+  # --8<-- [end:battery]
+
+    # --8<-- [start:h2_salt-cavern]
+  h2_salt-cavern:
+    name: "Hydrogen Salt Cavern Storage"
+    color: "#d633ff"
+    base_tech: storage
+    carrier_in: hydrogen
+    carrier_out: hydrogen
+    # flow_cap_max: 1000 # kW
+    storage_cap_max: .inf
+    # flow_cap_per_storage_cap_max: 4
+    # 0.95 * 0.95 = 0.9025 round trip efficiency
+    flow_out_eff: 0.99
+    flow_in_eff: 0.99
+    storage_loss: 0 # No loss over time assumed
+    lifetime: 100
+  # --8<-- [end:h2_salt-cavern]
+
+  ##
+  # Conversion
+  # (incl: electrolyser,H2_Conversion)
+  ##
+   # --8<-- [start:electrolyser]
+  # ccgt:
+  #   name: "Combined cycle gas turbine"
+  #   color: "#E37A72"
+  #   base_tech: supply
+  #   carrier_out: power
+  #   flow_out_eff: 0.5
+  #   flow_cap_max: 40000 # kW
+  #   flow_cap_max_systemwide: 100000 # kW
+  #   flow_ramping: 0.8
+  #   lifetime: 25
+  # --8<-- [end:ccgt]
+
+  electrolyser:
+    name: "PEM Electrolyser"
+    color: '#1e81b0'
+    base_tech: conversion
+    carrier_in: hydrogen
+    carrier_out: power
+    flow_out_eff: 0.65
+    lifetime: 25
+
+    H2-elec_conversion:
+      name: 'H2 to Electricity Conversion'
+      color: '#66023C'
+      base_tech: conversion
+      carrier_in: power
+      carrier_out: hydrogen
+      flow_out_eff: #TODO
+      lifetime: #TODO
+
+  ##
+  # Demand
+  ##
+  # --8<-- [start:demand]
+  demand_power:
+    name: "Power demand"
+    color: "#072486"
+    base_tech: demand
+    carrier_in: power
+  # --8<-- [end:demand]
+
+  ##
+  # Transmission
+  ##
+
+  # --8<-- [start:transmission]
+
+  region1_to_region2:
+    from: region1
+    to: region2
+    name: "AC power transmission"
+    color: "#8465A9"
+    base_tech: transmission
+    carrier_in: power
+    carrier_out: power
+    flow_out_eff: 0.85
+    lifetime: 25
+    flow_cap_max: 10000
+
+  region1_to_region1_1:
+    from: region1
+    to: region1_1
+    template: free_transmission
+  region1_to_region1_2:
+    from: region1
+    to: region1_2
+    template: free_transmission
+  region1_to_region1_3:
+    from: region1
+    to: region1_3
+    template: free_transmission
+
+  # --8<-- [end:transmission]

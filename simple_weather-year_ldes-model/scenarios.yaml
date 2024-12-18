@@ -3,7 +3,7 @@
 ##
 
 scenarios:
-  fixed_min_capacities: ["fixing_capacities"]
+  fixed_min_capacities: ["fixing_capacities", "add_maths"]
 
 
 ##
@@ -22,5 +22,9 @@ overrides:
       offshore_wind:
         flow_cap_min: 2.5e06 #current levels, see source below
         flow_cap_max: 108e06 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
+
+  add_maths:
+    build:
+      add_math: [custom_mathematics/add_maths_cycle_constraints.yaml]
 
 

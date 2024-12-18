@@ -1,0 +1,50 @@
+
+#
+#          Variables
+#
+
+
+variables:
+
+  #defining the cycle count limit variable
+  cycle_count_limit:
+    title: Storage Cycle Count Limit
+    description: >-
+      The number of cycles for which a storage component is permitted to discharge its capacity across the time horizon of the model. Expressed as a multiple of the installed capacity (i.e. unitless factor)
+    default: 1 # by default, permits one storage cycle
+    foreach: [nodes, techs]
+    where: "include_storage=True OR base_tech=storage"
+    domain: real
+    bounds:
+      min: 0 
+      max: .inf
+    active: false #defaults to being inactive
+
+  number_year_cycles:
+    title: Number of Year Cycles
+    description: >-
+      The number of years for which the allowable number of cycles occurs over
+    default: 1 # by default, permits one storage cycle
+    foreach: [nodes, techs]
+    where: "include_storage=True OR base_tech=storage"
+    domain: real
+    bounds:
+      min: 0 
+      max: .inf
+    active: false #defaults to being inactive
+
+
+#
+#          Constraints
+#
+
+constraints:
+  c_storage_discharge_cycle_limit: #have not figured out how to account for multiple years
+    description: >-
+      Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
+    foreach: [nodes, techs]
+    where: "storage AND cyclic_storage=True"
+    equations: #sum_for_all_t( discharge_t * t_length) <= cycle_count_limit * storage_cap * Number_years
+      - expression: >
+        sum(flow_out, over=[timesteps]) <= storage_cap_max * cycle_count_limit * number_year_cycles
+    active: false #defaults to being inactive

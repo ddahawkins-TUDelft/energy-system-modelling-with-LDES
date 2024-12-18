@@ -1,6 +1,5 @@
 import calliope
 import datetime
-
 import pandas as pd
 import plotly.express as px
 
@@ -93,6 +92,56 @@ for idx, node in enumerate(node_order[::-1]):
             marker_color="black",
             name="Demand",
             legendgroup="demand",
+            showlegend=showlegend,
+        )
+        showlegend = False
+fig.update_yaxes(matches=None)
+fig.show()
+
+# visualising SOC
+
+df_storage = (
+    (model.results.storage.fillna(0))
+    .sel(techs="hydrogen_storage_system")
+    .to_series()
+    .where(lambda x: x != 0)
+    .dropna()
+    .to_frame("Storage (kWh)")
+    .rename(columns={'Storage (kWh)':'Storage (GWh)'})
+    .mul(0.000001) #convert kWh to GWh
+    .reset_index()
+)
+
+print(df_storage.head())
+
+node_order = df_storage.nodes.unique()
+
+fig = px.bar(
+    df_storage,
+    x="timesteps",
+    y="Storage (GWh)",
+    facet_row="nodes",
+    category_orders={"nodes": node_order},
+    height=1000,
+)
+
+showlegend = True
+# we reverse the node order (`[::-1]`) because the rows are numbered from bottom to top.
+for idx, node in enumerate(node_order[::-1]):
+    storage_val = df_storage.loc[
+        df_storage.nodes == node, "Storage (GWh)"
+    ]
+    if not storage_val.empty:
+        fig.add_scatter(
+            x=df_storage.loc[
+                df_storage.nodes == node, "timesteps"
+            ],
+            y=1 * storage_val,
+            row=idx + 1,
+            col="all",
+            marker_color="black",
+            name="Storage",
+            legendgroup="storage",
             showlegend=showlegend,
         )
         showlegend = False

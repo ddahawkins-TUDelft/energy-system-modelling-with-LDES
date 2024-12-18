@@ -1,0 +1,8 @@
+techs,name
+battery,Li-ion Battery storage
+demand_power,Power demand
+hydrogen_storage_system,Hydrogen Storage System
+nuclear,Nuclear Power Plant
+offshore_wind,Offshore Wind
+onshore_wind,Onshore Wind
+solar,Utility Solar Power

@@ -1,0 +1,6 @@
+nodes,techs,costs,cost_operation_fixed
+netherlands,hydrogen_storage_system,monetary,633196702.8407415
+netherlands,nuclear,monetary,273900000.0
+netherlands,offshore_wind,monetary,1659384893.713252
+netherlands,onshore_wind,monetary,262399999.99999997
+netherlands,solar,monetary,531766504.1517918

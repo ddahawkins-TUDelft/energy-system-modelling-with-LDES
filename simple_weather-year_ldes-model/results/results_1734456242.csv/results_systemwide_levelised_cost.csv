@@ -1,6 +1,0 @@
-carriers,techs,costs,systemwide_levelised_cost
-power,hydrogen_storage_system,monetary,0.2335594255497762
-power,nuclear,monetary,0.1291482858936509
-power,offshore_wind,monetary,0.08959437085603368
-power,onshore_wind,monetary,0.05030956558919369
-power,solar,monetary,0.21646747691541435

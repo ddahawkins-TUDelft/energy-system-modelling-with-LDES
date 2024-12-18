@@ -3,7 +3,7 @@
 ##
 
 scenarios:
-  fixed_min_capacities: ["fixing_capacities", "add_maths"]
+  fixed_min_capacities: ["fixing_capacities","weather_year","add_maths"]
 
 
 ##
@@ -11,8 +11,9 @@ scenarios:
 ##
 overrides:
   weather_year:
-    init:
-      time_subset: ["2019-01-01", "2019-12-31"] # Subset of timesteps for given weather year
+    config:
+      init:
+        time_subset: ["2019-01-01", "2019-12-31"] # Subset of timesteps for given weather year
 
   fixing_capacities:
     techs:
@@ -24,7 +25,8 @@ overrides:
         flow_cap_max: 108e06 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
 
   add_maths:
-    build:
-      add_math: [custom_mathematics/add_maths_cycle_constraints.yaml]
+    config:
+      build:
+        add_math: [custom_mathematics/add_maths_cycle_constraints.yaml]
 
 

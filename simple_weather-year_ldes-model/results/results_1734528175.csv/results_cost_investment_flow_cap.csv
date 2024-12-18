@@ -1,0 +1,6 @@
+nodes,techs,carriers,costs,cost_investment_flow_cap
+netherlands,hydrogen_storage_system,power,monetary,24521505498.365074
+netherlands,nuclear,power,monetary,11427900000.0
+netherlands,offshore_wind,power,monetary,70357919493.4419
+netherlands,onshore_wind,power,monetary,17760000000.0
+netherlands,solar,power,monetary,26353030294.24809

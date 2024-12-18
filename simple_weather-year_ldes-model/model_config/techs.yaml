@@ -192,6 +192,8 @@ techs:
     lifetime: 25
     cyclic_storage: true 
     storage_loss: 0 #captured by charge and discharge efficiencies
+    cycle_count_limit: 1 # custom maths components
+    number_year_cycles: 1 #custom maths components
     cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
       data: 3.19 # Euro / kWh   
       index: monetary

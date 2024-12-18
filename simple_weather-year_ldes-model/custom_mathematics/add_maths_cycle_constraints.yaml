@@ -11,9 +11,9 @@ variables:
     title: Storage Cycle Count Limit
     description: >-
       The number of cycles for which a storage component is permitted to discharge its capacity across the time horizon of the model. Expressed as a multiple of the installed capacity (i.e. unitless factor)
-    default: 1 # by default, permits one storage cycle
-    foreach: [nodes, techs]
-    where: "include_storage=True OR base_tech=storage"
+    default: 10000 # by default, permits ten thousand storage cycles
+    foreach: [techs]
+    where: "techs=hydrogen_storage_system"
     domain: real
     bounds:
       min: 0 
@@ -25,8 +25,8 @@ variables:
     description: >-
       The number of years for which the allowable number of cycles occurs over
     default: 1 # by default, permits one storage cycle
-    foreach: [nodes, techs]
-    where: "include_storage=True OR base_tech=storage"
+    foreach: [techs]
+    where: "techs=hydrogen_storage_system"
     domain: real
     bounds:
       min: 0 
@@ -42,9 +42,64 @@ constraints:
   c_storage_discharge_cycle_limit: #have not figured out how to account for multiple years
     description: >-
       Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
-    foreach: [nodes, techs]
-    where: "storage AND cyclic_storage=True"
+    foreach: [nodes, techs, carriers]
+    where: "techs=hydrogen_storage_system"
     equations: #sum_for_all_t( discharge_t * t_length) <= cycle_count_limit * storage_cap * Number_years
-      - expression: >
-        sum(flow_out, over=[timesteps]) <= storage_cap_max * cycle_count_limit * number_year_cycles
-    active: false #defaults to being inactive
+      - expression: >-
+          sum(flow_out, over=[timesteps, nodes, techs, carriers]) <= cycle_limit_condition
+    active: true #defaults to being inactive
+  
+  c_storage_charge_cycle_limit: #have not figured out how to account for multiple years
+    description: >-
+      Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
+    foreach: [nodes, techs, carriers]
+    where: "techs=hydrogen_storage_system"
+    equations: #sum_for_all_t( discharge_t * t_length) <= cycle_count_limit * storage_cap * Number_years
+      - expression: >-
+          sum(flow_in, over=[timesteps, nodes, techs, carriers]) <= cycle_limit_condition
+    active: true #defaults to being inactive
+
+
+#
+#          Global Expressions
+#
+
+global_expressions:
+  sum_hydrogen_discharge:
+    title: Total of Hydrogen Storage System Discharge
+    description: >-
+      Summation of flow out for hydrogen storage across the model time horizon
+    default: 0
+    unit: kWh
+    foreach: [nodes, techs, carriers]
+    where: "techs=hydrogen_storage_system"
+    equations: 
+      - expression: >-
+          sum(flow_out, over=[timesteps])
+    active: true
+
+  sum_hydrogen_charge:
+    title: Total of Hydrogen Storage System Charge
+    description: >-
+      Summation of flow in for hydrogen storage across the model time horizon
+    default: 0
+    unit: kWh
+    foreach: [nodes, techs, carriers]
+    where: "techs=hydrogen_storage_system"
+    equations: 
+      - expression: >-
+          sum(flow_in_inc_eff, over=[timesteps])
+    active: true
+
+  cycle_limit_condition:
+    title: Limit of Discharge Capacity within Cycle
+    description: >-
+      Execution of the cycle limit equation to test functionality
+    default: 0
+    unit: kWh
+    foreach: [nodes, techs, carriers]
+    where: "techs=hydrogen_storage_system"
+    equations: 
+      - expression: >-
+          storage_cap * cycle_count_limit * number_year_cycles
+    active: true

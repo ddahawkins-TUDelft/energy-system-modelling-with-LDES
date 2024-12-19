@@ -1,8 +1,0 @@
-techs,carriers,systemwide_capacity_factor
-battery,power,0.007543452996714852
-demand_power,power,0.0
-hydrogen_storage_system,power,0.10418326361930136
-nuclear,power,0.8000000000000002
-offshore_wind,power,0.1366890338959752
-onshore_wind,power,0.22400760001311956
-solar,power,0.12185143237349289

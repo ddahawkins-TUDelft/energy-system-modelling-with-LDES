@@ -37,11 +37,11 @@ techs:
     source_unit: per_cap
     #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
     cost_flow_cap: #CAPEX cost
-      data: 560 # Euro / kW
+      data: 0.560000 # €M / MW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
-      data: 11.3 # Euro / kW / year
+      data: 0.011300 # €M / MW / year
       index: monetary
       dims: costs
   
@@ -55,15 +55,15 @@ techs:
     source_unit: per_cap
     #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
     cost_flow_cap: #CAPEX cost
-      data: 1110 # Euro / kW
+      data: 1.110000 # €M / MW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
-      data: 16.4 # Euro / kW / year
+      data: 0.016400 # €M / MW / year
       index: monetary
       dims: costs
     cost_flow_out: #variable maintenance costs
-      data: 0.002 # Euro / kWh
+      data: 0.000002 # €M / MWh
       index: monetary
       dims: costs
 
@@ -76,15 +76,15 @@ techs:
     source_unit: per_cap
     #Capacity Factors are defined by the time_varying_parameters.csv file and implemented in model.yaml.
     cost_flow_cap: #CAPEX cost
-      data: 2120 # Euro / kW
+      data: 2.120000 # €M / kW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
-      data: 50 # Euro / kW / year
+      data: 0.050000 # €M / kW / year
       index: monetary
       dims: costs
     cost_flow_out: #variable maintenance costs
-      data: 0.005 # Euro / kWh
+      data: 0.000005 # €M / kWh
       index: monetary
       dims: costs
 
@@ -94,24 +94,24 @@ techs:
     base_tech: supply
     carrier_out: power
     lifetime: 40 
-    flow_cap_max: 1650000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
-    flow_cap_min: 1000000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+    flow_cap_max: 1650 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+    flow_cap_min: 1000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
     flow_ramping: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
     capacity_factor_min: 0.8 #set minimum capacity factor to 80% for nuclear for realistic op conditions.
     cost_flow_cap: #CAPEX cost
-      data: 6926 # Euro / kW
+      data: 6.926000 # €M / MW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
-      data: 166 # Euro / kW / year
+      data: 0.166000 # €M / MW / year
       index: monetary
       dims: costs
     cost_flow_out: #variable maintenance costs
-      data: 0.0027 # Euro / kWh
+      data: 0.0000027 # €M / MWh
       index: monetary
       dims: costs
     cost_flow_in: #variable fuel costs
-      data: 0.004378 # Euro / kWh
+      data: 0.000004378 # €M / MWh
       index: monetary
       dims: costs
 
@@ -140,15 +140,15 @@ techs:
     lifetime: 20
     cyclic_storage: true
     cost_storage_cap: #CAPEX cost in terms of storage energy capacity
-      data: 1110 # Euro / kWh  
+      data: 1.110000 # €M / MWh  
       index: monetary
       dims: costs
     # cost_om_annual: #fixed O&M costs      #!!! Omitted fixed annual O&M costs for storage as these are not currently implemented in Calliope 0.7.0.dev4
-    #   data: 0.00000057 # Euro / kWh / year #TODO, how does calliope make this in terms of kWh and not kW
+    #   data: 0.00000057 # €M / kWh / year #TODO, how does calliope make this in terms of kWh and not kW
     #   index: monetary
     #   dims: costs
     cost_flow_out: #variable maintenance costs
-      data: 0.00021 # Euro / kWh
+      data: 0.00000021 # €M / MWh
       index: monetary
       dims: costs
 
@@ -170,7 +170,7 @@ techs:
     storage_loss: 0 # No loss over time assumed
     lifetime: 100
     cost_storage_cap: #CAPEX cost in terms of storage energy capacity
-      data: 3.19 # Euro / kWh   
+      data: 0.003190 # €M / MWh   
       index: monetary
       dims: costs
     # cost_om_annual: #fixed O&M costs    #!!! Omitted fixed annual O&M costs for storage as these are not currently implemented in Calliope 0.7.0.dev4
@@ -178,7 +178,7 @@ techs:
     #   index: monetary
     #   dims: costs
     cost_flow_out: #variable maintenance costs
-      data: 0.00000003608 # Euro / kWh
+      data: 0 # Actually 0.00003608e-06 # Euro / MWh howver this is too small for the system to resolve
       index: monetary
       dims: costs
 
@@ -195,21 +195,21 @@ techs:
     storage_loss: 0 #captured by charge and discharge efficiencies
     cycle_count_limit: 1 # custom maths components
     number_year_cycles: 1 #custom maths components
-    flow_ramping: 0.04 #TODO: this is an arbitrary value to smooth charge and discharge with no obvious basis #FIXME: review
+    #flow_ramping: 0.04 #TODO: this is an arbitrary value to smooth charge and discharge with no obvious basis #FIXME: review
     cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
-      data: 3.19 # Euro / kWh   
+      data: 0.003190 # €M / MWh   
       index: monetary
       dims: costs
     cost_flow_cap: #CAPEX cost (electrolyser+CCGT)
-      data: 2136 # Euro / kW    #1200E/KWh electrolyser + 936 E/KWh CCGT
+      data: 2.136000 # €M / MW    #1200E/KWh electrolyser + 936 E/KWh CCGT
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs (electrolyser)
-      data: 55.156 # Euro / kW / year #24E/KWh/yr electrolyser + 31.156 E/KWh/yr CCGT
+      data: 0.055156 # €M / MW / year #24E/KWh/yr electrolyser + 31.156 E/KWh/yr CCGT
       index: monetary
       dims: costs
     cost_flow_in: #variable maintenance costs (CGGT)
-      data: 0.000213 # Euro / kWh
+      data: 0.000004679 # €M / MWh
       index: monetary
       dims: costs
 
@@ -231,11 +231,11 @@ techs:
     flow_out_eff: 0.65 #src:=IRENA, Accessed December 2024
     lifetime: 25
     cost_flow_cap: #CAPEX cost
-      data: 1200 # Euro / kW
+      data: 1.200000 # €M / MW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
-      data: 24 # Euro / kW / year
+      data: 0.024000 # €M / MW / year
       index: monetary
       dims: costs
 
@@ -249,15 +249,15 @@ techs:
     flow_out_eff: 0.56  #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage,assumption for Natural Gas, seems to align with Hydrogen CCGT studies (https://doi.org/10.1115/1.4026085)
     lifetime: 25
     cost_flow_cap: #CAPEX cost
-      data: 936 # Euro / kW
+      data: 0.0936000 # €M / MW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
-      data: 31.156 # Euro / kW / year
+      data: 0.031156 # €M / MW / year
       index: monetary
       dims: costs
     cost_flow_out: #variable maintenance costs
-      data: 0.000213 # Euro / kWh
+      data: 0.000004679 # €M / MWh
       index: monetary
       dims: costs
       
@@ -283,30 +283,5 @@ techs:
   #
   # ---------------------------------------------------------------------------------------------------------------------------------------------
 
-
-  # region1_to_region2:
-  #   from: region1
-  #   to: region2
-  #   name: "AC power transmission"
-  #   color: "#8465A9"
-  #   base_tech: transmission
-  #   carrier_in: power
-  #   carrier_out: power
-  #   flow_out_eff: 0.85
-  #   lifetime: 25
-  #   flow_cap_max: 10000
-
-  # region1_to_region1_1:
-  #   from: region1
-  #   to: region1_1
-  #   template: free_transmission
-  # region1_to_region1_2:
-  #   from: region1
-  #   to: region1_2
-  #   template: free_transmission
-  # region1_to_region1_3:
-  #   from: region1
-  #   to: region1_3
-  #   template: free_transmission
 
 

@@ -27,9 +27,9 @@ df_capacity = (
     .to_series()
     #.where(lambda x: x != 0)
     .dropna()
-    .mul(0.000001) #convert kW to GW
-    .to_frame("Flow capacity (kW)")
-    .rename(columns={'Flow capacity (kW)':'Flow Capacity (GW)'})
+    .to_frame("Flow capacity (MW)")
+    .mul(0.001) #convert MW to GW
+    .rename(columns={'Flow capacity (MW)':'Flow Capacity (GW)'})
     .reset_index()
 )
 
@@ -52,9 +52,9 @@ df_electricity = (
     .to_series()
     .where(lambda x: x != 0)
     .dropna()
-    .to_frame("Flow in/out (kWh)")
-    .rename(columns={'Flow in/out (kWh)':'Flow in/out (GWh)'})
-    .mul(0.000001) #convert kWh to GWh
+    .to_frame("Flow in/out (MWh)")
+    .rename(columns={'Flow in/out (MWh)':'Flow in/out (GWh)'})
+    .mul(0.001) #convert kWh to GWh
     .reset_index()
 )
 df_electricity_demand = df_electricity[df_electricity.techs == "demand_power"]
@@ -106,9 +106,9 @@ df_storage = (
     .to_series()
     .where(lambda x: x != 0)
     .dropna()
-    .to_frame("Storage (kWh)")
-    .rename(columns={'Storage (kWh)':'Storage (GWh)'})
-    .mul(0.000001) #convert kWh to GWh
+    .to_frame("Storage (MWh)")
+    .rename(columns={'Storage (MWh)':'Storage (GWh)'})
+    .mul(0.001) #convert kWh to GWh
     .reset_index()
 )
 

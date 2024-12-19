@@ -1,0 +1,8 @@
+nodes,techs,carriers,flow_cap
+netherlands,battery,power,39663.36624034628
+netherlands,demand_power,power,18020.0
+netherlands,hydrogen_storage_system,power,11480.11958209201
+netherlands,nuclear,power,1650.0
+netherlands,offshore_wind,power,33184.93803622498
+netherlands,onshore_wind,power,16000.0
+netherlands,solar,power,47059.79990189454

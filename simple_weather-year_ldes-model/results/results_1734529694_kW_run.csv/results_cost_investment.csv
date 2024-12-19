@@ -1,0 +1,7 @@
+nodes,techs,costs,cost_investment
+netherlands,battery,monetary,50190061636.038734
+netherlands,hydrogen_storage_system,monetary,479364666004.1328
+netherlands,nuclear,monetary,11427900000.0
+netherlands,offshore_wind,monetary,68514367648.7669
+netherlands,onshore_wind,monetary,17760000000.0
+netherlands,solar,monetary,24787241630.728374

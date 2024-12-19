@@ -1,0 +1,6 @@
+techs,costs,cost_om_annual
+hydrogen_storage_system,monetary,0.055156
+nuclear,monetary,0.166
+offshore_wind,monetary,0.05
+onshore_wind,monetary,0.0164
+solar,monetary,0.0113

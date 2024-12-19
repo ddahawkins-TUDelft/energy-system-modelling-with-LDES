@@ -31,7 +31,7 @@ parameters:
     index: monetary
     dims: costs
   # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
-  bigM: 1e9
+  bigM: 1e6
   cost_interest_rate:
     data: 0.10
     index: monetary

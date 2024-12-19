@@ -18,11 +18,11 @@ overrides:
   fixing_capacities:
     techs:
       onshore_wind:
-        flow_cap_min: 4.2e06 #current levels, see source below
-        flow_cap_max: 16e06 #cap based on https://energy.nl/wp-content/uploads/technology-factsheet-wind-onshore-9.pdf  #TODO: find a better source
+        flow_cap_min: 4.2e03 #current levels, see source below
+        flow_cap_max: 16e03 #cap based on https://energy.nl/wp-content/uploads/technology-factsheet-wind-onshore-9.pdf  #TODO: find a better source
       offshore_wind:
-        flow_cap_min: 2.5e06 #current levels, see source below
-        flow_cap_max: 108e06 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
+        flow_cap_min: 2.5e03 #current levels, see source below
+        flow_cap_max: 108e03 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
 
   add_maths:
     config:

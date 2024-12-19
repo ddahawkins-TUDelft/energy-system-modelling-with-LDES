@@ -97,6 +97,7 @@ techs:
     flow_cap_max: 1650000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
     flow_cap_min: 1000000 #kW src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
     flow_ramping: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
+    capacity_factor_min: 0.8 #set minimum capacity factor to 80% for nuclear for realistic op conditions.
     cost_flow_cap: #CAPEX cost
       data: 6926 # Euro / kW
       index: monetary
@@ -194,6 +195,7 @@ techs:
     storage_loss: 0 #captured by charge and discharge efficiencies
     cycle_count_limit: 1 # custom maths components
     number_year_cycles: 1 #custom maths components
+    flow_ramping: 0.04 #TODO: this is an arbitrary value to smooth charge and discharge with no obvious basis #FIXME: review
     cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
       data: 3.19 # Euro / kWh   
       index: monetary

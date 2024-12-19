@@ -1,0 +1,5 @@
+techs,costs,cost_flow_out
+battery,monetary,0.00021
+nuclear,monetary,0.0027
+offshore_wind,monetary,0.005
+onshore_wind,monetary,0.002

@@ -1,0 +1,8 @@
+nodes,techs,carriers,definition_matrix
+netherlands,battery,power,True
+netherlands,demand_power,power,True
+netherlands,hydrogen_storage_system,power,True
+netherlands,nuclear,power,True
+netherlands,offshore_wind,power,True
+netherlands,onshore_wind,power,True
+netherlands,solar,power,True

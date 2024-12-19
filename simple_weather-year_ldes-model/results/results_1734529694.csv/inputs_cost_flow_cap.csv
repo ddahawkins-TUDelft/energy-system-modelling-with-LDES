@@ -1,0 +1,6 @@
+techs,costs,cost_flow_cap
+hydrogen_storage_system,monetary,2136.0
+nuclear,monetary,6926.0
+offshore_wind,monetary,2120.0
+onshore_wind,monetary,1110.0
+solar,monetary,560.0

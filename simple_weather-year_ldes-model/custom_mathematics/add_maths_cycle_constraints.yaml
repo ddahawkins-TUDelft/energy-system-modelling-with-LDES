@@ -54,10 +54,26 @@ constraints:
       Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
     foreach: [nodes, techs, carriers]
     where: "techs=hydrogen_storage_system"
-    equations: #sum_for_all_t( discharge_t * t_length) <= cycle_count_limit * storage_cap * Number_years
+    equations: #sum_for_all_t( charge_t * charge efficiency * t_length) <= cycle_count_limit * storage_cap * Number_years
       - expression: >-
-          sum(flow_in, over=[timesteps, nodes, techs, carriers]) <= cycle_limit_condition
+          sum(flow_in_inc_eff, over=[timesteps, nodes, techs, carriers]) <= cycle_limit_condition
     active: true #defaults to being inactive
+  
+  annual_capacity_factor_min:
+    description: >
+      Limit the lower bound of annual technology operation as a
+      fraction of annual operation at maximum capacity.
+    foreach: [nodes, techs, carriers]
+    where: capacity_factor_min
+    equations:
+      - expression: >
+          sum(flow_out * timestep_weights, over=timesteps) >=
+          flow_cap * capacity_factor_min * $total_time
+    sub_expressions:
+      total_time: &total_time
+        - expression: sum(timestep_resolution * timestep_weights, over=timesteps)  
+
+  #TODO: Add a daily flow capacity factor for the hydrogen storage (salt cavern)... inspo from maths in balance_storage_iter re. datestep https://calliope.readthedocs.io/en/v0.7.0.dev5/math/storage_inter_cluster/?h=day#__tabbed_2_2
 
 
 #

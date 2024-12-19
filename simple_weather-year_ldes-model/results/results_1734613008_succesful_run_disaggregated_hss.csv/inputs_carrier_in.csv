@@ -1,0 +1,6 @@
+nodes,techs,carriers,carrier_in
+netherlands,battery,power,1.0
+netherlands,demand_power,power,1.0
+netherlands,electrolyser,power,1.0
+netherlands,h2_elec_conversion,hydrogen,1.0
+netherlands,h2_salt_cavern,hydrogen,1.0

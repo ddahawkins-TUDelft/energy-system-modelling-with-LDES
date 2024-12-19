@@ -1,0 +1,10 @@
+techs,color
+battery,#581845
+demand_power,#000000
+electrolyser,#713fe7
+h2_elec_conversion,#3fa5e7
+h2_salt_cavern,#900C3F
+nuclear,#db2a04
+offshore_wind,#db5f04
+onshore_wind,#db9204
+solar,#FFC300

@@ -116,7 +116,7 @@ print(df_storage.head())
 
 node_order = df_storage.nodes.unique()
 
-df_storage_hss = df_storage[df_storage.techs == "hydrogen_storage_system"]
+df_storage_hss = df_storage[df_storage.techs == "h2_salt_cavern"]
 df_storage_batt = df_storage[df_storage.techs == "battery"]
 
 fig = px.bar(

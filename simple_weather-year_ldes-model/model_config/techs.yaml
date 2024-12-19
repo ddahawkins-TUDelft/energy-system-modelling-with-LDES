@@ -30,7 +30,7 @@ techs:
 
   solar: #src:=https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx
     name: "Utility Solar Power"
-    color: #TODO:
+    color: '#FFC300'
     base_tech: supply
     carrier_out: power
     lifetime: 35
@@ -47,7 +47,7 @@ techs:
   
   onshore_wind: #src:=https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx
     name: "Onshore Wind"
-    color: #TODO:
+    color: '#db9204'
     base_tech: supply
     carrier_out: power
     lifetime: 27
@@ -69,7 +69,7 @@ techs:
 
   offshore_wind: #src:=https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx
     name: "Offshore Wind"
-    color: #TODO:
+    color: '#db5f04'
     base_tech: supply
     carrier_out: power
     lifetime: 27
@@ -90,7 +90,7 @@ techs:
 
   nuclear: #src:= https://atb.nrel.gov/electricity/2024/nuclear#capital_expenditures_(capex)
     name: 'Nuclear Power Plant'
-    color: #TODO:
+    color: '#db2a04'
     base_tech: supply
     carrier_out: power
     lifetime: 40 
@@ -128,7 +128,7 @@ techs:
 
   battery: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage
     name: "Li-ion Battery storage"
-    color: #TODO:
+    color: '#581845'
     base_tech: storage
     carrier_in: power
     carrier_out: power
@@ -156,7 +156,7 @@ techs:
 
   h2_salt_cavern: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-energy-storage
     name: "Hydrogen Salt Cavern Storage"
-    color: #TODO:
+    color: '#900C3F'
     base_tech: storage
     carrier_in: hydrogen
     carrier_out: hydrogen
@@ -170,7 +170,7 @@ techs:
     storage_loss: 0 # No loss over time assumed
     lifetime: 100
     cycle_count_limit: 1 # custom maths components to limit number of dispatch cycles across the year
-    number_year_cycles: 1 #custom maths components to identify the number of modelled years (must be a better way of doing this)
+    number_year_cycles: 5 #custom maths components to identify the number of modelled years (must be a better way of doing this)
     cost_storage_cap: #CAPEX cost in terms of storage energy capacity
       data: 0.003190 # €M / MWh   
       index: monetary
@@ -225,7 +225,7 @@ techs:
 
   electrolyser: #src:=https://ens.dk/en/our-services/technology-catalogues/technology-data-renewable-fuels
     name: "PEM Electrolyser"
-    color: #TODO:
+    color: '#713fe7'
     base_tech: conversion
     carrier_in: power
     carrier_out: hydrogen
@@ -243,7 +243,7 @@ techs:
 
   h2_elec_conversion: #Conversion process is not a focus for this study, assuming a Hydrogen CCGT combusition process suffices. Natural Gas CCGT numbers (2020) taken from https://ens.dk/sites/ens.dk/files/Analyser/technology_data_for_el_and_dh.xlsx, uplifted by 8.5% as per Freitag et al. 2024 (https://doi.org/10.1016/j.ijhydene.2024.06.164)
     name: 'H2 to Electricity Conversion'
-    color: #TODO:
+    color: '#3fa5e7'
     base_tech: conversion
     carrier_in: hydrogen
     carrier_out: power
@@ -273,7 +273,7 @@ techs:
 
   demand_power:
     name: "Power demand"
-    color: #TODO:
+    color: '#000000'
     base_tech: demand
     carrier_in: power
     #Demand time series is defined by the time_varying_parameters.csv file and implemented in model.yaml.

@@ -169,6 +169,8 @@ techs:
     flow_in_eff: 0.99
     storage_loss: 0 # No loss over time assumed
     lifetime: 100
+    cycle_count_limit: 1 # custom maths components to limit number of dispatch cycles across the year
+    number_year_cycles: 1 #custom maths components to identify the number of modelled years (must be a better way of doing this)
     cost_storage_cap: #CAPEX cost in terms of storage energy capacity
       data: 0.003190 # €M / MWh   
       index: monetary
@@ -193,8 +195,8 @@ techs:
     lifetime: 25
     cyclic_storage: true 
     storage_loss: 0 #captured by charge and discharge efficiencies
-    cycle_count_limit: 1 # custom maths components
-    number_year_cycles: 1 #custom maths components
+    cycle_count_limit: 1 # custom maths components to limit number of dispatch cycles across the year
+    number_year_cycles: 1 #custom maths components to identify the number of modelled years (must be a better way of doing this)
     #flow_ramping: 0.04 #TODO: this is an arbitrary value to smooth charge and discharge with no obvious basis #FIXME: review
     cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
       data: 0.003190 # €M / MWh   

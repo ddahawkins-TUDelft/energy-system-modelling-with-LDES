@@ -9,17 +9,23 @@ nodes:
     # latitude: unnecessary for a single node model
     # longitude: unnecessary for a single node model
     techs:
+
         #supply techs
       solar:
       onshore_wind:
       offshore_wind:
       nuclear:
+
+
         #storage techs
       battery:
-      #h2_salt_cavern:
+      hydrogen_storage_system:
+      # h2_salt_cavern:
+
         #hydrogen conversion techs
-      #electrolyser:
-      #h2_elec_conversion:
+      # electrolyser:
+      # h2_elec_conversion:
+
         #demand tech
       demand_power:
-      hydrogen_storage_system:
+      

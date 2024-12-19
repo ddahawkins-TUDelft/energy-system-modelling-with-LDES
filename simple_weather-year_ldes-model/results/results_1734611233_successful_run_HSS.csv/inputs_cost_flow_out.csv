@@ -1,0 +1,5 @@
+techs,costs,cost_flow_out
+battery,monetary,2.1e-07
+nuclear,monetary,2.7e-06
+offshore_wind,monetary,5e-06
+onshore_wind,monetary,2e-06

@@ -1,8 +1,0 @@
-techs,base_tech
-battery,storage
-demand_power,demand
-hydrogen_storage_system,storage
-nuclear,supply
-offshore_wind,supply
-onshore_wind,supply
-solar,supply

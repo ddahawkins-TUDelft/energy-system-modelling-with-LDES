@@ -42,4 +42,7 @@ overrides:
       build:
         ensure_feasibility: true # Switches on the "unmet demand" constraint #TODO: review what this means, is this Lost Load?
         mode: operate # Choices: plan, operate #TODO: this requires optimising for each model run
+        operate_use_cap_results: true
+        operate_horizon: 48h  
+        operate_window: 24h
 

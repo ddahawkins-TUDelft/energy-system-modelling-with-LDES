@@ -106,6 +106,7 @@ print(op_model.inputs)
 op_model.solve(force=True)
 op_model.to_netcdf(operate_save_path)
 
+# TODO: Perhaps manually parse the variables into the model from the results file. Can use https://calliope.readthedocs.io/en/stable/user/ref_example_models.html as a reference for inputs
 
 
 # model = calliope.read_netcdf(plan_save_path)

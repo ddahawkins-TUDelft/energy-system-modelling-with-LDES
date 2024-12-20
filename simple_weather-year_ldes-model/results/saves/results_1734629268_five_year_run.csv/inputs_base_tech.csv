@@ -1,0 +1,10 @@
+techs,base_tech
+battery,storage
+demand_power,demand
+electrolyser,conversion
+h2_elec_conversion,conversion
+h2_salt_cavern,storage
+nuclear,supply
+offshore_wind,supply
+onshore_wind,supply
+solar,supply

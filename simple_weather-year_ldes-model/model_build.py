@@ -8,4 +8,8 @@ calliope.set_log_verbosity("INFO", include_solver_output=True)
 model.build()
 model.backend.to_lp('simple_weather-year_ldes-model/results/lp files/my_saved_model.lp')
 print(model.applied_math)
+# print(model.backend.constraints)
+# print(model.backend.global_expressions)
 # model.to_csv('simple_weather-year_ldes-model/results/results_'+str(int(datetime.datetime.now().timestamp()))+'.csv')
+
+print(model.backend.constraints)

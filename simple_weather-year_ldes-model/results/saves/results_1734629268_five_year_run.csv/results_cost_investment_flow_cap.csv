@@ -1,0 +1,9 @@
+nodes,techs,carriers,costs,cost_investment_flow_cap
+netherlands,electrolyser,hydrogen,monetary,8428.959902899118
+netherlands,electrolyser,power,monetary,12967.630619844798
+netherlands,h2_elec_conversion,hydrogen,monetary,2534.3499983992715
+netherlands,h2_elec_conversion,power,monetary,1419.2359991035921
+netherlands,nuclear,power,monetary,11427.9
+netherlands,offshore_wind,power,monetary,56298.32765565727
+netherlands,onshore_wind,power,monetary,17760.0
+netherlands,solar,power,monetary,28020.17585808046

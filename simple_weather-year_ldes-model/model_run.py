@@ -96,7 +96,7 @@ for idx, node in enumerate(node_order[::-1]):
         )
         showlegend = False
 fig.update_yaxes(matches=None)
-fig.write_html("simple_weather-year_ldes-model/results/result_capacities.html", auto_open=True)
+fig.write_html("simple_weather-year_ldes-model/results/result_flows.html", auto_open=True)
 
 # visualising SOC
 
@@ -119,7 +119,10 @@ node_order = df_storage.nodes.unique()
 df_storage_hss = df_storage[df_storage.techs == "h2_salt_cavern"]
 df_storage_batt = df_storage[df_storage.techs == "battery"]
 
-fig = px.bar(
+print("Battery Storage Capacity: "+str(df_storage_batt["Storage (GWh)"].max())+ "GWh")
+print("Hydrogen Storage Capacity: "+str(df_storage_hss["Storage (GWh)"].max())+ "GWh")
+
+fig = px.area(
     df_storage_hss,
     x="timesteps",
     y="Storage (GWh)",

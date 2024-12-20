@@ -1,0 +1,7 @@
+nodes,techs,costs,cost_operation_fixed
+netherlands,electrolyser,monetary,767.3266365988119
+netherlands,h2_elec_conversion,monetary,2968.0112182658013
+netherlands,nuclear,monetary,822.4504109589043
+netherlands,offshore_wind,monetary,3894.001633993024
+netherlands,onshore_wind,monetary,787.9189041095892
+netherlands,solar,monetary,1725.4663367185287

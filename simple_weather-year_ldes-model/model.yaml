@@ -12,15 +12,19 @@ config:
     name: Netherlands_Simple_Weather_Year_Model
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
-    time_subset: ["2019-01-01", "2019-12-31"] # Subset of timesteps
+    time_subset: ["2018-01-01", "2018-12-31"] # Subset of timesteps
     broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
 
   build:
+    add_math: ["custom_mathematics/add_maths_cycle_constraints.yaml"]
     ensure_feasibility: false # Switches on the "unmet demand" constraint #TODO: review what this means, is this Lost Load?
     mode: plan # Choices: plan, operate #TODO: this requires optimising for each model run
 
   solve:
     solver: gurobi
+    solver_options:
+      Presolve: 0
+      CrossoverBasis: 1
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 # --8<-- [end:config]
 

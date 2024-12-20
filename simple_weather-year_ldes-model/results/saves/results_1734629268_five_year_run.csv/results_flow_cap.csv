@@ -1,0 +1,12 @@
+nodes,techs,carriers,flow_cap
+netherlands,battery,power,3644.6380608241734
+netherlands,demand_power,power,18439.0
+netherlands,electrolyser,hydrogen,7024.1332524159325
+netherlands,electrolyser,power,10806.358849870665
+netherlands,h2_elec_conversion,hydrogen,27076.388871787087
+netherlands,h2_elec_conversion,power,15162.77776820077
+netherlands,h2_salt_cavern,hydrogen,27076.388871787087
+netherlands,nuclear,power,1650.0
+netherlands,offshore_wind,power,26555.814931913803
+netherlands,onshore_wind,power,16000.0
+netherlands,solar,power,50036.02831800082

@@ -1,0 +1,9 @@
+carriers,techs,costs,systemwide_levelised_cost
+hydrogen,electrolyser,monetary,9.950442541606865e-05
+hydrogen,h2_salt_cavern,monetary,0.00013333326365170604
+power,battery,monetary,0.00041605548337163555
+power,h2_elec_conversion,monetary,0.00011869362187847356
+power,nuclear,monetary,0.00013182810049000045
+power,offshore_wind,monetary,0.00015535380127144587
+power,onshore_wind,monetary,7.515257146236965e-05
+power,solar,monetary,6.829604330078318e-05

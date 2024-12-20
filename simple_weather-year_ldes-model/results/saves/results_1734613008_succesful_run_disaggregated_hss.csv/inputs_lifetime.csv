@@ -1,0 +1,9 @@
+techs,lifetime
+battery,20.0
+electrolyser,25.0
+h2_elec_conversion,25.0
+h2_salt_cavern,100.0
+nuclear,40.0
+offshore_wind,27.0
+onshore_wind,27.0
+solar,35.0

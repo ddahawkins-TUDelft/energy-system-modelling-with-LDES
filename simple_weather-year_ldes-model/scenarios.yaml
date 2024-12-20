@@ -3,7 +3,10 @@
 ##
 
 scenarios:
-  fixed_min_capacities: ["fixing_capacities","weather_year","add_maths"]
+  fixed_min_capacities: ["fixing_capacities","weather_year"]
+  single_year_runs_plan: ["fixing_capacities"]
+  single_year_runs_operate: ["fixing_capacities","operation_run"]
+
 
 
 ##
@@ -13,7 +16,12 @@ overrides:
   weather_year:
     config:
       init:
-        time_subset: ["2015-01-01", "2019-12-31"] # Subset of timesteps for given weather year
+        time_subset: ["2015-01-01", "2015-12-31"] # Subset of timesteps for given weather year
+    techs:
+      h2_salt_cavern:
+        number_year_cycles: 3
+      # hydrogen_storage_system:
+      #   number_year_cycles: 2
 
   fixing_capacities:
     techs:
@@ -24,10 +32,10 @@ overrides:
         flow_cap_min: 2.5e03 #current levels, see source below
         flow_cap_max: 108e03 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
 
-  add_maths:
-    config:
-      build:
-        add_math: [custom_mathematics/add_maths_cycle_constraints.yaml]
+  # add_maths:
+  #   config:
+  #     build:
+  #       add_math: [custom_mathematics/add_maths_cycle_constraints.yaml]
 
   operation_run: #override for when running model in operate mode with enmet demand allowance
     config:

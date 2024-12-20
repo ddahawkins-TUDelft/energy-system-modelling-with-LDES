@@ -132,7 +132,7 @@ techs:
     base_tech: storage
     carrier_in: power
     carrier_out: power
-    storage_cap_max: .inf
+    storage_cap_max: 1000000 #selected arbitrarily to improve solver time, historic runs have not come close to this value
     flow_cap_per_storage_cap_max: 3 #power to energy ratio, set to 3
     flow_out_eff: 0.97
     flow_in_eff: 0.98
@@ -161,7 +161,7 @@ techs:
     carrier_in: hydrogen
     carrier_out: hydrogen
     # flow_cap_max: 1000 # kW
-    storage_cap_max: .inf
+    storage_cap_max: 43300000 #Limit for the Netherlands, src:= https://publications.tno.nl/publication/34637700/8sBxDu/TNO-2020-R12006.pdf
     cyclic_storage: true 
     # flow_cap_per_storage_cap_max: 4
     # 0.95 * 0.95 = 0.9025 round trip efficiency
@@ -170,7 +170,7 @@ techs:
     storage_loss: 0 # No loss over time assumed
     lifetime: 100
     cycle_count_limit: 1 # custom maths components to limit number of dispatch cycles across the year
-    number_year_cycles: 5 #custom maths components to identify the number of modelled years (must be a better way of doing this)
+    number_year_cycles: 1 #custom maths components to identify the number of modelled years (must be a better way of doing this)
     cost_storage_cap: #CAPEX cost in terms of storage energy capacity
       data: 0.003190 # €M / MWh   
       index: monetary
@@ -184,36 +184,36 @@ techs:
       index: monetary
       dims: costs
 
-  hydrogen_storage_system: #combined hydrogen storage system with integrated costs for electrolyser, fuel cell/ccgt, and salt cavern
-    name: 'Hydrogen Storage System'
-    base_tech: storage
-    carrier_in: power
-    carrier_out: power
-    storage_cap_max: .inf
-    flow_out_eff: 0.5544 # 99% for salt cavern discharge * 56% combustion efficiency for h2 CCGT
-    flow_in_eff: 0.6435 # 99% for salt cavern charge * 65% electrolyser efficiency
-    lifetime: 25
-    cyclic_storage: true 
-    storage_loss: 0 #captured by charge and discharge efficiencies
-    cycle_count_limit: 1 # custom maths components to limit number of dispatch cycles across the year
-    number_year_cycles: 1 #custom maths components to identify the number of modelled years (must be a better way of doing this)
-    #flow_ramping: 0.04 #TODO: this is an arbitrary value to smooth charge and discharge with no obvious basis #FIXME: review
-    cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
-      data: 0.003190 # €M / MWh   
-      index: monetary
-      dims: costs
-    cost_flow_cap: #CAPEX cost (electrolyser+CCGT)
-      data: 2.136000 # €M / MW    #1200E/KWh electrolyser + 936 E/KWh CCGT
-      index: monetary
-      dims: costs
-    cost_om_annual: #fixed O&M costs (electrolyser)
-      data: 0.055156 # €M / MW / year #24E/KWh/yr electrolyser + 31.156 E/KWh/yr CCGT
-      index: monetary
-      dims: costs
-    cost_flow_in: #variable maintenance costs (CGGT)
-      data: 0.000004679 # €M / MWh
-      index: monetary
-      dims: costs
+  # hydrogen_storage_system: #combined hydrogen storage system with integrated costs for electrolyser, fuel cell/ccgt, and salt cavern
+  #   name: 'Hydrogen Storage System'
+  #   base_tech: storage
+  #   carrier_in: power
+  #   carrier_out: power
+  #   storage_cap_max: .inf
+  #   flow_out_eff: 0.5544 # 99% for salt cavern discharge * 56% combustion efficiency for h2 CCGT
+  #   flow_in_eff: 0.6435 # 99% for salt cavern charge * 65% electrolyser efficiency
+  #   lifetime: 25
+  #   cyclic_storage: true 
+  #   storage_loss: 0 #captured by charge and discharge efficiencies
+  #   cycle_count_limit: 1.0 # custom maths components to limit number of dispatch cycles across the year
+  #   number_year_cycles: 1.0 #custom maths components to identify the number of modelled years (must be a better way of doing this)
+  #   #flow_ramping: 0.04 #TODO: this is an arbitrary value to smooth charge and discharge with no obvious basis #FIXME: review
+  #   cost_storage_cap: #CAPEX cost of salt cavern in terms of storage energy capacity
+  #     data: 0.003190 # €M / MWh   
+  #     index: monetary
+  #     dims: costs
+  #   cost_flow_cap: #CAPEX cost (electrolyser+CCGT)
+  #     data: 2.136000 # €M / MW    #1200E/KWh electrolyser + 936 E/KWh CCGT
+  #     index: monetary
+  #     dims: costs
+  #   cost_om_annual: #fixed O&M costs (electrolyser)
+  #     data: 0.055156 # €M / MW / year #24E/KWh/yr electrolyser + 31.156 E/KWh/yr CCGT
+  #     index: monetary
+  #     dims: costs
+  #   cost_flow_in: #variable maintenance costs (CGGT)
+  #     data: 0.000004679 # €M / MWh
+  #     index: monetary
+  #     dims: costs
 
 
 

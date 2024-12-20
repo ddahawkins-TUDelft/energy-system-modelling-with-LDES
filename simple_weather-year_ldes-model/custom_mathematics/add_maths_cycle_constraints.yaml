@@ -11,26 +11,26 @@ variables:
     title: Storage Cycle Count Limit
     description: >-
       The number of cycles for which a storage component is permitted to discharge its capacity across the time horizon of the model. Expressed as a multiple of the installed capacity (i.e. unitless factor)
-    default: 10000 # by default, permits ten thousand storage cycles
-    foreach: [techs]
-    where: "techs=hydrogen_storage_system"
+    default: 10000.0 # by default, permits ten thousand storage cycles
+    foreach: [nodes, techs, carriers]
+    where: base_tech=storage AND carrier=hydrogen
     domain: real
     bounds:
       min: 0 
-      max: .inf
+      max: 10000
     active: false #defaults to being inactive
 
   number_year_cycles:
     title: Number of Year Cycles
     description: >-
       The number of years for which the allowable number of cycles occurs over
-    default: 1 # by default, permits one storage cycle
-    foreach: [techs]
-    where: "techs=hydrogen_storage_system"
+    default: 1.0 # by default, permits one storage cycle
+    foreach: [nodes, techs, carriers]
+    where: base_tech=storage AND carrier=hydrogen
     domain: real
     bounds:
       min: 0 
-      max: .inf
+      max: 100
     active: false #defaults to being inactive
 
 
@@ -43,26 +43,27 @@ constraints:
     description: >-
       Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
     foreach: [nodes, techs, carriers]
-    where: "techs=hydrogen_storage_system"
+    where: cycle_count_limit
     equations: #sum_for_all_t( discharge_t * t_length) <= cycle_count_limit * storage_cap * Number_years
       - expression: >-
-          sum(flow_out, over=[timesteps, nodes, techs, carriers]) <= cycle_limit_condition
+          sum(flow_out, over=[timesteps]) <= cycle_limit_condition
     active: true #defaults to being inactive
   
   c_storage_charge_cycle_limit: #have not figured out how to account for multiple years
     description: >-
       Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
     foreach: [nodes, techs, carriers]
-    where: "techs=hydrogen_storage_system"
+    where: cycle_count_limit
     equations: #sum_for_all_t( charge_t * charge efficiency * t_length) <= cycle_count_limit * storage_cap * Number_years
       - expression: >-
-          sum(flow_in_inc_eff, over=[timesteps, nodes, techs, carriers]) <= cycle_limit_condition
+          sum(flow_in_inc_eff, over=[timesteps]) <= cycle_limit_condition
     active: true #defaults to being inactive
   
   annual_capacity_factor_min:
     description: >
       Limit the lower bound of annual technology operation as a
       fraction of annual operation at maximum capacity.
+    active: true
     foreach: [nodes, techs, carriers]
     where: capacity_factor_min
     equations:
@@ -73,8 +74,15 @@ constraints:
       total_time: &total_time
         - expression: sum(timestep_resolution * timestep_weights, over=timesteps)  
 
-  #TODO: Add a daily flow capacity factor for the hydrogen storage (salt cavern)... inspo from maths in balance_storage_iter re. datestep https://calliope.readthedocs.io/en/v0.7.0.dev5/math/storage_inter_cluster/?h=day#__tabbed_2_2
-
+  # TODO: Add a daily flow capacity factor for the hydrogen storage (salt cavern)... inspo from maths in balance_storage_iter re. datestep https://calliope.readthedocs.io/en/v0.7.0.dev5/math/storage_inter_cluster/?h=day#__tabbed_2_2
+  c_daily_hydrogen_withdrawl_limit:
+    description: >
+      Limit the upper bound of daily net flows for a H2 storage tech as a
+      fraction of its maximum storage capacity. Fraction derived from TNO data src:= Large Scale Energy Storage In Salt Caverns And Depleted Fields, TNO, 2020
+    foreach: [nodes, techs, carriers, timesteps]
+    where: cycle_count_limit
+    equations:
+    - expression: daily_change_storage <= daily_withdrawal_limit
 
 #
 #          Global Expressions
@@ -86,9 +94,9 @@ global_expressions:
     description: >-
       Summation of flow out for hydrogen storage across the model time horizon
     default: 0
-    unit: kWh
+    unit: energy
     foreach: [nodes, techs, carriers]
-    where: "techs=hydrogen_storage_system"
+    where: cycle_count_limit
     equations: 
       - expression: >-
           sum(flow_out, over=[timesteps])
@@ -99,9 +107,9 @@ global_expressions:
     description: >-
       Summation of flow in for hydrogen storage across the model time horizon
     default: 0
-    unit: kWh
+    unit: energy
     foreach: [nodes, techs, carriers]
-    where: "techs=hydrogen_storage_system"
+    where: cycle_count_limit
     equations: 
       - expression: >-
           sum(flow_in_inc_eff, over=[timesteps])
@@ -112,10 +120,48 @@ global_expressions:
     description: >-
       Execution of the cycle limit equation to test functionality
     default: 0
-    unit: kWh
+    unit: energy
     foreach: [nodes, techs, carriers]
-    where: "techs=hydrogen_storage_system"
+    where: cycle_count_limit
     equations: 
       - expression: >-
           storage_cap * cycle_count_limit * number_year_cycles
+    active: true
+
+  # daily_hourly_flow_out:
+  #   title: Bi Hourly Flow
+  #   description: >-
+  #     Sums the flow outs for all timesteps within the datestep for a hydrogen storage unit six hours
+  #   unit: energy
+  #   foreach: [nodes, techs, carriers, timesteps]
+  #   where: cycle_count_limit
+  #   equations:
+  #   - expression: >- 
+  #       flow_out + roll(flow_out, timesteps=1) + roll(flow_out, timesteps=2) + roll(flow_out, timesteps=3) + roll(flow_out, timesteps=4) + roll(flow_out, timesteps=5) + 
+  #       roll(flow_out, timesteps=6) + roll(flow_out, timesteps=7) + roll(flow_out, timesteps=8) + roll(flow_out, timesteps=9) + roll(flow_out, timesteps=10) +
+  #       roll(flow_out, timesteps=11) + roll(flow_out, timesteps=12) + roll(flow_out, timesteps=13) + roll(flow_out, timesteps=14) + roll(flow_out, timesteps=15) +
+  #       roll(flow_out, timesteps=16) + roll(flow_out, timesteps=17) + roll(flow_out, timesteps=18) + roll(flow_out, timesteps=19) + roll(flow_out, timesteps=20) +
+  #       roll(flow_out, timesteps=21) + roll(flow_out, timesteps=22) + roll(flow_out, timesteps=23)
+  #   active: true
+
+  daily_change_storage:
+    title: Daily Change in H2 Storage
+    description: >-
+      Subtracts the SOC from the SOC 24hrs previously for all timesteps for a hydrogen storage unit
+    unit: energy
+    foreach: [nodes, techs, carriers, timesteps]
+    where: cycle_count_limit
+    equations:
+    - expression: storage - roll(storage, timesteps=24)
+    active: true
+
+  daily_withdrawal_limit:
+    title: Limit on withdrawl of H2 from Cavern
+    description: >-
+      Limit on withdrawl of H2 from Cavern as a fraction of Storage Capacity. Fraction derived from TNO data src:= Large Scale Energy Storage In Salt Caverns And Depleted Fields, TNO, 2020
+    unit: energy
+    foreach: [nodes, techs]
+    where: cycle_count_limit
+    equations:
+    - expression: storage_cap *0.017931
     active: true

@@ -73,8 +73,8 @@ operate_save_path= 'simple_weather-year_ldes-model/results/single_year_runs/resu
 
 #generate calliope config variables
 plan_start_date = str(plan_year)+'-01-01'
-plan_end_date = str(plan_year)+'-01-31'
-operate_start_date = str(plan_year)+'-01-01'
+plan_end_date = str(plan_year)+'-01-31' #TODO: set to December again
+operate_start_date = str(plan_year)+'-01-01' #TODO: set to December again
 operate_end_date = str(plan_year)+'-01-31'
 
 # run the build model for the build year
@@ -100,7 +100,8 @@ operate_mode_dict = {'config.build.ensure_feasibility': True,'config.build.mode'
 print(operate_mode_dict)
 
 op_model.build(operate_mode_dict)
-print(op_model)
+print(op_model.inputs)
+
 
 op_model.solve(force=True)
 op_model.to_netcdf(operate_save_path)

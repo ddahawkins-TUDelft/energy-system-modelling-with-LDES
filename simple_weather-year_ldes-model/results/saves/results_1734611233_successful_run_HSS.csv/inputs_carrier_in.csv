@@ -1,4 +1,0 @@
-nodes,techs,carriers,carrier_in
-netherlands,battery,power,1.0
-netherlands,demand_power,power,1.0
-netherlands,hydrogen_storage_system,power,1.0

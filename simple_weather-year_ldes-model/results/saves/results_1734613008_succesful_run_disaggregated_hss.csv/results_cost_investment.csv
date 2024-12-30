@@ -1,9 +1,0 @@
-nodes,techs,costs,cost_investment
-netherlands,battery,monetary,1108.326025564123
-netherlands,electrolyser,monetary,21802.88614513725
-netherlands,h2_elec_conversion,monetary,3906.065208850621
-netherlands,h2_salt_cavern,monetary,12887.789092920957
-netherlands,nuclear,monetary,11427.9
-netherlands,offshore_wind,monetary,58982.76531002502
-netherlands,onshore_wind,monetary,17760.0
-netherlands,solar,monetary,18832.688729966994

@@ -1,7 +1,0 @@
-techs,costs,cost_flow_cap
-electrolyser,monetary,1.2
-h2_elec_conversion,monetary,0.0936
-nuclear,monetary,6.926
-offshore_wind,monetary,2.12
-onshore_wind,monetary,1.11
-solar,monetary,0.56

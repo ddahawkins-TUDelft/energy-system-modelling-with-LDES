@@ -5,7 +5,7 @@ import plotly.express as px
 
 
 #functions
-def visualise_SOC(model):
+def visualise_SOC(model, run_type):
     df_storage = (
         (model.results.storage.fillna(0))
         # .sel(techs="hydrogen_storage_system")
@@ -57,12 +57,45 @@ def visualise_SOC(model):
                 showlegend=showlegend,
             )
             showlegend = False
+    
+    if run_type == 'operate':
+
+        df_unmet_demand = (
+            (model.results.unmet_demand.fillna(0))
+            # .sel(techs="hydrogen_storage_system")
+            .to_series()
+            .where(lambda x: x != 0)
+            .dropna()
+            .to_frame("Unmet Demand (MWh)")
+            .reset_index()
+        )
+
+        for idx, node in enumerate(node_order[::-1]):
+            unmet_val = df_unmet_demand.loc[
+                df_unmet_demand.nodes == node, "Unmet Demand (MWh)"
+            ]
+            if not unmet_val.empty:
+                fig.add_scatter(
+                    x=df_unmet_demand.loc[
+                        df_unmet_demand.nodes == node, "timesteps"
+                    ],
+                    y=1 * unmet_val,
+                    row=idx + 1,
+                    col="all",
+                    marker_color="red",
+                    name="Unmet Demand",
+                    legendgroup="Demand",
+                    showlegend=showlegend,
+                    mode='markers'
+                )
+                showlegend = False
+            
     fig.update_yaxes(matches=None)
-    fig.write_html("simple_weather-year_ldes-model/results/result_storage.html", auto_open=True)
+    fig.write_html("simple_weather-year_ldes-model/results/result_storage"+str(run_type)+".html", auto_open=True)
 
 #Run Parameters
 plan_year = 2015
-operate_year = 2016
+operate_year = 2015
 number_years = 1
 
 #results save path
@@ -73,12 +106,14 @@ operate_save_path= 'simple_weather-year_ldes-model/results/single_year_runs/resu
 
 #generate calliope config variables
 plan_start_date = str(plan_year)+'-01-01'
-plan_end_date = str(plan_year)+'-01-31' #TODO: set to December again
-operate_start_date = str(plan_year)+'-01-01' #TODO: set to December again
-operate_end_date = str(plan_year)+'-01-31'
-
+plan_end_date = str(plan_year)+'-12-31' #TODO: set to December again
+operate_start_date = str(operate_year)+'-01-01' #TODO: set to December again
+operate_end_date = str(operate_year)+'-12-31'
+days_for_foresight = (datetime.date(operate_year,12,31)-datetime.date(operate_year,1,1)).days
+print('Operate Foresight Horizon set to: '+str(days_for_foresight))
 # run the build model for the build year
 # calliope.set_log_verbosity("INFO", include_solver_output=True)
+calliope.set_log_verbosity("INFO", include_solver_output=True)
 
 model = calliope.Model(
     'simple_weather-year_ldes-model/model.yaml',
@@ -90,29 +125,65 @@ model.build()
 model.solve()
 model.to_netcdf(plan_save_path)
 
+#dictionaries for assembling op model constraints
+techs_flow_dict = {}
+techs_storage_dict = {}
+
+# REDUNDANT USED FOR DEBUGGING
+# model = calliope.read_netcdf('simple_weather-year_ldes-model/results/single_year_runs/results_plan_2015_1734782728.netcdf')
+
+df_storage_cap = (
+        (model.results.storage_cap.fillna(0))
+        # .sel(techs="hydrogen_storage_system")
+        .to_series()
+        .where(lambda x: x != 0)
+        .dropna()
+        .to_frame("Storage (MWh)")
+        .reset_index()
+    )
+
+df_capacity = (
+    model.results.flow_cap
+    .where(model.results.techs != "demand_power")
+    # .sel(carriers="power")
+    .to_series()
+    #.where(lambda x: x != 0)
+    .dropna()
+    .to_frame("Flow capacity (MW)")
+    .reset_index()
+)
+
+df_capacity=df_capacity.sort_values(by=['Flow capacity (MW)'],ascending=True)
 
 
+for index, row in df_capacity.iterrows():
+    # dict_str = 'nodes.'+row['nodes']+'.techs.'+row['techs']+'.flow_cap'
+    dict_str = f"nodes.{row['nodes']}.techs.{row["techs"]}.flow_cap"
+    techs_flow_dict[dict_str] = row['Flow capacity (MW)']
+
+for index, row in df_storage_cap.iterrows():
+    # dict_str = 'nodes.'+row['nodes']+'.techs.'+row['techs']+'.storage_cap'
+    dict_str = f"nodes.{row['nodes']}.techs.{row["techs"]}.storage_cap"
+    techs_storage_dict[dict_str] =  row['Storage (MWh)']
 # run the operate model for the operate year
 
-op_model = model
+override_dictionary = {'config.init.time_subset': [str(operate_start_date), str(operate_end_date)], 'techs.h2_salt_cavern.number_year_cycles': number_years,'config.build.operate_horizon': str(days_for_foresight)+'d','config.build.operate_window': str(days_for_foresight)+'d'}
+override_dictionary.update(techs_storage_dict)
+override_dictionary.update(techs_flow_dict)
+# print(override_dictionary)
 
-operate_mode_dict = {'config.build.ensure_feasibility': True,'config.build.mode': 'operate', 'config.build.operate_use_cap_results': True,'config.build.operate_horizon': '48h','config.build.operate_window': '24h','config.init.time_subset': [str(operate_start_date), str(operate_end_date)], 'techs.h2_salt_cavern.number_year_cycles': number_years}
-print(operate_mode_dict)
+op_model = calliope.Model(
+    'simple_weather-year_ldes-model/model.yaml',
+    scenario='single_year_runs_operate',
+    override_dict=override_dictionary
+)
 
-op_model.build(operate_mode_dict)
-print(op_model.inputs)
-
-
-op_model.solve(force=True)
+op_model.build()
+op_model.solve()
 op_model.to_netcdf(operate_save_path)
 
-# TODO: Perhaps manually parse the variables into the model from the results file. Can use https://calliope.readthedocs.io/en/stable/user/ref_example_models.html as a reference for inputs
-
-
-# model = calliope.read_netcdf(plan_save_path)
-
-# visualise_SOC(model)
-# visualise_SOC(op_model)
+visualise_SOC(model, 'plan')
+visualise_SOC(op_model, 'operate')
 
 #visualise results
 

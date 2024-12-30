@@ -23,8 +23,8 @@ config:
   solve:
     solver: gurobi
     solver_options:
-      Presolve: 0
-      CrossoverBasis: 1
+      # Presolve: 0
+      # CrossoverBasis: 1
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 # --8<-- [end:config]
 

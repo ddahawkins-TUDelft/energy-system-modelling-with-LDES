@@ -1,7 +1,0 @@
-techs,costs,cost_om_annual
-electrolyser,monetary,0.024
-h2_elec_conversion,monetary,0.031156
-nuclear,monetary,0.166
-offshore_wind,monetary,0.05
-onshore_wind,monetary,0.0164
-solar,monetary,0.0113

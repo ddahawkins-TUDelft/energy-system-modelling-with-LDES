@@ -33,6 +33,19 @@ variables:
       max: 100
     active: false #defaults to being inactive
 
+  # flow_cap_carrier:
+  #   title: Carrier Flow Capacity
+  #   description: >-
+  #     The Flow Capacity per carrier
+  #   default: 1.0 # by default, permits one storage cycle
+  #   foreach: [nodes, techs, carriers]
+  #   where: flow_cap_max
+  #   domain: real
+  #   bounds:
+  #     min: 0 
+  #     max: 10000000
+  #   active: false #defaults to being inactive
+
 
 #
 #          Constraints
@@ -47,17 +60,17 @@ constraints:
     equations: #sum_for_all_t( discharge_t * t_length) <= cycle_count_limit * storage_cap * Number_years
       - expression: >-
           sum(flow_out, over=[timesteps]) <= cycle_limit_condition
-    active: true #defaults to being inactive
+    active: false #defaults to being inactive
   
-  c_storage_charge_cycle_limit: #have not figured out how to account for multiple years
-    description: >-
-      Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
-    foreach: [nodes, techs, carriers]
-    where: cycle_count_limit
-    equations: #sum_for_all_t( charge_t * charge efficiency * t_length) <= cycle_count_limit * storage_cap * Number_years
-      - expression: >-
-          sum(flow_in_inc_eff, over=[timesteps]) <= cycle_limit_condition
-    active: true #defaults to being inactive
+  # c_storage_charge_cycle_limit: #have not figured out how to account for multiple years
+  #   description: >-
+  #     Constrain the discharge (/charge?) of a storage technology based on its capacity and allowable number of storage cycles 
+  #   foreach: [nodes, techs, carriers]
+  #   where: cycle_count_limit
+  #   equations: #sum_for_all_t( charge_t * charge efficiency * t_length) <= cycle_count_limit * storage_cap * Number_years
+  #     - expression: >-
+  #         sum(flow_in_inc_eff, over=[timesteps]) <= cycle_limit_condition
+  #   active: true #defaults to being inactive
   
   annual_capacity_factor_min:
     description: >
@@ -74,15 +87,23 @@ constraints:
       total_time: &total_time
         - expression: sum(timestep_resolution * timestep_weights, over=timesteps)  
 
-  # TODO: Add a daily flow capacity factor for the hydrogen storage (salt cavern)... inspo from maths in balance_storage_iter re. datestep https://calliope.readthedocs.io/en/v0.7.0.dev5/math/storage_inter_cluster/?h=day#__tabbed_2_2
-  c_daily_hydrogen_withdrawl_limit:
-    description: >
-      Limit the upper bound of daily net flows for a H2 storage tech as a
-      fraction of its maximum storage capacity. Fraction derived from TNO data src:= Large Scale Energy Storage In Salt Caverns And Depleted Fields, TNO, 2020
-    foreach: [nodes, techs, carriers, timesteps]
-    where: cycle_count_limit
-    equations:
-    - expression: daily_change_storage <= daily_withdrawal_limit
+  # Add a daily flow capacity factor for the hydrogen storage (salt cavern)... inspo from maths in balance_storage_iter re. datestep https://calliope.readthedocs.io/en/v0.7.0.dev5/math/storage_inter_cluster/?h=day#__tabbed_2_2
+  # c_daily_hydrogen_withdrawl_limit:
+  #   description: >
+  #     Limit the upper bound of daily net flows for a H2 storage tech as a
+  #     fraction of its maximum storage capacity. Fraction derived from TNO data src:= Large Scale Energy Storage In Salt Caverns And Depleted Fields, TNO, 2020
+  #   foreach: [nodes, techs, carriers, timesteps]
+  #   where: cycle_count_limit
+  #   equations:
+  #   - expression: daily_change_storage <= daily_withdrawal_limit
+
+  # c_flow_cap_equals:
+  #   description: >
+  #     Limit the flow cap to that of the build results
+  #   foreach: [nodes, techs, carriers]
+  #   where: flow_cap_carrier
+  #   equations:
+  #   - expression: flow_cap = flow_cap_carrier
 
 #
 #          Global Expressions
@@ -102,18 +123,19 @@ global_expressions:
           sum(flow_out, over=[timesteps])
     active: true
 
-  sum_hydrogen_charge:
-    title: Total of Hydrogen Storage System Charge
-    description: >-
-      Summation of flow in for hydrogen storage across the model time horizon
-    default: 0
-    unit: energy
-    foreach: [nodes, techs, carriers]
-    where: cycle_count_limit
-    equations: 
-      - expression: >-
-          sum(flow_in_inc_eff, over=[timesteps])
-    active: true
+#  Realised this is unnecessary as its implicitly constrained by the discharge constraint
+  # sum_hydrogen_charge:
+  #   title: Total of Hydrogen Storage System Charge
+  #   description: >-
+  #     Summation of flow in for hydrogen storage across the model time horizon
+  #   default: 0
+  #   unit: energy
+  #   foreach: [nodes, techs, carriers]
+  #   where: cycle_count_limit
+  #   equations: 
+  #     - expression: >-
+  #         sum(flow_in_inc_eff, over=[timesteps])
+  #   active: true
 
   cycle_limit_condition:
     title: Limit of Discharge Capacity within Cycle
@@ -144,24 +166,24 @@ global_expressions:
   #       roll(flow_out, timesteps=21) + roll(flow_out, timesteps=22) + roll(flow_out, timesteps=23)
   #   active: true
 
-  daily_change_storage:
-    title: Daily Change in H2 Storage
-    description: >-
-      Subtracts the SOC from the SOC 24hrs previously for all timesteps for a hydrogen storage unit
-    unit: energy
-    foreach: [nodes, techs, carriers, timesteps]
-    where: cycle_count_limit
-    equations:
-    - expression: storage - roll(storage, timesteps=24)
-    active: true
+  # daily_change_storage:
+  #   title: Daily Change in H2 Storage
+  #   description: >-
+  #     Subtracts the SOC from the SOC 24hrs previously for all timesteps for a hydrogen storage unit
+  #   unit: energy
+  #   foreach: [nodes, techs, carriers, timesteps]
+  #   where: cycle_count_limit
+  #   equations:
+  #   - expression: storage - roll(storage, timesteps=24)
+  #   active: true
 
-  daily_withdrawal_limit:
-    title: Limit on withdrawl of H2 from Cavern
-    description: >-
-      Limit on withdrawl of H2 from Cavern as a fraction of Storage Capacity. Fraction derived from TNO data src:= Large Scale Energy Storage In Salt Caverns And Depleted Fields, TNO, 2020
-    unit: energy
-    foreach: [nodes, techs]
-    where: cycle_count_limit
-    equations:
-    - expression: storage_cap *0.017931
-    active: true
+  # daily_withdrawal_limit:
+  #   title: Limit on withdrawl of H2 from Cavern
+  #   description: >-
+  #     Limit on withdrawl of H2 from Cavern as a fraction of Storage Capacity. Fraction derived from TNO data src:= Large Scale Energy Storage In Salt Caverns And Depleted Fields, TNO, 2020
+  #   unit: energy
+  #   foreach: [nodes, techs]
+  #   where: cycle_count_limit
+  #   equations:
+  #   - expression: storage_cap *0.017931
+  #   active: true

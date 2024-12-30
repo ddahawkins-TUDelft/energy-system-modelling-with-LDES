@@ -95,7 +95,7 @@ def visualise_SOC(model, run_type):
                 showlegend = False
             
     fig.update_yaxes(matches=None)
-    fig.write_html("simple_weather-year_ldes-model/results/result_storage"+str(run_type)+".html", auto_open=True)
+    fig.write_html("simple_weather-year_ldes-model/results/result_storage"+str(run_type)+".html")
 
 #function for printing run results to terminal
 def print_capacities(model):
@@ -279,7 +279,7 @@ def generate_runs(plan_year, operate_year, number_years):
 plan_year = 2019
 operate_year = 2019
 
-for i in range(2012,2019+1): #TODO: already run for 2010-2011
+for i in range(2013,2019+1): #TODO: already run for 2010-2011
     for j in range(2010,2019+1):
         if i != j:
             generate_runs(i,j,1)

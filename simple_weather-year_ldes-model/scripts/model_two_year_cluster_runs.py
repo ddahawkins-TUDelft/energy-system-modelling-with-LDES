@@ -269,7 +269,6 @@ def visualise_costs(anc_wy,app_wy,anc_weight,app_weight):
     # # fig_capacities.write_html("simple_weather-year_ldes-model/results/result_cluster_caps.html", auto_open=True)
     # print(f"Cluster Cost: {df_costs["Costs Million EURO"].sum()}, Full Cost: {df_costs_full["Costs Million EURO"].sum()}")
 
-visualise_costs(2012,2014,1,9)
 visualise_costs(2012,2015,1,9)
 visualise_costs(2012,2016,1,9)
 visualise_costs(2012,2017,1,9)

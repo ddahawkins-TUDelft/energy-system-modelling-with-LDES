@@ -171,7 +171,7 @@ def visualise_costs(anc_wy,app_wy,anc_weight,app_weight):
             
     #     )
     
-    #create area chart of storage distros over time
+    # #create area chart of storage distros over time
     # fig_storage = px.area(
     #     df_storage_hss,
     #     x="timesteps",
@@ -269,15 +269,37 @@ def visualise_costs(anc_wy,app_wy,anc_weight,app_weight):
     # # fig_capacities.write_html("simple_weather-year_ldes-model/results/result_cluster_caps.html", auto_open=True)
     # print(f"Cluster Cost: {df_costs["Costs Million EURO"].sum()}, Full Cost: {df_costs_full["Costs Million EURO"].sum()}")
 
-visualise_costs(2012,2015,1,9)
-visualise_costs(2012,2016,1,9)
-visualise_costs(2012,2017,1,9)
-visualise_costs(2012,2018,1,9)
-visualise_costs(2012,2019,1,9)
+def review_storage_across_cluster_runs(year_min, year_max):
+    max_val = 0
+    max_year = 0
+    x_axis_vals = []
+    y_axis_vals = []
 
-for i in range(2013,2019+1):
-    for j in range (2011,2019+1):
-        if j != i+1:
-            if j!= i:
-                visualise_costs(i,j,1,9)
-                print(f'Optimisation for [{i},2010] complete')
+    for i in range(year_min, year_max+1):
+        for j in range(year_min, year_max+1):
+            if i != j:
+                model = calliope.read_netcdf(f"simple_weather-year_ldes-model/results/two_year_cluster_runs/results_plan_cluster_{i}_{j}_weights_1_9.netcdf") 
+
+                df_storage = (
+                    (model.results.storage_cap.fillna(0))
+                    .sel(techs="h2_salt_cavern")
+                    .to_series()
+                    .where(lambda x: x != 0)
+                    .dropna()
+                    .to_frame("Hydrogen Storage Capacity (MWh)")
+                    .reset_index()
+                )["Hydrogen Storage Capacity (MWh)"].max()
+                y_axis_vals.append(int(df_storage))
+                x_axis_vals.append(f"{i},{j}")
+                if int(df_storage) >= max_val:
+                    max_val = int(df_storage)
+                    max_year = [i,j]
+                print('Years: ',i,j,'Storage: ',int(df_storage))
+    print('Maximum: Year:',max_year,'Storage: ',max_val)
+    fig = px.bar(
+            x=x_axis_vals,
+            y=y_axis_vals,
+            height=1000,
+        )
+    fig.show()
+

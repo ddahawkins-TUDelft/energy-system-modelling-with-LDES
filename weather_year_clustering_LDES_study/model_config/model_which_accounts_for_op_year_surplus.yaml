@@ -1,0 +1,51 @@
+
+import: # Import other files from paths relative to this file, or absolute paths
+  - "technologies.yaml" # This file specifies the model's technologies
+  - "locations.yaml" # This file specifies the model's nodes
+  - "scenarios.yaml" # Scenario and override group definitions #TODO: Review these scenarios
+
+
+# Model configuration: all settings that affect the built model
+# --8<-- [start:config]
+config:
+  init:
+    name: Netherlands_Simple_Weather_Year_Model
+    # What version of Calliope this model is intended for
+    calliope_version: 0.7.0
+    time_subset: ["2010-01-01", "2010-12-31"] # Subset of timesteps
+    broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
+    
+  build:
+    add_math: ["../custom_mathematics/add_maths_cycle_constraints.yaml","../custom_mathematics/intra_cluster_cycle_constraint_surplus_incuded.yaml"]
+    ensure_feasibility: false # Switches on the "unmet demand" constraint #TODO: review what this means, is this Lost Load?
+    mode: plan # Choices: plan, operate #TODO: this requires optimising for each model run
+  solve:
+    solver: gurobi
+    solver_options:
+      # Presolve: 0
+      # CrossoverBasis: 1
+    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+# --8<-- [end:config]
+
+# --8<-- [start:parameters]
+parameters:
+  objective_cost_weights: #TODO: I believe I can use this Cost Weights function to add weights to the different cost classes. It may be possible to use these for assinging weights to the dispatch across different years as part of the clustering method.
+    data: 1
+    index: monetary
+    dims: costs
+  # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+  bigM: 1e6
+  cost_interest_rate:
+    data: 0.10
+    index: monetary
+    dims: costs
+# --8<-- [end:parameters]
+
+data_tables:
+  time_varying_parameters:
+    data: ../data_tables/original_timeseries/time_varying_parameters.csv
+    rows: timesteps
+    columns: [comment, nodes, techs, parameters]
+    drop: comment
+  
+

@@ -1,0 +1,14 @@
+#
+#          Constraints on SOC between Operational Years and System Defining Years
+#          to capture surplus
+#
+
+constraints:
+  c_op_year_cycle_constraint:
+    description: >-
+      Fix the SOC at the end of the OP Year to match that of the storage at timestep = 0 !!Assumes the operational year comes first in the model setup!!
+    foreach: [nodes, techs, timesteps]
+    where: (include_storage=true or base_tech=storage) AND NOT (base_tech=supply OR base_tech=demand) AND timesteps=get_val_at_index(timesteps=8760)
+    equations:
+      - expression: >-
+          storage == roll(storage,timesteps=8760)

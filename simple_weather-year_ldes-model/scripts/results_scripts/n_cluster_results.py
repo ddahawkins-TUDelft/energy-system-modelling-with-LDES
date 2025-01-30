@@ -509,6 +509,8 @@ result = pd.read_csv('simple_weather-year_ldes-model/export/all_runs_results.csv
 parameter='Mean Abs Capacity Mix Error' # Options:'Mean Capacity Mix Error' 'Mean Abs Capacity Mix Error' 'Abs Compound Error' 'Cost Error'
 
 
-graphic_box_plot_cluster_errors(result)
-graphic_bar_featured_year_errors(result,'Abs Compound Error')
-review_year_couples_in_n_3_runs(result,[2016,2017])
+# graphic_box_plot_cluster_errors(result)
+# graphic_bar_featured_year_errors(result,'Abs Compound Error')
+# review_year_couples_in_n_3_runs(result,[2016,2017])
+
+print(identify_design_candidates(result,0.1,0.1))

@@ -134,7 +134,7 @@ def run_model_with_timestep_weights(dict_input):
     model.build()
     print('Solving Model...')
     model.solve()
-    model.to_netcdf(f"simple_weather-year_ldes-model/results/n_year_cluster_runs/model_cluster_{'_'.join(str(x) for x in dict_input['weather_years'])}_{'_'.join(str(x) for x in dict_input['weights'])}.netcdf")
+    # model.to_netcdf(f"simple_weather-year_ldes-model/results/n_year_cluster_runs/model_cluster_{'_'.join(str(x) for x in dict_input['weather_years'])}_{'_'.join(str(x) for x in dict_input['weights'])}.netcdf")
 
     return model
 
@@ -267,5 +267,49 @@ def review_highlights(path):
 
     return pd.DataFrame.from_dict(output).set_index('Parameter')
 
+min_yr = 2010
+max_yr = 2019
+
+for i in range(min_yr,max_yr+1):
+    for j in range (min_yr, max_yr+1):
+        run = False
+
+        if i != j and i+1 != j:
+            if i != max_yr:
+
+                input_dictionary ={
+                    'weather_years': [j, i, i+1],
+                    'weights': [8,1,1]
+                }
+
+                run = True
+
+            else:
+
+                input_dictionary ={
+                    'weather_years': [j, i, min_yr],
+                    'weights': [8,1,1]
+                }
+
+                if j != min_yr:
+                    run = True
+        
+        if run:
+
+            old_directory = 'simple_weather-year_ldes-model/results/n_year_cluster_runs'
+            new_directory = 'simple_weather-year_ldes-model/results/three_year_cluster_runs'
+
+            file = n_cluster_model_path_parser(input_dictionary)
+
+            if os.path.isfile(n_cluster_model_path_parser(input_dictionary)):
+                print('Result exists. Saving to new directory...', input_dictionary['weather_years'])
+                # model = calliope.read_netcdf(file)
+            else:
+                print(input_dictionary['weather_years'])
+                # model = run_model_with_timestep_weights(input_dictionary)
+                
+
+            # model.to_netcdf(f"simple_weather-year_ldes-model/results/three_year_cluster_runs/model_cluster_{'_'.join(str(x) for x in input_dictionary['weather_years'])}_{'_'.join(str(x) for x in input_dictionary['weights'])}.netcdf")
 
 
+# run_model_with_timestep_weights(input_dictionary)

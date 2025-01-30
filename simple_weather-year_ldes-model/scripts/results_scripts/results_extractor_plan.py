@@ -5,6 +5,7 @@ import plotly.express as px
 import re
 import os
 import plotly.graph_objects as go
+from IPython.display import Image
 
 # -----------
 #    plan 
@@ -34,7 +35,7 @@ model = {}
 
 pd_results = pd.DataFrame()
 
-def extract_plan_results(pd_results, plan_year):
+def extract_plan_results(plan_year):
     import_file_path = ""
 
     # checks if input year is added, otherwise imports the full model results
@@ -51,6 +52,8 @@ def extract_plan_results(pd_results, plan_year):
             raise Exception(f"Sorry, no results file found for plan year: {plan_year}")
     else:
         model = calliope.read_netcdf("simple_weather-year_ldes-model/results/results_full_horizon_2010_2019.netcdf")
+
+    
     
     df_flow_cap_power = (
                     (model.results.flow_cap.fillna(0))
@@ -148,124 +151,100 @@ def extract_plan_results(pd_results, plan_year):
                     .reset_index()
                     # .drop('techs')
                 )
-
-    result = (
-                df_techs
-                .join(df_year).set_index('techs')
-                .join(df_flow_out_carrier.set_index('techs')).drop(['Flow Out Carrier','nodes'], axis=1).rename(columns={'carriers':'flow_out_carrier'})
-                .join(df_flow_cap_power.set_index('techs')).drop(['nodes'], axis=1)
-                .join(df_storage_cap_hydrogen.set_index('techs')).drop(['nodes'], axis=1)
-                .join(df_flow_cap_hydrogen.set_index('techs')).drop(['nodes'], axis=1)
-                .join(df_cost_investment.set_index('techs')).drop(['nodes','costs'], axis=1)
-                .join(df_cost_investment_annualised.set_index('techs')).drop(['nodes','costs'], axis=1)
-                .join(df_cost_investment_flow_cap.set_index('techs')).drop(['nodes','costs'], axis=1)
-                .join(df_cost_investment_storage_cap.set_index('techs')).drop(['nodes','costs'], axis=1)
-                .join(df_cost_operation_fixed.set_index('techs')).drop(['nodes','costs'], axis=1)
-            )
-
-    if pd_results.empty:
-        pd_results = result
-    else:
-        pd_results = pd.concat([pd_results,result])
     
-    return pd_results
+    results_dict = {
+        'Model': str(plan_year),
+        'Solar': df_flow_cap_power.loc[df_flow_cap_power['techs']=='solar']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        'Offshore Wind': df_flow_cap_power.loc[df_flow_cap_power['techs']=='offshore_wind']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        'Onshore Wind': df_flow_cap_power.loc[df_flow_cap_power['techs']=='onshore_wind']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        'Nuclear': df_flow_cap_power.loc[df_flow_cap_power['techs']=='nuclear']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        'Battery (Power)': df_flow_cap_power.loc[df_flow_cap_power['techs']=='battery']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        'Electrolyser': df_flow_cap_hydrogen.loc[df_flow_cap_hydrogen['techs']=='electrolyser']["Flow Capacity (Hydrogen) (MW)"].values[0]/1000,
+        'LDES': df_storage_cap_hydrogen.loc[df_storage_cap_hydrogen['techs']=='h2_salt_cavern']["Storage Capacity (MWh)"].values[0]/1000,
+        'Battery Storage': df_storage_cap_hydrogen.loc[df_storage_cap_hydrogen['techs']=='battery']["Storage Capacity (MWh)"].values[0]/1000,
+        'Demand': df_flow_cap_power.loc[df_flow_cap_power['techs']=='demand_power']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        'Hydrogen CCGT': df_flow_cap_power.loc[df_flow_cap_power['techs']=='h2_elec_conversion']["Flow Capacity (Power) (MW)"].values[0]/1000,
+        }
+    
+    df_result = pd.DataFrame(results_dict, index=[plan_year])
+    
+    return df_result
          
 #full horizon results
 
+df_results = extract_plan_results('Full Horizon')
 
 for i in range(2010,2019+1):
     print(f"Importing results for: {i}")
-    pd_results = extract_plan_results(pd_results,i)
-print(f"Importing results for: Full: 2010-2019") 
-pd_results = extract_plan_results(pd_results,'Full: 2010-2019')
+    df_results = pd.concat([df_results,extract_plan_results(i)])
 
-pd_results.to_csv('simple_weather-year_ldes-model/export/plan_results.csv')
+colour_1 = 'rgb(0, 51, 102)'
+colour_2 = 'rgb(102, 0, 204)'
+colour_3 = 'rgb(102, 153, 255)'
+colour_4 = 'rgb(51, 204, 204)'
+colour_5 = 'rgb(51, 51, 153)'
+colour_6 = 'rgb(102, 153, 153)'
+colour_7 = 'rgb(51, 102, 153)'
 
-df_hydrogen_caps = (pd_results
-                               .where(pd_results['flow_out_carrier'] == pd_results['carriers'])
-                               .where(pd_results['flow_out_carrier'] == 'hydrogen')
-                               .dropna(how='all')
-                               .rename(columns={"Flow Capacity (Hydrogen) (MW)": 'Flow Capacity (MW)'})
-                            )
-# df_hydrogen_caps = df_output_carrier_flow_caps[df_output_carrier_flow_caps['carriers'] == 'hydrogen']
 
-df_power_caps = (pd_results
-                               .where(pd_results['flow_out_carrier'] == pd_results['carriers'])
-                               .where(pd_results['flow_out_carrier'] == 'power')
-                               .dropna(how='all')
-                               .rename(columns={"Flow Capacity (Power) (MW)": 'Flow Capacity (MW)'})
-                            )
 
-df_cap_out_flows = pd.concat([df_hydrogen_caps[['year','technologies','carriers',"Flow Capacity (MW)"]],df_power_caps[['year','technologies','carriers',"Flow Capacity (MW)"]]])
-# print(df_cap_out_flows)
-
-#TODO: FIXME: Datasets prepared above, they need to be imported into box plot below and grouped by carrier
-
-fig = go.Figure()
-
-fig.add_trace(go.Box(
-    y=df_power_caps['Flow Capacity (MW)'].where(df_power_caps['year'] != 'Full: 2010-2019'),
-    x=df_power_caps['technologies'],
-    name='power',
-    marker_color='#3D9970',
-    boxpoints='all'
-))
-
-df_full_year = df_cap_out_flows.where(df_cap_out_flows['year'] == 'Full: 2010-2019')
-
-fig.add_trace(go.Scatter(
-    y=df_full_year['Flow Capacity (MW)'],
-    x=df_full_year['technologies'],
-    name='Reference (Full Horizon)',
-    mode='markers',
-    marker_color='black',
-    marker_symbol ='diamond',
-    # boxpoints='all'
-))
-
-fig.add_trace(go.Box(
-    y=df_hydrogen_caps['Flow Capacity (MW)'],
-    x=df_hydrogen_caps['technologies'],
-    name='hydrogen',
-    marker_color='#FF851B',
-    boxpoints='all'
-))
-
-fig.update_layout(
-    yaxis=dict(
-        title=dict(
-            text='Outflow Capacity (MW)')
-    ),
-    boxmode='group' # group together boxes of the different traces for each value of x
+fig = go.Figure(data=[
+              go.Bar(name='Nuclear', x=df_results['Model'], y=df_results['Nuclear'],marker_color=colour_1),
+              go.Bar(name='Onshore Wind', x=df_results['Model'], y=df_results['Onshore Wind'], marker_color=colour_5),
+              go.Bar(name='Offshore Wind', x=df_results['Model'], y=df_results['Offshore Wind'], marker_color=colour_2),
+              go.Bar(name='Solar', x=df_results['Model'], y=df_results['Solar'], marker_color=colour_7),
+              go.Bar(name='Hydrogen CCGT', x=df_results['Model'], y=df_results['Hydrogen CCGT'], marker_color=colour_3),
+              go.Bar(name='Battery', x=df_results['Model'], y=df_results['Battery (Power)'], marker_color=colour_4),
+              go.Bar(name='Electrolyser', x=df_results['Model'], y=df_results['Electrolyser'],marker_color=colour_6),
+]
 )
 
-# fig = px.box(pd_results[['technologies',"Flow Capacity (MW)"]].dropna(), 
-#              x="technologies", 
-#              y="Flow Capacity (MW)",
-#              points=False
-#              )
-# fig.show()
-fig.write_html("simple_weather-year_ldes-model/export/result_caps.html", auto_open=True)
+# fig = go.Figure(data=[
+              
+#               go.Bar(name='LDES', x=df_results['Model'], y=df_results['LDES']),
+#               go.Bar(name='Battery', x=df_results['Model'], y=df_results['Battery Storage']),
+# ]
+# )
+fig.update_layout(
+        barmode='stack',
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        title=dict(text=f"Power capacity mix across single year models and the reference model."),
+        yaxis = dict(
+            title = dict(
+                text='Capacity, GW',
+                font=dict(size=24)
+            )
+        ),
+        xaxis = dict(
+            title = dict(
+                text='Model',
+                font=dict(size=24)
+            )
+        ),
+        legend=dict(
+            x=0.9,
+            y=1.0,
+            bgcolor = 'rgba(255,255,255,0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        # yaxis_tickformat=".2f",
+    )
 
-df_storage_results = pd_results.where(pd_results['year'] != 'Full: 2010-2019')
-df_storage_results_full_year = pd_results[['technologies','Storage Capacity (MWh)']].where(pd_results['year'] == 'Full: 2010-2019').dropna()
+# fig.update_yaxes(matches=None)
+fig.update_xaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='lightgrey'
+)
+fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(255, 255, 255, 0)'
+)
+# fig.write_html("simple_weather-year_ldes-model/export/result_single_year_caps.html", auto_open=True)
+fig.write_image("simple_weather-year_ldes-model/export/result_single_year_caps.png", format="png", width=2000, height=2000, scale=1)
 
-fig = px.box(df_storage_results[['technologies','Storage Capacity (MWh)']].dropna(), 
-             x="technologies", 
-             y="Storage Capacity (MWh)",
-             points='all'
-             )
-
-fig.add_trace(go.Scatter(
-    y=df_storage_results_full_year['Storage Capacity (MWh)'],
-    x=df_storage_results_full_year['technologies'],
-    name='Reference (Full Horizon)',
-    mode='markers',
-    marker_color='black',
-    marker_symbol ='diamond',
-    # boxpoints='all'
-))
-
-fig.write_html("simple_weather-year_ldes-model/export/result_storage.html", auto_open=True)
 
 # print(pd_results[['technologies','Storage Capacity (MWh)']].dropna().head())

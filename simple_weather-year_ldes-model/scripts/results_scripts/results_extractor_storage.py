@@ -43,13 +43,13 @@ for py in range(min_year,max_year+1):
     if py==min_year:
         df_storage_hss = (
             (model.results.storage.fillna(0))
-            # .sel(techs="hydrogen_storage_system")
+            .sel(techs="h2_salt_cavern")
             .to_series()
             .where(lambda x: x != 0)
             .dropna()
             .to_frame("Storage (MWh)")
-            .rename(columns={'Storage (MWh)':'Storage (GWh)'})
-            .mul(0.001) #convert MWh to GWh
+            .rename(columns={'Storage (MWh)':'Storage (TWh)'})
+            .mul(0.000001) #convert MWh to GWh
             .reset_index()
         )
     else:
@@ -57,106 +57,139 @@ for py in range(min_year,max_year+1):
             [df_storage_hss,
             (
             (model.results.storage.fillna(0))
-            # .sel(techs="hydrogen_storage_system")
+            .sel(techs="h2_salt_cavern")
             .to_series()
             .where(lambda x: x != 0)
             .dropna()
             .to_frame("Storage (MWh)")
-            .rename(columns={'Storage (MWh)':'Storage (GWh)'})
-            .mul(0.001) #convert MWh to GWh
+            .rename(columns={'Storage (MWh)':'Storage (TWh)'})
+            .mul(0.000001) #convert MWh to GWh
             .reset_index()
             )
             ]
             )
 
+    
+
 node_order = df_storage_hss.nodes.unique()
 
-fig = px.area(
-        df_storage_hss,
-        x="timesteps",
-        y="Storage (GWh)",
-        facet_row="nodes",
-        category_orders={"nodes": node_order},
-    )
 
 full_model=calliope.read_netcdf('simple_weather-year_ldes-model/results/results_full_horizon_2010_2019.netcdf')
 
 df_storage_hss_full = (
             (full_model.results.storage.fillna(0))
-            # .sel(techs="hydrogen_storage_system")
+            .sel(techs="h2_salt_cavern")
             .to_series()
             .where(lambda x: x != 0)
             .dropna()
             .to_frame("Storage (MWh)")
-            .rename(columns={'Storage (MWh)':'Storage (GWh)'})
-            .mul(0.001) #convert MWh to GWh
+            .rename(columns={'Storage (MWh)':'Storage (TWh)'})
+            .mul(0.000001) #convert MWh to GWh
             .reset_index()
             
         )
 
-for idx, node in enumerate(node_order[::-1]):
-            full_val = df_storage_hss_full.loc[
-                df_storage_hss_full.nodes == node, "Storage (GWh)"
-            ]
-            if not full_val.empty:
-                fig.add_scatter(
-                    x=df_storage_hss_full.loc[
-                        df_storage_hss_full.nodes == node, "timesteps"
-                    ],
-                    y=1 * full_val,
-                    row=idx + 1,
-                    col="all",
-                    marker_color="black",
-                    marker_size=1,
-                    name="Full Model Storage",
-                    legendgroup="Full Model",
-                    mode='markers'
-                )
+
+# Roll hourly data into daily data for visualisation
+df_storage_hss = df_storage_hss.groupby([df_storage_hss['timesteps'].dt.date]).max()
+df_storage_hss_full = df_storage_hss_full.groupby([df_storage_hss_full['timesteps'].dt.date]).max()
+
+# annotations
+id_max_storage_full = df_storage_hss_full['Storage (TWh)'].idxmax()
+SOC_max_full = df_storage_hss_full.loc[id_max_storage_full,'Storage (TWh)']
+Date_max_full = df_storage_hss_full.loc[id_max_storage_full,'timesteps']
+
+id_max_storage = df_storage_hss['Storage (TWh)'].idxmax()
+SOC_max = df_storage_hss.loc[id_max_storage,'Storage (TWh)']
+Date_max = df_storage_hss.loc[id_max_storage,'timesteps']
+
+colour_1 = 'rgb(102, 153, 255)'
+colour_1_darker = 'rgb(51, 76, 128)'
+colour_2 = 'rgb(255, 153, 102)'
+colour_2_darker = 'rgb(128, 76, 51)'
 
 
-fig.update_yaxes(matches=None)
-fig.update_xaxes(tickvals=[2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020])
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(
+    x=df_storage_hss_full['timesteps'],
+    y=df_storage_hss_full['Storage (TWh)'],
+    fill='tozeroy',
+    mode='none',
+    line_color=colour_1,
+    name='Reference Model'
+))
+
+fig.add_trace(go.Scatter(
+    x=df_storage_hss['timesteps'],
+    y=df_storage_hss['Storage (TWh)'],
+    fill='tozeroy',
+    mode='none',
+    line_color=colour_2,
+    name='Concatenated Single Weather-Year Models'
+))
+
+fig.add_trace(go.Scatter(
+    x=[Date_max_full],
+    y=[SOC_max_full],
+    mode="markers+text",
+    name="Maximum SOC Full",
+    line_color = 'dark gray',
+    text=[f"Maximum SOC for Reference Model : {round(SOC_max_full,2)} TWh "],
+    textfont=dict(
+        size=16,
+        color="light grey"
+    ),
+    textposition="middle left",
+    showlegend=False
+))
+
+fig.add_trace(go.Scatter(
+    x=[Date_max],
+    y=[SOC_max],
+    mode="markers+text",
+    name="Maximum SOC",
+    line_color = 'dark gray',
+    text=[f" Maximum SOC across Single-Year Models: {round(SOC_max,2)} TWh"],
+    textfont=dict(
+        size=24,
+        color="light grey"
+    ),
+    textposition="middle right",
+    showlegend=False
+))
+
+fig.update_layout(
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        title=dict(text=f"SOC for hydrogen storage over time for the reference model and concatenated single weather-year models."),
+        yaxis = dict(
+            title = dict(
+                text='State of Charge, TWh',
+                font=dict(size=24)
+            )
+        ),
+        legend=dict(
+            x=0,
+            y=1.0,
+            bgcolor = 'rgba(255,255,255,0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        boxmode='group',
+        yaxis_tickformat=".2f",
+    )
+
+# fig.update_yaxes(matches=None)
+fig.update_xaxes(
+    tickvals=[2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020],
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='lightgrey'
+)
+fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(255, 255, 255, 0)'
+)
 fig.write_html("simple_weather-year_ldes-model/export/result_storage_full_vs_singles.html", auto_open=True)
-
-    
-#     df_demand_hourly = (
-#                 (model.inputs.sink_use_equals.fillna(0))
-#                 .sel(techs="demand_power")
-#                 .to_series()
-#                 .where(lambda x: x != 0)
-#                 .dropna()
-#                 .to_frame("Demand (MWh)")
-#                 .reset_index()
-#             )
-    
-#     #count number of hours with unmet demand of more than 10% demand 
-#     demand_CF_hourly = df_unmet_demand_hourly['Unmet Demand (MWh)']/df_demand_hourly['Demand (MWh)']
-#     number_hours_gte_10_percent_unmet_demand = (demand_CF_hourly >= 0.1).sum()
-#     number_hours_unmet_threshold_10_percent.append(number_hours_gte_10_percent_unmet_demand)
-
-#     #sum the unmet demand in year
-#     annual_sum_demand = df_unmet_demand_hourly['Unmet Demand (MWh)'].sum()
-#     unmet_demand.append(annual_sum_demand)
-
-    
-
-#     if not df_unmet_demand_hourly.empty:
-#         var_daily_unmet = df_unmet_demand_hourly.groupby([df_unmet_demand_hourly['timesteps'].dt.date])['Unmet Demand (MWh)'].sum().mean()
-#     else:
-#         var_daily_unmet = 0
-    
-#     daily_average_unmet_demand.append(var_daily_unmet)
-
-#     print(f"PY: {py}, OY: {oy}, Annuam UD: {int(annual_sum_demand)}, Hours>10%: {number_hours_gte_10_percent_unmet_demand}, Daily Mean UD: {int(var_daily_unmet)}")
-
-# # export csv
-
-# export_dict= {
-#                 'plan_year' : plan_year, 
-#                 'op_year' : op_year, 
-#                 'unmet_demand' : unmet_demand, 
-#                 'number_hours_unmet_threshold_10_percent' : number_hours_unmet_threshold_10_percent,
-#                 'daily_average_unmet_demand' : daily_average_unmet_demand
-#               }
-
-# pd.DataFrame(export_dict).to_csv('simple_weather-year_ldes-model/export/single_year_unmet_demand_results.csv')

@@ -47,4 +47,7 @@ def char_scatter_SOC(model):
 
     fig.write_html('simple_weather-year_ldes-model/export/results.html', auto_open=True)
 
-model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/two_year_cluster/results_years_[2010,2011]_weight_[9,1].netcdf')
+# model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/two_year_cluster/with_surplus_tracking/results_years_[2010,2011]_weight_[9,1].netcdf')
+# char_scatter_SOC(model)
+# model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/two_year_cluster/with_intracluster_cycle_condition/results_years_[2010,2011]_weight_[9,1].netcdf')
+# char_scatter_SOC(model)

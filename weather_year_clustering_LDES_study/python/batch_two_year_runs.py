@@ -10,7 +10,7 @@ import script_utilities as util #custom module to abstract away some frequently 
 # script configuration
 model_type = "two_year_cluster" # model type
 results_directory = f"weather_year_clustering_LDES_study/results/{model_type}" #save directory for results
-calliope.set_log_verbosity("INFO", include_solver_output=True) #if True, shows calliope logs as output
+# calliope.set_log_verbosity("INFO", include_solver_output=True) #if True, shows calliope logs as output
 
 
 # import weather years
@@ -18,8 +18,8 @@ df_casestudy = (util.read_years_weights(model_type)) #df of years and weights, o
 
 #loop over the case study years, generate and solve models for each, saving the results as netcdf
 for index, values in df_casestudy.iterrows():
-
-    if index == 0: #for debugging purposes just using the first one
+    print('Running: ', index, values['years'])
+    if index >=0: #for debugging purposes just using the first one
 
             # dictionary that defines the parameters for determining timeseries and weights
         dict_input = {
@@ -34,7 +34,7 @@ for index, values in df_casestudy.iterrows():
 
         # initialise the model given the above and wider parameters
         model = calliope.Model(
-        'weather_year_clustering_LDES_study/model_config/model_with_clusters.yaml',
+        'weather_year_clustering_LDES_study/model_config/model_which_accounts_for_op_year_surplus.yaml',
         scenario='single_year_runs_plan',
         override_dict={
              'config.init.time_subset': [df_timestep_weights['timesteps'].min(), df_timestep_weights['timesteps'].max()],   #change the daterange
@@ -57,7 +57,7 @@ for index, values in df_casestudy.iterrows():
         model.solve()
 
         # identify a save path for the netcdf after solving the model, and save
-        save_path = results_directory+f'/results_years_[{",".join(str(x) for x in values['years'])}]_weight_[{",".join(str(x) for x in values['weights'])}].netcdf'
+        save_path = results_directory+f'/with_surplus_tracking/results_years_[{",".join(str(x) for x in values['years'])}]_weight_[{",".join(str(x) for x in values['weights'])}].netcdf'
         model.to_netcdf(save_path)
 
 

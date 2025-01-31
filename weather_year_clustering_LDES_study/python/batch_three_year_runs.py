@@ -28,7 +28,7 @@ for index, values in df_casestudy.iterrows():
 
         # initialise the model given the above and wider parameters
         model = calliope.Model(
-        'weather_year_clustering_LDES_study/model_config/model_with_intracluster_cycle_condition.yaml', #model #model_with_intracluster_cycle_condition #model_which_accounts_for_op_year_surplus
+        'weather_year_clustering_LDES_study/model_config/model_which_accounts_for_op_year_surplus.yaml', #model #model_with_intracluster_cycle_condition #model_which_accounts_for_op_year_surplus
         scenario='single_year_runs_plan',
         override_dict={ 
                 'config.init.time_subset': [df_timestep_weights['timesteps'].min(), df_timestep_weights['timesteps'].max()],   #change the daterange
@@ -51,5 +51,5 @@ for index, values in df_casestudy.iterrows():
         model.solve()
 
         # identify a save path for the netcdf after solving the model, and save
-        save_path = results_directory+f'/with_intracluster_cycle_condition/results_years_[{",".join(str(x) for x in values['years'])}]_weight_[{",".join(str(x) for x in values['weights'])}].netcdf'
+        save_path = results_directory+f'/with_surplus_tracking/results_years_[{",".join(str(x) for x in values['years'])}]_weight_[{",".join(str(x) for x in values['weights'])}].netcdf'
         model.to_netcdf(save_path)

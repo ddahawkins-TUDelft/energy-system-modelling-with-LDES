@@ -13,7 +13,7 @@ df_casestudy = (util.read_years_weights(model_type)) #df of years and weights, o
 #loop over the case study years, generate and solve models for each, saving the results as netcdf
 for index, values in df_casestudy.iterrows():
     print('Running: ', index, values['years'])
-    if index > 46: #for debugging purposes just using the first one
+    if index >= 0: #for debugging purposes just using the first one
 
             # dictionary that defines the parameters for determining timeseries and weights
         dict_input = {

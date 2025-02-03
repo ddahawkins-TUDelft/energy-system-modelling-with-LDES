@@ -1,8 +1,5 @@
 import calliope
-
-import pandas as pd
 import results_viewer as rv
-import script_utilities as util #custom module to abstract away some frequently used functions
 
 # script configuration
 model_type = "reference" # model type
@@ -21,6 +18,8 @@ model.build()
 model.solve()
 model.to_netcdf(save_path)
 
-rv.chart_bar_flow_cap(model)
 print('breakpoint, in case something goes wrong with save that I can retain the variables to manually save... dont want to lose something after a 17hr run')
+
+rv.chart_bar_flow_cap(model)
+
 print('breakpoint')

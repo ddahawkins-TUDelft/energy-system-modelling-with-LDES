@@ -34,14 +34,14 @@ for index, values in df_casestudy.iterrows():
 
         # initialise the model given the above and wider parameters
         model = calliope.Model(
-        'weather_year_clustering_LDES_study/model_config/model_which_accounts_for_op_year_surplus.yaml',
+        'weather_year_clustering_LDES_study/model_config/model.yaml',
         scenario='single_year_runs_plan',
         override_dict={
              'config.init.time_subset': [df_timestep_weights['timesteps'].min(), df_timestep_weights['timesteps'].max()],   #change the daterange
              'techs.h2_salt_cavern.number_year_cycles': len(dict_input['weather_years']), #update number of cycles parameters, redundant as this constraint has been removed
              'data_tables.time_varying_parameters.data': f"../data_tables/two_year_cluster/time_varying_parameters_temp_two_years.csv", #update location for timeseries data
-             'techs.h2_salt_cavern.v_surplus_factor': max(values['weights']),
-             'techs.battery.v_surplus_factor': max(values['weights']),
+            #  'techs.h2_salt_cavern.v_surplus_factor': max(values['weights']), #activate this when using model_which_accoutns_for_op_year_surplus.yaml
+            #  'techs.battery.v_surplus_factor': max(values['weights']), #activate this when using model_which_accoutns_for_op_year_surplus.yaml
              }
         )
 

@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import os
 
 # Config
-variant = 'with_surplus_tracking' #two cluster conditions were tested, here can switch between them
+variant = 'with_surplus_tracking' #with_intracluster_cycle_condition #with_surplus_tracking #two cluster conditions were tested, here can switch between them
 figure_directory = 'weather_year_clustering_LDES_study/results/figures'
 
 # function based colour palette, takes id and opacity factor
@@ -24,10 +24,23 @@ def colour(id: int, opacity: float = 1):
     return f'rgba({colours[id]},{opacity})'
 
 #paths to ref model and cluster model directories
-path_ref_model = 'simple_weather-year_ldes-model/results/results_full_horizon_2010_2019.netcdf' #TODO: Update with latest run
+path_ref_model = 'weather_year_clustering_LDES_study/results/reference/results_2010_to_2019.netcdf' #TODO: Update with latest run
 path_directory_single_year_cluster = 'weather_year_clustering_LDES_study/results/single_year_cluster'
-path_directory_two_year_cluster = f'weather_year_clustering_LDES_study/results/two_year_cluster/{variant}'
-path_directory_three_year_cluster = f'weather_year_clustering_LDES_study/results/three_year_cluster/{variant}'
+path_variants = {
+    'umodified': {
+        'two_year' : 'weather_year_clustering_LDES_study/results/two_year_cluster/unmodified',
+        'three_year' : 'weather_year_clustering_LDES_study/results/three_year_cluster/unmodified',
+    },
+    'with_surplus': {
+        'two_year' : 'weather_year_clustering_LDES_study/results/two_year_cluster/with_surplus_tracking',
+        'three_year' : 'weather_year_clustering_LDES_study/results/three_year_cluster/with_surplus_tracking',
+    },
+    'cycle_condition': {
+        'two_year' : 'weather_year_clustering_LDES_study/results/two_year_cluster/with_intracluster_cycle_condition',
+        'three_year' : 'weather_year_clustering_LDES_study/results/three_year_cluster/with_intracluster_cycle_condition',
+    }
+}
+
 
 # Function to extract model parameters from filename
 def extract_years_weights(filepath: str, model_type: int):
@@ -372,7 +385,7 @@ def plot_fig2_bar_chart_of_capacity_mix(path_ref_model,path_directory_single_yea
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=.9,
+            y=.95,
             xanchor="center",
             x=0.5,
             bgcolor = 'rgba(255,255,255,1)',
@@ -400,7 +413,7 @@ def plot_fig2_bar_chart_of_capacity_mix(path_ref_model,path_directory_single_yea
     fig.write_image(f"{figure_directory}/fig2.jpeg", width=1920, height=1920, scale=1)
 
 # function plots the 3rd figure, exploring model error against reference
-def generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster):
+def generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster,variant):
     print('Extracting Data for Fig 3')
 
     #initialise empty df
@@ -424,10 +437,98 @@ def generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_y
         filepath = (path_directory_three_year_cluster+'/'+os.fsdecode(file))
         df = pd.concat([df,generate_results_table(filepath,3,path_ref_model)])
 
-    df.to_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots.csv')
+    df.to_csv(f'simple_weather-year_ldes-model/export/data_cluster_box_plots_{variant}.csv')
 
-def plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster):
+def plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster, variant):
     print('Plotting Fig 3')
+
+    generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster,variant)
+    df = pd.read_csv(f'simple_weather-year_ldes-model/export/data_cluster_box_plots_{variant}.csv')
+    df.drop_duplicates(subset=['Run'], inplace=True)
+    df['Cost Error'] = -1* df['Cost Error']
+    df['LDES Capacity Error'] = -1* df['LDES Capacity Error']
+    #separate and group Design Error and Cost Error
+    str_cost = 'Cost Error'
+    str_abs_design = 'Mean Abs Capacity Mix Error'
+    # str_design = 'Mean Capacity Mix Error'
+    str_compound_err = 'Abs Compound Error'
+    ldes_err = 'LDES Capacity Error'
+    df_cost_design_unpivoted = df[['Run',str_cost,str_abs_design,ldes_err,str_compound_err]]
+    df_cost_design_unpivoted=pd.melt(df_cost_design_unpivoted, id_vars=['Run'], var_name='Parameter', value_name='Error')  
+
+    result_n_1 = df_cost_design_unpivoted[df_cost_design_unpivoted['Run'].str.match(r"\[\d{4}\]")]
+    result_n_2 = df_cost_design_unpivoted[df_cost_design_unpivoted['Run'].str.match(r"^\[\d{4},\d{4}\]")]
+    result_n_3 = df_cost_design_unpivoted[df_cost_design_unpivoted['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Box(
+        name='Single Weather Year',
+        y=result_n_1['Error'],
+        x=result_n_1['Parameter'],
+        text=result_n_1['Run'],
+        boxpoints='all', # can also be outliers, or suspectedoutliers, or False
+        jitter=0.3, # add some jitter for a better separation between points
+        marker_color=colour(4,1),
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Box(
+        name='Two Weather Years',
+        y=result_n_2['Error'],
+        x=result_n_2['Parameter'],
+        text=result_n_2['Run'],
+        boxpoints='all', # can also be outliers, or suspectedoutliers, or False
+        jitter=0.3, # add some jitter for a better separation between points
+        marker_color=colour(5,1),
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Box(
+        name='Three Weather Years',
+        y=result_n_3['Error'],
+        x=result_n_3['Parameter'],
+        text=result_n_3['Run'],
+        boxpoints='all', # can also be outliers, or suspectedoutliers, or False
+        jitter=0.3, # add some jitter for a better separation between points
+        marker_color=colour(6,1),
+        # line=dict(width=0),
+        ))
+    fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0.2)',
+    
+    )
+    fig.update_xaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0)'
+    )
+    fig.update_layout(
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        yaxis = dict(
+            title = dict(
+                text='Error',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        legend=dict(
+            x=0,
+            y=1.0,
+            bgcolor = 'rgba(255,255,255,0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        boxmode='group',
+        yaxis_tickformat=".2%",
+        font=dict(
+        family="Times New Roman",
+        size=48,
+        ),
+    )
+
+    fig.write_image(f"{figure_directory}/fig3_{variant}.svg", width=1920, height=1920, scale=1)
+    fig.write_image(f"{figure_directory}/fig3_{variant}.jpeg", width=1920, height=1920, scale=1)
 
 # function plots the 4th figure, timeseries duration curve error across 3-yr clusters
 def plot_fig4_timeseries_duration_curve_error(path_ref_model,path_directory_three_year_cluster):
@@ -436,5 +537,7 @@ def plot_fig4_timeseries_duration_curve_error(path_ref_model,path_directory_thre
 
 # plot_fig1_area_chart_of_SOC(path_ref_model, path_directory_single_year_cluster)
 # plot_fig2_bar_chart_of_capacity_mix(path_ref_model, path_directory_single_year_cluster)
-generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster)
+# generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster)
+plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['cycle_condition']['two_year'],path_variants['cycle_condition']['three_year'],'cycle_condition')
+plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['with_surplus']['two_year'],path_variants['with_surplus']['three_year'],'with_surplus')
 # plot_fig4_timeseries_duration_curve_error(path_ref_model,path_directory_three_year_cluster)

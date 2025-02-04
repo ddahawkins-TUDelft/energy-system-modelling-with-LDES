@@ -439,10 +439,11 @@ def generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_y
 
     df.to_csv(f'simple_weather-year_ldes-model/export/data_cluster_box_plots_{variant}.csv')
 
-def plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster, variant):
+# function plots the 3rd figure, a box plot of errors against reference
+def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster, variant):
     print('Plotting Fig 3')
 
-    generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster,variant)
+    # generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster,variant)
     df = pd.read_csv(f'simple_weather-year_ldes-model/export/data_cluster_box_plots_{variant}.csv')
     df.drop_duplicates(subset=['Run'], inplace=True)
     df['Cost Error'] = -1* df['Cost Error']
@@ -516,7 +517,7 @@ def plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_clust
         legend=dict(
             x=0,
             y=1.0,
-            bgcolor = 'rgba(255,255,255,0)',
+            bgcolor = 'rgba(255,255,255,1)',
             bordercolor='rgba(255, 255, 255, 0)'
         ),
         boxmode='group',
@@ -527,17 +528,190 @@ def plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_clust
         ),
     )
 
-    fig.write_image(f"{figure_directory}/fig3_{variant}.svg", width=1920, height=1920, scale=1)
-    fig.write_image(f"{figure_directory}/fig3_{variant}.jpeg", width=1920, height=1920, scale=1)
+    # fig.write_image(f"{figure_directory}/fig3_{variant}.svg", width=1920, height=1920, scale=1)
+    # fig.write_image(f"{figure_directory}/fig3_{variant}.jpeg", width=1920, height=1920, scale=1)
+    fig.write_html(f"simple_weather-year_ldes-model/export/results_{variant}.html", auto_open=True)
 
-# function plots the 4th figure, timeseries duration curve error across 3-yr clusters
-def plot_fig4_timeseries_duration_curve_error(path_ref_model,path_directory_three_year_cluster):
-    print('Plotting Fig 4')
+# function plots an alternative 3rd figure, putting error matrics on two axes
+def plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster, variant):
+    print('Plotting Fig 3.2')
 
 
+    # generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster,variant)
+    df = pd.read_csv(f'simple_weather-year_ldes-model/export/data_cluster_box_plots_{variant}.csv')
+    df.drop_duplicates(subset=['Run'], inplace=True)
+    df['Cost Error'] = -1* df['Cost Error']
+    df['LDES Capacity Error'] = -1* df['LDES Capacity Error']
+    #separate and group Design Error and Cost Error
+    result_n_1 = df[df['Run'].str.match(r"\[\d{4}\]")]
+    result_n_2 = df[df['Run'].str.match(r"^\[\d{4},\d{4}\]")]
+    result_n_3 = df[df['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        name='Single Weather Year',
+        y=result_n_1['Cost Error'],
+        x=result_n_1['Mean Abs Capacity Mix Error'],
+        text=result_n_1['Run'],
+        marker_color=colour(6,.8),
+        mode='markers',
+        marker_size = 40,
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Scatter(
+        name='Two Weather Years',
+        y=result_n_2['Cost Error'],
+        x=result_n_2['Mean Abs Capacity Mix Error'],
+        text=result_n_2['Run'],
+        marker_color=colour(4,.8),
+        mode='markers',
+        marker_size = 40,
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Scatter(
+        name='Three Weather Years',
+        y=result_n_3['Cost Error'],
+        x=result_n_3['Mean Abs Capacity Mix Error'],
+        text=result_n_3['Run'],
+        marker_color=colour(5,.8),
+        mode='markers',
+        marker_size = 40,
+        # line=dict(width=0),
+        ))
+    fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0.2)',
+    
+    )
+    fig.update_xaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0)'
+    )
+    fig.update_layout(
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        yaxis = dict(
+            title = dict(
+                text='Cost Error',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        xaxis = dict(
+            title = dict(
+                text='Mean Absolute Capacity Mix Error',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        legend=dict(
+            x=0,
+            y=1.0,
+            bgcolor = 'rgba(255,255,255,1)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        yaxis_tickformat=".0%",
+        xaxis_tickformat=".0%",
+        font=dict(
+        family="Times New Roman",
+        size=48,
+        ),
+    )
+    
+    fig.write_html(f"simple_weather-year_ldes-model/export/results_{variant}.html", auto_open=True)
+
+#  function plots an alternative 3rd figure, exploring difference between model variants
+def plot_fig3_3_scatter_of_errors():
+    print('Plotting Fig 3.2')
+
+    df_w_surplus = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_with_surplus.csv')
+    df_cycle_condition  = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_cycle_condition.csv')
+
+    df_w_surplus.drop_duplicates(subset=['Run'], inplace=True)
+    df_cycle_condition.drop_duplicates(subset=['Run'], inplace=True)
+
+    df_w_surplus['Cost Error'] = -1* df_w_surplus['Cost Error']
+    df_w_surplus['LDES Capacity Error'] = -1* df_w_surplus['LDES Capacity Error']
+    df_cycle_condition['Cost Error'] = -1* df_cycle_condition['Cost Error']
+    df_cycle_condition['LDES Capacity Error'] = -1* df_cycle_condition['LDES Capacity Error']
+
+    #separate and group Design Error and Cost Error
+    df_w_surplus = df_w_surplus[df_w_surplus['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+    df_cycle_condition = df_cycle_condition[df_cycle_condition['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        name='Surplus Tracking',
+        y=df_w_surplus['Cost Error'],
+        x=df_w_surplus['Mean Abs Capacity Mix Error'],
+        text=df_w_surplus['Run'],
+        marker_color=colour(6,.8),
+        mode='markers',
+        marker_size = 40,
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Scatter(
+        name='Cycle Condition',
+        y=df_cycle_condition['Cost Error'],
+        x=df_cycle_condition['Mean Abs Capacity Mix Error'],
+        text=df_cycle_condition['Run'],
+        marker_color=colour(4,.8),
+        mode='markers',
+        marker_size = 40,
+        # line=dict(width=0),
+        ))
+    fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0.2)',
+    
+    )
+    fig.update_xaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0)'
+    )
+    fig.update_layout(
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        yaxis = dict(
+            title = dict(
+                text='Cost Error',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        xaxis = dict(
+            title = dict(
+                text='Mean Absolute Capacity Mix Error',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        legend=dict(
+            x=0,
+            y=1.0,
+            bgcolor = 'rgba(255,255,255,1)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        yaxis_tickformat=".0%",
+        xaxis_tickformat=".0%",
+        font=dict(
+        family="Times New Roman",
+        size=48,
+        ),
+    )
+    
+    fig.write_html("simple_weather-year_ldes-model/export/results_variant_comparison.html", auto_open=True)
 # plot_fig1_area_chart_of_SOC(path_ref_model, path_directory_single_year_cluster)
 # plot_fig2_bar_chart_of_capacity_mix(path_ref_model, path_directory_single_year_cluster)
 # generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster)
-plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['cycle_condition']['two_year'],path_variants['cycle_condition']['three_year'],'cycle_condition')
-plot_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['with_surplus']['two_year'],path_variants['with_surplus']['three_year'],'with_surplus')
+# plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['cycle_condition']['two_year'],path_variants['cycle_condition']['three_year'],'cycle_condition')
+# plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['with_surplus']['two_year'],path_variants['with_surplus']['three_year'],'with_surplus')
+# plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['cycle_condition']['two_year'],path_variants['cycle_condition']['three_year'],'cycle_condition')
+# plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['with_surplus']['two_year'],path_variants['with_surplus']['three_year'],'with_surplus')
+plot_fig3_3_scatter_of_errors()
 # plot_fig4_timeseries_duration_curve_error(path_ref_model,path_directory_three_year_cluster)

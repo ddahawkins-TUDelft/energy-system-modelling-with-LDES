@@ -2,6 +2,8 @@ import calliope
 import pandas as pd
 import plotly.graph_objects as go
 import os
+import numpy as np
+import re
 
 # Config
 variant = 'with_surplus_tracking' #with_intracluster_cycle_condition #with_surplus_tracking #two cluster conditions were tested, here can switch between them
@@ -27,7 +29,7 @@ def colour(id: int, opacity: float = 1):
 path_ref_model = 'weather_year_clustering_LDES_study/results/reference/results_2010_to_2019.netcdf' #TODO: Update with latest run
 path_directory_single_year_cluster = 'weather_year_clustering_LDES_study/results/single_year_cluster'
 path_variants = {
-    'umodified': {
+    'unmodified': {
         'two_year' : 'weather_year_clustering_LDES_study/results/two_year_cluster/unmodified',
         'three_year' : 'weather_year_clustering_LDES_study/results/three_year_cluster/unmodified',
     },
@@ -41,6 +43,9 @@ path_variants = {
     }
 }
 
+# 
+#               HELPER FUNCTIONS
+# 
 
 # Function to extract model parameters from filename
 def extract_years_weights(filepath: str, model_type: int):
@@ -240,6 +245,123 @@ def generate_results_table(path_test_model, test_model_type, path_reference):
     
     return pd.DataFrame(output).set_index('Run')
 
+# function to compute error between two series
+def compute_error(df_original,df_artificial,parameter: str):
+
+    dc_original = (df_original[parameter].sort_values(ascending=False).values).astype(np.float32)
+    dc_artificial = (df_artificial[parameter].sort_values(ascending=False).values).astype(np.float32)
+
+    abs_deviation = np.divide(abs(dc_original-dc_artificial), dc_original, out=np.zeros_like(abs(dc_original-dc_artificial)), where=dc_original!=0)
+
+    return abs_deviation.mean()
+
+# duration curve error function
+def compute_duration_curve_error(path_timeseries_ref: str, path: str, model_type: int):
+
+    #extract cluster parameters
+    cluster_params = extract_years_weights(path, model_type)
+    # load original timeseries
+    df_ts_original = pd.read_csv(path_timeseries_ref)
+    df_ts_original.columns = ['timesteps','demand','solar_cf','offshore_cf','onshore_cf']
+    df_ts_original = df_ts_original[4:]
+    # Conversion of value formats
+    df_ts_original['timesteps'] = pd.to_datetime(df_ts_original['timesteps'])
+    df_ts_original['demand'] = pd.to_numeric(df_ts_original['demand'])
+    df_ts_original['solar_cf'] = pd.to_numeric(df_ts_original['solar_cf'])
+    df_ts_original['offshore_cf'] = pd.to_numeric(df_ts_original['offshore_cf'])
+    df_ts_original['onshore_cf'] = pd.to_numeric(df_ts_original['onshore_cf'])
+
+    # filter timerseries to 2010-2019 inclusive
+    df_ts_original=df_ts_original[df_ts_original['timesteps'].dt.year >= 2010]
+    # remove leap days due to series length mismatches
+    df_ts_original=df_ts_original[~((df_ts_original['timesteps'].dt.month == 2) &(df_ts_original['timesteps'].dt.day == 29))]
+
+
+    df_ts_artificial = pd.DataFrame
+    columns_to_apply_weights = ['demand','solar_cf','offshore_cf','onshore_cf']
+
+    for i in range(0,len(cluster_params['years'])):
+        #filter the original ts to the given year
+        df_temp = df_ts_original[df_ts_original['timesteps'].dt.year == cluster_params['years'][i]]
+
+        #assign/append to artificial timeseries
+        if df_ts_artificial.empty:
+            df_ts_artificial = df_temp
+        else:
+            df_ts_artificial = pd.concat([df_ts_artificial,df_temp])
+
+        if cluster_params['weights'][i] > 1:
+            # duplicate the timeseries for that year based on its weighting. i.e. for a year weighted as 8, we get that year's timeseries 8 times.
+            for j in range(1,(cluster_params['weights'][i]+1)-1):
+                df_ts_artificial = pd.concat([df_ts_artificial,df_temp])
+
+    # compute duration curve and duration curve error for each parameter
+    demand_error = compute_error(df_ts_original,df_ts_artificial,'demand')
+    solar_error = compute_error(df_ts_original,df_ts_artificial,'solar_cf')
+    offshore_error = compute_error(df_ts_original,df_ts_artificial,'offshore_cf')
+    onshore_error = compute_error(df_ts_original,df_ts_artificial,'onshore_cf')
+    combined_absolute_error = (demand_error+solar_error+offshore_error+onshore_error)/4
+
+    return  {
+        'demand_error': demand_error,
+        'solar_cf_error': solar_error,
+        'offshore_cf_error': offshore_error,
+        'onshore_cf_error': onshore_error,
+        'compound_error': combined_absolute_error
+    }
+
+# function that aggregates all timeseries errors for models within a directory given a regex query
+def timeseries_error_in_dir(path_timeseries_ref,directory, regex_query, model_type):
+
+    output = pd.DataFrame
+
+    # search through the provided directory
+    for file in os.listdir(os.fsencode(directory)):
+        filename = os.fsdecode(file)
+        full_path = directory+"/"+filename
+        # print(full_path)
+        if re.match(regex_query,filename):
+            #if output is not yet initialised, initialise it
+            print('Extracting Results:',filename)
+            data = pd.DataFrame(compute_duration_curve_error(path_timeseries_ref,full_path,model_type),index=[0])
+            cluster_params = extract_years_weights(filename,model_type)
+            # data['Years'] = ",".join(str(x) for x in cluster_params['years'])
+            # data['Weights'] = ",".join(str(x) for x in cluster_params['weights'])
+            data['Run'] = f"[{",".join(str(x) for x in cluster_params['years'])}]_[{":".join(str(x) for x in cluster_params['weights'])}]"
+            if output.empty:
+                output = data
+            else:
+                output = pd.concat([output,data])
+
+    return output
+
+#  checks if model wys are sequential
+def is_sequential(number_string: str):
+    # Convert string to array of numbers
+    numbers = list(map(int, number_string.split(',')))
+    diffs = [abs(numbers[0]-numbers[1]),abs(numbers[1]-numbers[2]),abs(numbers[2]-numbers[0])]
+    if diffs.count(1) != 2:
+        return False
+    return True
+    # check these are consecutive
+    # return all(numbers[i]+1 == numbers[i+1] for i in range(len(numbers)-1))
+
+#  checks if model wys acnhor weather years are a particular set
+def includes_system_defining_years(number_string: str, check_array: list[int] =[2016,2017]):
+    # Convert string to array of numbers
+    numbers = list(map(int, number_string.split(',')))
+
+    if numbers[-1] == check_array[-1] and numbers[-2] == check_array[-2]:
+        return True
+    else:
+        return False
+
+
+
+# 
+#          FIGURE FUNCTIONS
+# 
+
 # function plots the 1st figure of the paper, comparing single year run SOCs with reference SOC
 def plot_fig1_area_chart_of_SOC(path_ref_model,path_directory_single_year_cluster):
     print('Plotting Fig 1')
@@ -339,7 +461,7 @@ def plot_fig1_area_chart_of_SOC(path_ref_model,path_directory_single_year_cluste
         gridcolor='rgba(255, 255, 255, 0)',
         title_standoff = 36
     )
-    # fig.write_html("simple_weather-year_ldes-model/export/result_storage_full_vs_singles.html", auto_open=True)
+    fig.write_html(f"{figure_directory}/fig1.html", auto_open=True)
     fig.write_image(f"{figure_directory}/fig1.svg", width=1920, height=1920, scale=1)
     fig.write_image(f"{figure_directory}/fig1.jpeg", width=1920, height=1920, scale=1)
 
@@ -408,11 +530,11 @@ def plot_fig2_bar_chart_of_capacity_mix(path_ref_model,path_directory_single_yea
         title_standoff = 36
     )
 
-    # fig.write_html("simple_weather-year_ldes-model/export/result_storage_full_vs_singles.html", auto_open=True)
+    fig.write_html(f"{figure_directory}/fig2.html", auto_open=True)
     fig.write_image(f"{figure_directory}/fig2.svg", width=1920, height=1920, scale=1)
     fig.write_image(f"{figure_directory}/fig2.jpeg", width=1920, height=1920, scale=1)
 
-# function plots the 3rd figure, exploring model error against reference
+# function generates data for the 3rd figure
 def generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster,variant):
     print('Extracting Data for Fig 3')
 
@@ -449,11 +571,15 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
     df['Cost Error'] = -1* df['Cost Error']
     df['LDES Capacity Error'] = -1* df['LDES Capacity Error']
     #separate and group Design Error and Cost Error
-    str_cost = 'Cost Error'
-    str_abs_design = 'Mean Abs Capacity Mix Error'
-    # str_design = 'Mean Capacity Mix Error'
-    str_compound_err = 'Abs Compound Error'
-    ldes_err = 'LDES Capacity Error'
+    str_cost = 'Cost<br>Error'
+    str_abs_design = 'Mean Abs<br>Capacity Mix<br>Error'
+    str_compound_err = 'Abs Compound<br>Error'
+    ldes_err = 'LDES Capacity<br>Error'
+    df[str_cost] = df['Cost Error']
+    df[ldes_err] = df['LDES Capacity Error']
+    df[str_abs_design] = df['Mean Abs Capacity Mix Error']
+    df[str_compound_err] = df['Abs Compound Error']
+
     df_cost_design_unpivoted = df[['Run',str_cost,str_abs_design,ldes_err,str_compound_err]]
     df_cost_design_unpivoted=pd.melt(df_cost_design_unpivoted, id_vars=['Run'], var_name='Parameter', value_name='Error')  
 
@@ -471,7 +597,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
         boxpoints='all', # can also be outliers, or suspectedoutliers, or False
         jitter=0.3, # add some jitter for a better separation between points
         marker_color=colour(4,1),
-        # line=dict(width=0),
+        line=dict(width=3),
         ))
     fig.add_trace(go.Box(
         name='Two Weather Years',
@@ -481,7 +607,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
         boxpoints='all', # can also be outliers, or suspectedoutliers, or False
         jitter=0.3, # add some jitter for a better separation between points
         marker_color=colour(5,1),
-        # line=dict(width=0),
+        line=dict(width=3),
         ))
     fig.add_trace(go.Box(
         name='Three Weather Years',
@@ -491,7 +617,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
         boxpoints='all', # can also be outliers, or suspectedoutliers, or False
         jitter=0.3, # add some jitter for a better separation between points
         marker_color=colour(6,1),
-        # line=dict(width=0),
+        line=dict(width=3),
         ))
     fig.update_yaxes(
     ticks='outside',
@@ -521,16 +647,16 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
             bordercolor='rgba(255, 255, 255, 0)'
         ),
         boxmode='group',
-        yaxis_tickformat=".2%",
+        yaxis_tickformat=".0%",
         font=dict(
         family="Times New Roman",
         size=48,
         ),
     )
 
-    # fig.write_image(f"{figure_directory}/fig3_{variant}.svg", width=1920, height=1920, scale=1)
-    # fig.write_image(f"{figure_directory}/fig3_{variant}.jpeg", width=1920, height=1920, scale=1)
-    fig.write_html(f"simple_weather-year_ldes-model/export/results_{variant}.html", auto_open=True)
+    fig.write_html(f"{figure_directory}/fig3_1.html", auto_open=True)
+    fig.write_image(f"{figure_directory}/fig3_1.svg", width=1920, height=1920, scale=1)
+    fig.write_image(f"{figure_directory}/fig3_1.jpeg", width=1920, height=1920, scale=1)
 
 # function plots an alternative 3rd figure, putting error matrics on two axes
 def plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster, variant):
@@ -547,33 +673,200 @@ def plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_clus
     result_n_2 = df[df['Run'].str.match(r"^\[\d{4},\d{4}\]")]
     result_n_3 = df[df['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
 
+    result_n_2['Years'] = result_n_2['Run'].str[1:10]
+    result_n_2['Check'] = result_n_2['Years'].apply(includes_system_defining_years)
+    result_n_3['Years'] = result_n_3['Run'].str[1:15]
+    result_n_3['Check'] = result_n_3['Years'].apply(includes_system_defining_years)
+
+    result_n_2_set_1 =result_n_2[result_n_2['Check'] == True]
+    result_n_2_set_2 =result_n_2[result_n_2['Check']== False]
+    result_n_3_set_1 =result_n_3[result_n_3['Check'] == True]
+    result_n_3_set_2 =result_n_3[result_n_3['Check']== False]
+
     fig = go.Figure()
+
+    y_val = 'Cost Error'
+    x_val = 'Mean Abs Capacity Mix Error' #'Mean Abs Capacity Mix Error'   #'LDES Capacity Error'
+
+    line_width = 4
 
     fig.add_trace(go.Scatter(
         name='Single Weather Year',
-        y=result_n_1['Cost Error'],
-        x=result_n_1['Mean Abs Capacity Mix Error'],
+        y=result_n_1[y_val],
+        x=result_n_1[x_val],
         text=result_n_1['Run'],
+        marker_color=colour(8,.8),
+        mode='markers',
+        marker_size = 40,
+        marker=dict(
+            line=dict(
+                color=colour(1,1),
+                width=line_width
+            ))
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Scatter(
+        name='Two Weather Years',
+        y=result_n_2_set_2[y_val],
+        x=result_n_2_set_2[x_val],
+        text=result_n_2_set_2['Run'],
+        marker_color=colour(8,.8),
+        mode='markers',
+        marker_size = 40,
+        marker=dict(
+            line=dict(
+                color=colour(4,1),
+                width=line_width
+            ))
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Scatter(
+        name='Two Weather Years, [2016, 2017]',
+        y=result_n_2_set_1[y_val],
+        x=result_n_2_set_1[x_val],
+        text=result_n_2_set_1['Run'],
+        marker_color=colour(4,.8),
+        mode='markers',
+        marker_size = 40,
+        marker=dict(
+            line=dict(
+                color=colour(4,1),
+                width=line_width
+            ))
+        # line=dict(width=0),
+        ))
+    
+    fig.add_trace(go.Scatter(
+        name='Three Weather Years',
+        y=result_n_3_set_2[y_val],
+        x=result_n_3_set_2[x_val],
+        text=result_n_3_set_2['Run'],
+        marker_color=colour(8,.8),
+        mode='markers',
+        marker_size = 40,
+        marker=dict(
+            line=dict(
+                color=colour(6,1),
+                width=line_width
+            ))
+        # line=dict(width=0),
+        ))
+    fig.add_trace(go.Scatter(
+        name='Three Weather Years, incl. [2016, 2017]',
+        y=result_n_3_set_1[y_val],
+        x=result_n_3_set_1[x_val],
+        text=result_n_3_set_1['Run'],
+        marker_color=colour(6,.8),
+        mode='markers',
+        marker_size = 40,
+        marker=dict(
+            line=dict(
+                color=colour(6,1),
+                width=line_width
+            ))
+        # line=dict(width=0),
+        ))
+    
+    fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0.2)',
+    
+    )
+    fig.update_xaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0)'
+    )
+    fig.update_layout(
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        yaxis = dict(
+            title = dict(
+                text=y_val,
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        xaxis = dict(
+            title = dict(
+                text=x_val,
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        legend=dict(
+            x=0.02,
+            y=1.08,
+            bgcolor = 'rgba(255,255,255,1)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        yaxis_tickformat=".0%",
+        xaxis_tickformat=".0%",
+        font=dict(
+        family="Times New Roman",
+        size=48,
+        ),
+    )
+    
+    fig.write_html(f"{figure_directory}/fig3_2.html", auto_open=True)
+    fig.write_image(f"{figure_directory}/fig3_2.svg", width=1920, height=1920, scale=1)
+    fig.write_image(f"{figure_directory}/fig3_2.jpeg", width=1920, height=1920, scale=1)
+
+#  function plots an alternative 3rd figure, exploring difference between model variants
+def plot_fig3_3_scatter_of_errors():
+    print('Plotting Fig 3.2')
+
+    df_w_surplus = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_with_surplus.csv')
+    df_cycle_condition  = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_cycle_condition.csv')
+    df_unmodified  = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_unmodified.csv')
+
+    df_w_surplus.drop_duplicates(subset=['Run'], inplace=True)
+    df_cycle_condition.drop_duplicates(subset=['Run'], inplace=True)
+    df_unmodified.drop_duplicates(subset=['Run'], inplace=True)
+
+    df_w_surplus['Cost Error'] = -1* df_w_surplus['Cost Error']
+    df_w_surplus['LDES Capacity Error'] = -1* df_w_surplus['LDES Capacity Error']
+    df_cycle_condition['Cost Error'] = -1* df_cycle_condition['Cost Error']
+    df_cycle_condition['LDES Capacity Error'] = -1* df_cycle_condition['LDES Capacity Error']
+    df_unmodified['Cost Error'] = -1* df_unmodified['Cost Error']
+    df_unmodified['LDES Capacity Error'] = -1* df_unmodified['LDES Capacity Error']
+
+    #separate and group Design Error and Cost Error
+    df_w_surplus = df_w_surplus[df_w_surplus['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+    df_cycle_condition = df_cycle_condition[df_cycle_condition['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+    df_unmodified = df_unmodified[df_unmodified['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
+
+
+    fig = go.Figure()
+
+    y_val = 'Cost Error'
+    x_val = 'Mean Abs Capacity Mix Error'
+
+    fig.add_trace(go.Scatter(
+        name='Surplus Tracking',
+        y=df_w_surplus[y_val],
+        x=df_w_surplus[x_val],
+        text=df_w_surplus['Run'],
         marker_color=colour(6,.8),
         mode='markers',
         marker_size = 40,
         # line=dict(width=0),
         ))
     fig.add_trace(go.Scatter(
-        name='Two Weather Years',
-        y=result_n_2['Cost Error'],
-        x=result_n_2['Mean Abs Capacity Mix Error'],
-        text=result_n_2['Run'],
+        name='Cycle Condition',
+        y=df_cycle_condition[y_val],
+        x=df_cycle_condition[x_val],
+        text=df_cycle_condition['Run'],
         marker_color=colour(4,.8),
         mode='markers',
         marker_size = 40,
         # line=dict(width=0),
         ))
     fig.add_trace(go.Scatter(
-        name='Three Weather Years',
-        y=result_n_3['Cost Error'],
-        x=result_n_3['Mean Abs Capacity Mix Error'],
-        text=result_n_3['Run'],
+        name='Unmodified',
+        y=df_unmodified[y_val],
+        x=df_unmodified[x_val],
+        text=df_unmodified['Run'],
         marker_color=colour(5,.8),
         mode='markers',
         marker_size = 40,
@@ -596,106 +889,23 @@ def plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_clus
         plot_bgcolor='rgba(255, 255, 255, 0)',
         yaxis = dict(
             title = dict(
-                text='Cost Error',
+                text=y_val,
             ),
             zerolinecolor = 'rgba(0, 0, 0, 0.4)',
         ),
         xaxis = dict(
             title = dict(
-                text='Mean Absolute Capacity Mix Error',
+                text=x_val,
             ),
             zerolinecolor = 'rgba(0, 0, 0, 0.4)',
         ),
         legend=dict(
-            x=0,
-            y=1.0,
-            bgcolor = 'rgba(255,255,255,1)',
-            bordercolor='rgba(255, 255, 255, 0)'
-        ),
-        yaxis_tickformat=".0%",
-        xaxis_tickformat=".0%",
-        font=dict(
-        family="Times New Roman",
-        size=48,
-        ),
-    )
-    
-    fig.write_html(f"simple_weather-year_ldes-model/export/results_{variant}.html", auto_open=True)
-
-#  function plots an alternative 3rd figure, exploring difference between model variants
-def plot_fig3_3_scatter_of_errors():
-    print('Plotting Fig 3.2')
-
-    df_w_surplus = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_with_surplus.csv')
-    df_cycle_condition  = pd.read_csv('simple_weather-year_ldes-model/export/data_cluster_box_plots_cycle_condition.csv')
-
-    df_w_surplus.drop_duplicates(subset=['Run'], inplace=True)
-    df_cycle_condition.drop_duplicates(subset=['Run'], inplace=True)
-
-    df_w_surplus['Cost Error'] = -1* df_w_surplus['Cost Error']
-    df_w_surplus['LDES Capacity Error'] = -1* df_w_surplus['LDES Capacity Error']
-    df_cycle_condition['Cost Error'] = -1* df_cycle_condition['Cost Error']
-    df_cycle_condition['LDES Capacity Error'] = -1* df_cycle_condition['LDES Capacity Error']
-
-    #separate and group Design Error and Cost Error
-    df_w_surplus = df_w_surplus[df_w_surplus['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
-    df_cycle_condition = df_cycle_condition[df_cycle_condition['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
-
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        name='Surplus Tracking',
-        y=df_w_surplus['Cost Error'],
-        x=df_w_surplus['Mean Abs Capacity Mix Error'],
-        text=df_w_surplus['Run'],
-        marker_color=colour(6,.8),
-        mode='markers',
-        marker_size = 40,
-        # line=dict(width=0),
-        ))
-    fig.add_trace(go.Scatter(
-        name='Cycle Condition',
-        y=df_cycle_condition['Cost Error'],
-        x=df_cycle_condition['Mean Abs Capacity Mix Error'],
-        text=df_cycle_condition['Run'],
-        marker_color=colour(4,.8),
-        mode='markers',
-        marker_size = 40,
-        # line=dict(width=0),
-        ))
-    fig.update_yaxes(
-    ticks='outside',
-    showline=True,
-    linecolor='black',
-    gridcolor='rgba(0, 0, 0, 0.2)',
-    
-    )
-    fig.update_xaxes(
-    ticks='outside',
-    showline=True,
-    linecolor='black',
-    gridcolor='rgba(0, 0, 0, 0)'
-    )
-    fig.update_layout(
-        plot_bgcolor='rgba(255, 255, 255, 0)',
-        yaxis = dict(
-            title = dict(
-                text='Cost Error',
-            ),
-            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
-        ),
-        xaxis = dict(
-            title = dict(
-                text='Mean Absolute Capacity Mix Error',
-            ),
-            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
-        ),
-        legend=dict(
-            x=0,
-            y=1.0,
-            bgcolor = 'rgba(255,255,255,1)',
-            bordercolor='rgba(255, 255, 255, 0)'
+            orientation="h",
+            yanchor="bottom",
+            y=.98,
+            xanchor="center",
+            x=0.5,
+            bgcolor = 'rgba(255,255,255,1)',    
         ),
         yaxis_tickformat=".0%",
         xaxis_tickformat=".0%",
@@ -706,12 +916,129 @@ def plot_fig3_3_scatter_of_errors():
     )
     
     fig.write_html("simple_weather-year_ldes-model/export/results_variant_comparison.html", auto_open=True)
-# plot_fig1_area_chart_of_SOC(path_ref_model, path_directory_single_year_cluster)
-# plot_fig2_bar_chart_of_capacity_mix(path_ref_model, path_directory_single_year_cluster)
-# generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_directory_two_year_cluster,path_directory_three_year_cluster)
-# plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['cycle_condition']['two_year'],path_variants['cycle_condition']['three_year'],'cycle_condition')
-# plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['with_surplus']['two_year'],path_variants['with_surplus']['three_year'],'with_surplus')
-# plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['cycle_condition']['two_year'],path_variants['cycle_condition']['three_year'],'cycle_condition')
-# plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['with_surplus']['two_year'],path_variants['with_surplus']['three_year'],'with_surplus')
-plot_fig3_3_scatter_of_errors()
-# plot_fig4_timeseries_duration_curve_error(path_ref_model,path_directory_three_year_cluster)
+
+# function generates data for the 4th figure
+def generate_data_fig4_scatter_of_timeseries_duration_curve_error(path_directory_three_year_cluster):
+
+
+    result_n_3 = timeseries_error_in_dir('weather_year_clustering_LDES_study/data_tables/original_timeseries/time_varying_parameters.csv',path_directory_three_year_cluster,r"^results_years_\[\d{4},\d{4},\d{4}\]_weight_\[\d{1},\d{1},\d{1}\]*\.netcdf$",3)
+
+    result_n_3.to_csv('simple_weather-year_ldes-model/export/timeseries_duration_curve_error.csv')
+
+#  function plots the 4th figure, the timeseries duration curve error
+def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,path_cluster_error):
+    df_timeseries_error = pd.read_csv(path_timeseries_error)
+    df_cluster_error = pd.read_csv(path_cluster_error)
+    df_timeseries_error = df_timeseries_error.drop_duplicates(subset=['Run'])
+    df_cluster_error = df_cluster_error.drop_duplicates(subset=['Run'])
+
+    # Join Results into single PD
+    df_timeseries_error.set_index('Run')
+    df_cluster_error.set_index('Run')
+    df_combined = pd.merge(df_timeseries_error, df_cluster_error, how="left", on=["Run"])
+
+    df_combined = df_combined[['Run','compound_error','Cost Error','Mean Abs Capacity Mix Error','Abs Compound Error']]
+    df_combined['Years'] = df_combined['Run'].str[1:15]
+    df_combined['Check'] = df_combined['Years'].apply(includes_system_defining_years)
+
+    df_set_1 =df_combined[df_combined['Check'] == True]
+    df_set_2 =df_combined[df_combined['Check']== False]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        name='Includes System Defining Years: [2016, 2017]',
+        y=df_set_1['Mean Abs Capacity Mix Error'],
+        x=df_set_1['compound_error'],
+        text=df_set_1['Run'],
+        mode='markers',
+        marker=dict(
+            color=colour(2,1),
+            size=32,
+            line=dict(
+                color=colour(2,1),
+                width=4
+            ))
+    ))
+
+    fig.add_trace(go.Scatter(
+        name='Remaining Clusters',
+        y=df_set_2['Mean Abs Capacity Mix Error'],
+        x=df_set_2['compound_error'],
+        text=df_set_2['Run'],
+        mode='markers',
+        marker=dict(
+            color=colour(2,.1),
+            size=32,
+            line=dict(
+                color=colour(2,1),
+                width=4
+            )
+    )))
+
+    fig.update_yaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0.2)',
+    # tick0=-0.05, 
+    # dtick=0.05
+    )
+    fig.update_xaxes(
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='rgba(0, 0, 0, 0.2)',
+    # tick0=0, 
+    # dtick=0.05
+    )
+    fig.update_layout(
+        plot_bgcolor='rgba(255, 255, 255, 0)',
+        # title=dict(text="Preoptimisation Duration Curve Error versus Postoptimisation Absolute Compound Error"),
+        yaxis = dict(
+            title = dict(
+                text='Mean Absolute Capacity Mix Error (Ex-Post)',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        xaxis = dict(
+            title = dict(
+                text='Duration Curve Error (Ex-Ante)',
+            ),
+            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=.98,
+            xanchor="center",
+            x=0.5,
+            bgcolor = 'rgba(255,255,255,1)',    
+        ),
+        font=dict(
+        family="Times New Roman",
+        size=48,
+        ),
+        # boxmode='group',
+        yaxis_tickformat=".0%",
+        xaxis_tickformat=".0%",
+    )
+
+    fig.write_html(f"{figure_directory}/fig4.html", auto_open=True)
+    fig.write_image(f"{figure_directory}/fig4.svg", width=1920, height=1920, scale=1)
+    fig.write_image(f"{figure_directory}/fig4.jpeg", width=1920, height=1920, scale=1)
+
+
+
+
+    print('something')
+
+plot_fig1_area_chart_of_SOC(path_ref_model, path_directory_single_year_cluster)
+plot_fig2_bar_chart_of_capacity_mix(path_ref_model, path_directory_single_year_cluster)
+# # # generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
+plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
+plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
+# # plot_fig3_3_scatter_of_errors()
+# generate_data_fig4_scatter_of_timeseries_duration_curve_error('weather_year_clustering_LDES_study/results/three_year_cluster/unmodified')
+plot_fig4_scatter_of_timeseries_duration_curve_error('simple_weather-year_ldes-model/export/timeseries_duration_curve_error.csv','simple_weather-year_ldes-model/export/data_cluster_box_plots_unmodified.csv')
+

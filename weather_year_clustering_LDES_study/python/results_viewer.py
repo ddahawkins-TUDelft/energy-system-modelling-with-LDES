@@ -47,9 +47,9 @@ def char_scatter_SOC(model):
 
     fig.write_html('simple_weather-year_ldes-model/export/results.html', auto_open=True)
 
-model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/three_year_cluster/with_intracluster_cycle_condition/results_years_[2012,2016,2017]_weight_[8,1,1].netcdf')
-char_scatter_SOC(model)
-model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/three_year_cluster/with_surplus_tracking/results_years_[2012,2016,2017]_weight_[8,1,1].netcdf')
-char_scatter_SOC(model)
-model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/three_year_cluster/unmodified/results_years_[2012,2016,2017]_weight_[8,1,1].netcdf')
+# model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/three_year_cluster/with_intracluster_cycle_condition/results_years_[2012,2016,2017]_weight_[8,1,1].netcdf')
+# char_scatter_SOC(model)
+# model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/three_year_cluster/with_surplus_tracking/results_years_[2015,2016,2017]_weight_[8,1,1].netcdf')
+# char_scatter_SOC(model)
+model = calliope.read_netcdf('weather_year_clustering_LDES_study/results/three_year_cluster/unmodified/results_years_[2015,2016,2017]_weight_[8,1,1].netcdf')
 char_scatter_SOC(model)

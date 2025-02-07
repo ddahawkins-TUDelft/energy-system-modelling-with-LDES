@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import os
 import numpy as np
 import re
+from plotly.subplots import make_subplots
 
 # Config
 variant = 'with_surplus_tracking' #with_intracluster_cycle_condition #with_surplus_tracking #two cluster conditions were tested, here can switch between them
@@ -13,17 +14,48 @@ figure_directory = 'weather_year_clustering_LDES_study/results/figures'
 def colour(id: int, opacity: float = 1):
     colours = [
         '0,0,0', #0 black
-        '88, 139, 139', #1 blue_green
-        '101, 107, 157', #2 pale_red_blue
-        '255, 213, 194', #3 peach
-        '242, 143, 59', #4 orange
-        '200, 85, 61', #5 burnt orange
-        '45, 48, 71', #6 dark_red_blue
-        '147, 183, 190', #7 pale_blue_green
+        '240, 249, 33', #1 yellow
+        '253, 180, 47', #2 gold
+        '237, 121, 83', #3 orange
+        '204, 71, 120', #4 pink 
+        '156, 23, 158', #5 purple
+        '92, 1, 166', #6 indigo 
+        '13, 8, 135', #7 blue
         '255,255,255', #8 white
     ]
-
     return f'rgba({colours[id]},{opacity})'
+
+plasma_scale = [
+    'rgb(240, 249, 33)',
+    'rgb(252, 166, 54)',
+    'rgb(225, 100, 98)',
+    'rgb(177, 42, 144)',
+    'rgb(106, 0, 168)',
+    'rgb(13, 8, 135)',
+    'rgb(0, 0, 62)',
+]
+
+plasma_discrete_scale = [
+    [0,plasma_scale[5]], #0-5%
+    [1/6,plasma_scale[5]],
+
+    [1/6,plasma_scale[4]], #5%-10%
+    [2/6,plasma_scale[4]],
+
+    [2/6,plasma_scale[3]], #10%-15%
+    [3/6,plasma_scale[3]],
+
+    [3/6,plasma_scale[2]], #15%-20%
+    [4/6,plasma_scale[2]],
+
+    [4/6,plasma_scale[1]], #20%-25%
+    [5/6,plasma_scale[1]],
+
+    [5/6,plasma_scale[0]], #25%-30%
+    [1,plasma_scale[0]],
+
+
+]
 
 #paths to ref model and cluster model directories
 path_ref_model = 'weather_year_clustering_LDES_study/results/reference/results_2010_to_2019.netcdf' #TODO: Update with latest run
@@ -398,7 +430,7 @@ def plot_fig1_area_chart_of_SOC(path_ref_model,path_directory_single_year_cluste
         y=df_reference['storage'],
         fill='tozeroy',
         mode='none',
-        fillcolor=colour(6,0.8),
+        fillcolor=colour(2,0.8),
         name='Reference Model'
     ))
 
@@ -411,6 +443,10 @@ def plot_fig1_area_chart_of_SOC(path_ref_model,path_directory_single_year_cluste
         fillcolor=colour(5,0.8),
         name='Concatenated Single Weather-Year Models'
     ))
+
+    fig.add_vline(x='2015-11-01 00:00:00', line_width=2, line_dash="dash", line_color=colour(6,0.5))
+    fig.add_vline(x='2017-02-01 00:00:00', line_width=2, line_dash="dash", line_color=colour(6,0.5))
+
 
     fig.update_layout(
         plot_bgcolor='rgba(255, 255, 255, 0)',
@@ -461,7 +497,7 @@ def plot_fig1_area_chart_of_SOC(path_ref_model,path_directory_single_year_cluste
         gridcolor='rgba(255, 255, 255, 0)',
         title_standoff = 36
     )
-    fig.write_html(f"{figure_directory}/fig1.html", auto_open=True)
+    # fig.write_html(f"{figure_directory}/fig1.html", auto_open=True)
     fig.write_image(f"{figure_directory}/fig1.svg", width=1920, height=1920, scale=1)
     fig.write_image(f"{figure_directory}/fig1.jpeg", width=1920, height=1920, scale=1)
 
@@ -530,7 +566,7 @@ def plot_fig2_bar_chart_of_capacity_mix(path_ref_model,path_directory_single_yea
         title_standoff = 36
     )
 
-    fig.write_html(f"{figure_directory}/fig2.html", auto_open=True)
+    # fig.write_html(f"{figure_directory}/fig2.html", auto_open=True)
     fig.write_image(f"{figure_directory}/fig2.svg", width=1920, height=1920, scale=1)
     fig.write_image(f"{figure_directory}/fig2.jpeg", width=1920, height=1920, scale=1)
 
@@ -580,7 +616,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
     df[str_abs_design] = df['Mean Abs Capacity Mix Error']
     df[str_compound_err] = df['Abs Compound Error']
 
-    df_cost_design_unpivoted = df[['Run',str_cost,str_abs_design,ldes_err,str_compound_err]]
+    df_cost_design_unpivoted = df[['Run',str_cost,str_abs_design,ldes_err]]
     df_cost_design_unpivoted=pd.melt(df_cost_design_unpivoted, id_vars=['Run'], var_name='Parameter', value_name='Error')  
 
     result_n_1 = df_cost_design_unpivoted[df_cost_design_unpivoted['Run'].str.match(r"\[\d{4}\]")]
@@ -596,7 +632,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
         text=result_n_1['Run'],
         boxpoints='all', # can also be outliers, or suspectedoutliers, or False
         jitter=0.3, # add some jitter for a better separation between points
-        marker_color=colour(4,1),
+        marker_color=colour(7,1),
         line=dict(width=3),
         ))
     fig.add_trace(go.Box(
@@ -616,7 +652,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
         text=result_n_3['Run'],
         boxpoints='all', # can also be outliers, or suspectedoutliers, or False
         jitter=0.3, # add some jitter for a better separation between points
-        marker_color=colour(6,1),
+        marker_color=colour(3,1),
         line=dict(width=3),
         ))
     fig.update_yaxes(
@@ -654,7 +690,7 @@ def plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_clu
         ),
     )
 
-    fig.write_html(f"{figure_directory}/fig3_1.html", auto_open=True)
+    # fig.write_html(f"{figure_directory}/fig3_1.html", auto_open=True)
     fig.write_image(f"{figure_directory}/fig3_1.svg", width=1920, height=1920, scale=1)
     fig.write_image(f"{figure_directory}/fig3_1.jpeg", width=1920, height=1920, scale=1)
 
@@ -673,140 +709,155 @@ def plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_clus
     result_n_2 = df[df['Run'].str.match(r"^\[\d{4},\d{4}\]")]
     result_n_3 = df[df['Run'].str.match(r"^\[\d{4},\d{4},\d{4}\]")]
 
-    result_n_2['Years'] = result_n_2['Run'].str[1:10]
-    result_n_2['Check'] = result_n_2['Years'].apply(includes_system_defining_years)
-    result_n_3['Years'] = result_n_3['Run'].str[1:15]
-    result_n_3['Check'] = result_n_3['Years'].apply(includes_system_defining_years)
-
-    result_n_2_set_1 =result_n_2[result_n_2['Check'] == True]
-    result_n_2_set_2 =result_n_2[result_n_2['Check']== False]
-    result_n_3_set_1 =result_n_3[result_n_3['Check'] == True]
-    result_n_3_set_2 =result_n_3[result_n_3['Check']== False]
-
-    fig = go.Figure()
-
     y_val = 'Cost Error'
-    x_val = 'Mean Abs Capacity Mix Error' #'Mean Abs Capacity Mix Error'   #'LDES Capacity Error'
+    z_val = 'Mean Abs Capacity Mix Error' #'Mean Abs Capacity Mix Error'   #'LDES Capacity Error'
+    x_val = 'LDES Capacity Error'
 
-    line_width = 4
+    line_width = 2
+    marker_sz = 32
+
+    fig =  make_subplots(
+        rows=3, cols=1,
+        subplot_titles=('<b>Single Weather Year<b>','<b>Two Weather Years<b>','<b>Three Weather Years<b>'),
+        # shared_xaxes=True
+        )
+
 
     fig.add_trace(go.Scatter(
         name='Single Weather Year',
         y=result_n_1[y_val],
         x=result_n_1[x_val],
         text=result_n_1['Run'],
-        marker_color=colour(8,.8),
         mode='markers',
-        marker_size = 40,
+        marker_size = marker_sz,
         marker=dict(
+            color = result_n_1[z_val],
+            coloraxis = 'coloraxis',
             line=dict(
-                color=colour(1,1),
+                color = colour(0,0.4),
                 width=line_width
-            ))
-        # line=dict(width=0),
-        ))
+            )),
+        customdata=np.stack(([result_n_1[z_val]]),axis=-1),
+        hovertemplate =
+        f'<i>{y_val}</i>: '+'%{y:.2%}'+
+        f'<br><b>{x_val}</b>: '+'%{x:.2%}<br>'+
+        f'<i>{z_val}</i>: '+'%{customdata[0]:.2%}<br>'+
+        '<b>%{text}</b>',
+        ),
+        row=1,col=1)
+    
     fig.add_trace(go.Scatter(
         name='Two Weather Years',
-        y=result_n_2_set_2[y_val],
-        x=result_n_2_set_2[x_val],
-        text=result_n_2_set_2['Run'],
-        marker_color=colour(8,.8),
+        y=result_n_2[y_val],
+        x=result_n_2[x_val],
+        text=result_n_2['Run'],
         mode='markers',
-        marker_size = 40,
+        marker_size = marker_sz,
         marker=dict(
+            color = result_n_2[z_val],
+            coloraxis = 'coloraxis',
+            # showscale=True,
             line=dict(
-                color=colour(4,1),
+                color = colour(0,0.4),
                 width=line_width
-            ))
-        # line=dict(width=0),
-        ))
-    fig.add_trace(go.Scatter(
-        name='Two Weather Years, [2016, 2017]',
-        y=result_n_2_set_1[y_val],
-        x=result_n_2_set_1[x_val],
-        text=result_n_2_set_1['Run'],
-        marker_color=colour(4,.8),
-        mode='markers',
-        marker_size = 40,
-        marker=dict(
-            line=dict(
-                color=colour(4,1),
-                width=line_width
-            ))
-        # line=dict(width=0),
-        ))
+            )),
+        customdata=np.stack(([result_n_2[z_val]]),axis=-1),
+        hovertemplate =
+        f'<i>{y_val}</i>: '+'%{y:.2%}'+
+        f'<br><b>{x_val}</b>: '+'%{x:.2%}<br>'+
+        f'<i>{z_val}</i>: '+'%{customdata[0]:.2%}<br>'+
+        '<b>%{text}</b>',
+        ),
+        row=2,col=1)
     
+    #ARTIFICIAL DATA TO FORCE COLOURBAR TO SHOW PROPERLY. DATA POINT DOES NOT SHOW ON CHART.
+    fig.add_trace(go.Scatter(
+        name='Artificial',
+        y=[result_n_3[y_val].iloc[0],result_n_3[y_val].iloc[1]],
+        x=[result_n_3[x_val].iloc[0],result_n_3[x_val].iloc[1]],
+        text=result_n_3['Run'],    
+        mode='markers',
+        marker_size = marker_sz,
+        marker=dict(
+            color = [0,0.3],
+            coloraxis = 'coloraxis',
+            line=dict(
+                color = colour(0,0.0),
+                width=line_width
+            )),
+        ),
+        row=3,col=1)
+    
+    # REAL DATA
     fig.add_trace(go.Scatter(
         name='Three Weather Years',
-        y=result_n_3_set_2[y_val],
-        x=result_n_3_set_2[x_val],
-        text=result_n_3_set_2['Run'],
-        marker_color=colour(8,.8),
+        y=result_n_3[y_val],
+        x=result_n_3[x_val],
+        text=result_n_3['Run'],    
         mode='markers',
-        marker_size = 40,
+        marker_size = marker_sz,
         marker=dict(
+            color = result_n_3[z_val],
+            coloraxis = 'coloraxis',
             line=dict(
-                color=colour(6,1),
+                color = colour(0,0.4),
                 width=line_width
-            ))
-        # line=dict(width=0),
-        ))
-    fig.add_trace(go.Scatter(
-        name='Three Weather Years, incl. [2016, 2017]',
-        y=result_n_3_set_1[y_val],
-        x=result_n_3_set_1[x_val],
-        text=result_n_3_set_1['Run'],
-        marker_color=colour(6,.8),
-        mode='markers',
-        marker_size = 40,
-        marker=dict(
-            line=dict(
-                color=colour(6,1),
-                width=line_width
-            ))
-        # line=dict(width=0),
-        ))
+            )),
+        customdata=np.stack(([result_n_3[z_val]]),axis=-1),
+        hovertemplate =
+        f'<i>{y_val}</i>: '+'%{y:.2%}'+
+        f'<br><b>{x_val}</b>: '+'%{x:.2%}<br>'+
+        f'<i>{z_val}</i>: '+'%{customdata[0]:.2%}<br>'+
+        '<b>%{text}</b>',
+        ),
+        row=3,col=1)
     
-    fig.update_yaxes(
-    ticks='outside',
-    showline=True,
-    linecolor='black',
-    gridcolor='rgba(0, 0, 0, 0.2)',
-    
-    )
-    fig.update_xaxes(
-    ticks='outside',
-    showline=True,
-    linecolor='black',
-    gridcolor='rgba(0, 0, 0, 0)'
-    )
+    for i in range(1,3+1):
+        fig.update_yaxes(
+        row=i,col=1,
+        ticks='outside',
+        tickmode = 'array',
+        tickvals = [-0.05,0,0.05,0.1,0.15],
+        showline=True,
+        linecolor='black',
+        gridcolor='rgba(0, 0, 0, 0.2)',
+        tickformat='.0%',
+        zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        title=y_val,
+        )
+        fig.update_xaxes(
+        row=i,col=1,
+        ticks='outside',
+        showline=True,
+        linecolor='black',
+        gridcolor='rgba(0, 0, 0, 0)',
+        tickformat='.0%',
+        zerolinecolor = 'rgba(0, 0, 0, 0.4)',
+        title=x_val,
+        range=[-0.07,0.83]
+        )
+        
     fig.update_layout(
         plot_bgcolor='rgba(255, 255, 255, 0)',
-        yaxis = dict(
-            title = dict(
-                text=y_val,
-            ),
-            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
-        ),
-        xaxis = dict(
-            title = dict(
-                text=x_val,
-            ),
-            zerolinecolor = 'rgba(0, 0, 0, 0.4)',
-        ),
-        legend=dict(
-            x=0.02,
-            y=1.08,
-            bgcolor = 'rgba(255,255,255,1)',
-            bordercolor='rgba(255, 255, 255, 0)'
-        ),
+        showlegend=False,
         yaxis_tickformat=".0%",
         xaxis_tickformat=".0%",
         font=dict(
         family="Times New Roman",
-        size=48,
+        size=40,
         ),
+        coloraxis = dict(
+            colorbar = dict(
+            title = dict(text='MACME'),
+            tickformat = '.0%',
+            tickmode='array',
+            tickvals = [0,.05,.1,.15,.2,.25,.3],
+            ticktext = ['0%','5%','10%','15%','20%','25%',''],
+            ),
+            colorscale=plasma_discrete_scale,
+            ),
     )
+    fig.update_annotations(font_size=48)
     
     fig.write_html(f"{figure_directory}/fig3_2.html", auto_open=True)
     fig.write_image(f"{figure_directory}/fig3_2.svg", width=1920, height=1920, scale=1)
@@ -915,7 +966,7 @@ def plot_fig3_3_scatter_of_errors():
         ),
     )
     
-    fig.write_html("simple_weather-year_ldes-model/export/results_variant_comparison.html", auto_open=True)
+    # fig.write_html("simple_weather-year_ldes-model/export/results_variant_comparison.html", auto_open=True)
 
 # function generates data for the 4th figure
 def generate_data_fig4_scatter_of_timeseries_duration_curve_error(path_directory_three_year_cluster):
@@ -937,7 +988,9 @@ def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,p
     df_cluster_error.set_index('Run')
     df_combined = pd.merge(df_timeseries_error, df_cluster_error, how="left", on=["Run"])
 
-    df_combined = df_combined[['Run','compound_error','Cost Error','Mean Abs Capacity Mix Error','Abs Compound Error']]
+    df_combined = df_combined[['Run','compound_error','Cost Error','Mean Abs Capacity Mix Error','Abs Compound Error','LDES Capacity Error']]
+    df_combined['LDES Capacity Error'] = -1* df_combined['LDES Capacity Error']
+    df_combined['Cost Error'] = -1* df_combined['Cost Error']
     df_combined['Years'] = df_combined['Run'].str[1:15]
     df_combined['Check'] = df_combined['Years'].apply(includes_system_defining_years)
 
@@ -946,41 +999,60 @@ def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,p
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(
-        name='Includes System Defining Years: [2016, 2017]',
-        y=df_set_1['Mean Abs Capacity Mix Error'],
-        x=df_set_1['compound_error'],
-        text=df_set_1['Run'],
-        mode='markers',
-        marker=dict(
-            color=colour(2,1),
-            size=32,
-            line=dict(
-                color=colour(2,1),
-                width=4
-            ))
-    ))
+    #PLOTLY has issues with scaling the colour bar correctly, have to produce artificial hidden datapoints. DOES NOT SHOW ON FINAL GRAPH!!
+    
 
     fig.add_trace(go.Scatter(
-        name='Remaining Clusters',
-        y=df_set_2['Mean Abs Capacity Mix Error'],
-        x=df_set_2['compound_error'],
-        text=df_set_2['Run'],
+            name='Artificial Data',
+            y=[df_combined['compound_error'][0],df_combined['compound_error'][1]],
+            x=[df_combined['LDES Capacity Error'][0],df_combined['LDES Capacity Error'][1]],
+            text=['data to enforce colourbar','data to enforce colourbar'],
+            mode='markers',
+            marker=dict(
+                color=[0,0.3],
+                coloraxis='coloraxis',
+                size=32,
+                line=dict(
+                    color=colour(0,.0),
+                    width=4
+                )),
+            showlegend=False
+        ))
+
+    # REAL DATA
+
+    fig.add_trace(go.Scatter(
+        name='Three Year Clusters',
+        y=df_combined['compound_error'],
+        x=df_combined['LDES Capacity Error'],
+        text=df_combined['Run'],
         mode='markers',
         marker=dict(
-            color=colour(2,.1),
+            color=df_combined['Mean Abs Capacity Mix Error'],
+            coloraxis='coloraxis',
             size=32,
             line=dict(
-                color=colour(2,1),
+                color=colour(0,.4),
                 width=4
-            )
-    )))
+            )),
+        customdata=np.stack(([df_combined['Mean Abs Capacity Mix Error']]),axis=-1),
+        hovertemplate =
+        f'<i>Ex Ante</i>: '+'%{y:.2%}'+
+        f'<br><b>LDES</b>: '+'%{x:.2%}<br>'+
+        f'<i>MACME</i>: '+'%{customdata[0]:.2%}<br>'+
+        '<b>%{text}</b>',
+        showlegend=False
+    ))
+
+    
+    
 
     fig.update_yaxes(
     ticks='outside',
     showline=True,
     linecolor='black',
     gridcolor='rgba(0, 0, 0, 0.2)',
+    title_standoff = 36,
     # tick0=-0.05, 
     # dtick=0.05
     )
@@ -989,6 +1061,8 @@ def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,p
     showline=True,
     linecolor='black',
     gridcolor='rgba(0, 0, 0, 0.2)',
+    title_standoff = 36,
+    rangemode='tozero',
     # tick0=0, 
     # dtick=0.05
     )
@@ -997,13 +1071,13 @@ def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,p
         # title=dict(text="Preoptimisation Duration Curve Error versus Postoptimisation Absolute Compound Error"),
         yaxis = dict(
             title = dict(
-                text='Mean Absolute Capacity Mix Error (Ex-Post)',
+                text='Duration Curve Error (Ex-Ante)',
             ),
             zerolinecolor = 'rgba(0, 0, 0, 0.4)',
         ),
         xaxis = dict(
             title = dict(
-                text='Duration Curve Error (Ex-Ante)',
+                text='LDES Capacity Error (Ex-Post)',
             ),
             zerolinecolor = 'rgba(0, 0, 0, 0.4)',
         ),
@@ -1022,6 +1096,17 @@ def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,p
         # boxmode='group',
         yaxis_tickformat=".0%",
         xaxis_tickformat=".0%",
+        coloraxis = dict(
+            colorbar = dict(
+            title = dict(text='MACME<br>(Ex-Post)'),
+            tickformat = '.0%',
+            tickmode='array',
+            tickvals = [0,.05,.1,.15,.2,.25,.3],
+            ticktext = ['0%','5%','10%','15%','20%','25%',''],
+            ),
+            colorscale=plasma_discrete_scale,
+            
+            ),
     )
 
     fig.write_html(f"{figure_directory}/fig4.html", auto_open=True)
@@ -1035,10 +1120,9 @@ def plot_fig4_scatter_of_timeseries_duration_curve_error(path_timeseries_error,p
 
 plot_fig1_area_chart_of_SOC(path_ref_model, path_directory_single_year_cluster)
 plot_fig2_bar_chart_of_capacity_mix(path_ref_model, path_directory_single_year_cluster)
-# # # generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
-plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
+generate_data_fig3_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
+# # plot_fig3_1_box_plot_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
 plot_fig3_2_scatter_of_errors(path_ref_model,path_directory_single_year_cluster,path_variants['unmodified']['two_year'],path_variants['unmodified']['three_year'],'unmodified')
-# # plot_fig3_3_scatter_of_errors()
-# generate_data_fig4_scatter_of_timeseries_duration_curve_error('weather_year_clustering_LDES_study/results/three_year_cluster/unmodified')
+generate_data_fig4_scatter_of_timeseries_duration_curve_error('weather_year_clustering_LDES_study/results/three_year_cluster/unmodified')
 plot_fig4_scatter_of_timeseries_duration_curve_error('simple_weather-year_ldes-model/export/timeseries_duration_curve_error.csv','simple_weather-year_ldes-model/export/data_cluster_box_plots_unmodified.csv')
 

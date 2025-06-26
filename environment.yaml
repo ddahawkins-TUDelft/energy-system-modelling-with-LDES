@@ -1,0 +1,8 @@
+name: calliope-v07
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - calliope
+  - gurobi
+prefix: C:\Users\dhawkins\AppData\Local\miniforge3\envs\calliope-v07

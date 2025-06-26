@@ -1,7 +1,8 @@
 import calliope
 import os
-from model_constructor import standardised_model_config as standard_model
-from utils import filename_standard
+# print(os.getcwd())
+from utility_functions.standard_model import standardised_model_config as standard_model, filename_standard
+
 
 # script configuration
 params = {

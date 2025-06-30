@@ -1,11 +1,11 @@
 Install v0.7dev5 with Gurobi, via:
-conda create -n calliope-v07 -c conda-forge/label/calliope_dev -c conda-forge -c gurobi calliope=0.7.0.dev5 gurobi
+conda create -n calliope-v07 -c conda-forge/label/calliope_dev -c conda-forge -c gurobi calliope tsam gurobi
 
 Activate the environment, via:
 conda activate calliope-v07
 
 Export/update the environment, via:
-conda env export --from-history > environment.yaml
+conda env export --from-history > environment_calliope_v07.yaml
 
 Install from environment.yaml, via:
-conda env create -f environment.yaml
+conda env create -f environment_calliope_v07.yaml

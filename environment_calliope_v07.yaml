@@ -8,4 +8,5 @@ dependencies:
   - calliope
   - gurobi
   - tsam
+  - matplotlib
 prefix: C:\Users\dhawkins\AppData\Local\miniforge3\envs\calliope-v07

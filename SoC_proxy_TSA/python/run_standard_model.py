@@ -1,8 +1,7 @@
 import calliope
 import os
 # print(os.getcwd())
-from utility_functions.standard_model import standardised_model_config as standard_model, filename_standard
-
+from SoC_proxy_TSA.python.utility_functions.helper_model_config import standardised_model_config as standard_model, filename_standard
 
 # script configuration
 params = {

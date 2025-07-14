@@ -4,8 +4,18 @@ conda create -n calliope-v07 -c conda-forge/label/calliope_dev -c conda-forge -c
 Activate the environment, via:
 conda activate calliope-v07
 
+Deactivate the environment, via:
+conda deactivate
+
 Export/update the environment, via:
 conda env export --from-history > environment_calliope_v07.yaml
 
 Install from environment.yaml, via:
+conda env create -f environment_calliope_v07.yaml
+
+Update environment on the fly, via:
+conda env update -f environment_calliope_v07.yaml --prune
+
+Hard delete/reinstall environment, via:
+conda env remove -n calliope-v07
 conda env create -f environment_calliope_v07.yaml

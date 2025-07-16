@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 from .helper_normalise import normalise_by_method
+from scipy.stats import pearsonr
+from sklearn.metrics.pairwise import cosine_similarity
+from pandas import Timestamp
 
 #function that generates the State of Charge proxy given a pandas dataframe containing timeseries information, meta data, and some system config data
 def generate_SoC_proxy(
@@ -26,10 +29,10 @@ def generate_SoC_proxy(
         raise Exception(f"The following fields are missing from the dataframe: {missing_fields}")
 
     #normalise demand by mean
-    normalise_by_method(df_timeseries[demand_field], method='mean', inplace=True)
+    df_timeseries[demand_field] = normalise_by_method(df_timeseries[demand_field], method='mean')
 
     #normalise capacity factors by sum, for unity across summation
-    normalise_by_method(renewables_fields_and_weights, method='sum', inplace=True)
+    renewables_fields_and_weights = normalise_by_method(renewables_fields_and_weights, method='sum')
 
     #For each timestep, divide the renewables capacity factors by the normalised demand for that timestep, to get capacity factors relative to demand
     #This seeks to capture events where renewable output is low, but so is demand, i.e. no issues with supply.
@@ -58,3 +61,90 @@ def generate_SoC_proxy(
     #return the timeseries with new SoC Proxy as well as the threshold
     return df_timeseries, threshold_SoC
 
+#  ------------------------------------------------------------------
+# 
+#                       SoC Assessment metrics
+# 
+# ------------------------------------------------------------------
+
+def first_derivative_correlation(y_true, y_pred, standardise=False):
+    """
+    Computes the Pearson correlation between the first derivatives of two time series.
+    
+    Parameters:
+    - y_true: pd.Series — the reference time series
+    - y_pred: pd.Series — the predicted time series
+    - standardise: bool — whether to standardise the differences before correlation
+
+    Returns:
+    - float — Pearson correlation of the first derivatives
+    """
+    # Compute first differences
+    y_true_diff = y_true.diff().dropna()
+    y_pred_diff = y_pred.diff().dropna()
+    
+    # Align lengths
+    min_len = min(len(y_true_diff), len(y_pred_diff))
+    y_true_diff = y_true_diff.iloc[:min_len]
+    y_pred_diff = y_pred_diff.iloc[:min_len]
+
+    # Optionally standardise
+    if standardise:
+        y_true_diff = (y_true_diff - y_true_diff.mean()) / y_true_diff.std()
+        y_pred_diff = (y_pred_diff - y_pred_diff.mean()) / y_pred_diff.std()
+    
+    # Compute Pearson correlation
+    corr, _ = pearsonr(y_true_diff, y_pred_diff)
+    return corr
+
+def peak_timing_error(y_true, y_pred, field_reference: str = 'index'):
+
+     #get id of prediction peak,
+    id_peak_true = y_true.idxmax() #get id of true profile peak, representing the hour
+    id_peak_pred = y_pred.idxmax()
+    
+    #if index is to be used for hour in period
+    if field_reference == 'index':
+        peak_true = id_peak_true
+        peak_pred = id_peak_pred
+        series_max = y_true.index.max()
+        series_min = y_true.index.min()
+
+    #if another column is to be used for hour in period
+    else:
+        peak_true = y_true.loc[field_reference,id_peak_true]
+        peak_pred = y_pred.loc[field_reference,id_peak_pred]
+        series_max = y_true[field_reference].max()
+        series_min = y_true[field_reference].min()
+
+    if isinstance(peak_true,Timestamp) and isinstance(peak_pred,Timestamp):
+        diff_in_hours = (peak_true-peak_pred).total_seconds() / 3600
+        max_span_hours = (series_max - series_min).total_seconds() / 3600
+        result = diff_in_hours / max_span_hours
+    else:
+        result = (peak_true-peak_pred)/(series_max-series_min)
+    
+    return result #calcualte difference and divide by highest id i.e. divide by hours in the model e.g. 8760 for a 1 year model
+
+def pearson_r_standardised(y_true, y_pred):
+
+    #normalise with respect to standard dev
+    ref_stardardised = (y_true-np.mean(y_true)) / np.std(y_true)
+    proxy_stardardised = (y_pred-np.mean(y_pred)) / np.std(y_pred)
+
+    #calculate pearson r coeff
+    r, _ = pearsonr(ref_stardardised, proxy_stardardised)
+
+    return r
+
+def cos_similarity(y_true, y_pred):
+    return cosine_similarity([y_true], [y_pred])[0][0]
+
+def standardised_profile_comparison(y_true,y_pred):
+
+    e_peak_time = peak_timing_error(y_true, y_pred,)
+    e_pearson_r = pearson_r_standardised(y_true, y_pred)
+    e_cos_sim = cos_similarity(y_true, y_pred)
+    e_fd_corr = first_derivative_correlation(y_true, y_pred, standardise=True)
+
+    return e_peak_time,e_pearson_r,e_cos_sim, e_fd_corr

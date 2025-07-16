@@ -1,61 +1,48 @@
 import pandas as pd
 import numpy as np
 
-def normalise_by_method(data, method="mean", inplace=False):
+def normalise_by_method(data, method="mean"):
     """
     Normalizes the input (list, dict, or pandas Series) using one of:
     - method="sum": values sum to 1
     - method="mean": values are scaled by mean
     - method="max": values are scaled by max
-    
-    Returns an object of the same type. Supports inplace modification for dicts, lists, Series.
+
+    Returns a new object of the same type. Does not modify input in-place.
     """
+
     if method not in {"sum", "mean", "max"}:
         raise ValueError("Method must be 'sum', 'mean', or 'max'")
 
-    # Convert to pandas Series for unified processing
+    # Convert input to Series
     if isinstance(data, dict):
         s = pd.Series(data)
+        output_type = 'dict'
     elif isinstance(data, (list, np.ndarray)):
         s = pd.Series(data)
+        output_type = 'list'
     elif isinstance(data, pd.Series):
-        s = data
+        s = data.astype(float)
+        output_type = 'series'
     else:
         raise TypeError("Input must be a list, dictionary, or pandas Series.")
 
-    # Choose normalization factor
-    if method == "sum":
-        factor = s.sum()
-    elif method == "mean":
-        factor = s.mean()
-    elif method == "max":
-        factor = s.max()
+    # Compute normalization factor
+    factor = {
+        "sum": s.sum(),
+        "mean": s.mean(),
+        "max": s.max()
+    }[method]
 
-    # Avoid divide-by-zero errors
     if factor == 0:
         raise ValueError("Normalization factor is zero — cannot normalize.")
 
     normed = s / factor
 
-    # Return in same format
-    if isinstance(data, dict):
-        if inplace:
-            data.update(normed.to_dict())
-            return data
-        else:
-            return normed.to_dict()
-
-    elif isinstance(data, list) or isinstance(data, np.ndarray):
-        normed_list = normed.tolist()
-        if inplace:
-            data[:] = normed_list
-            return data
-        else:
-            return normed_list
-
-    elif isinstance(data, pd.Series):
-        if inplace:
-            data[:] = normed
-            return data
-        else:
-            return normed
+    # Convert back to original type
+    if output_type == 'dict':
+        return normed.to_dict()
+    elif output_type == 'list':
+        return normed.tolist()
+    elif output_type == 'series':
+        return normed

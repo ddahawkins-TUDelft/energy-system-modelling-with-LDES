@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 
 def _format_standard_calliope_ts(df: pd.DataFrame):
     df['timesteps'] = pd.to_datetime(df['timesteps'])
@@ -64,3 +65,26 @@ def extrapolate_ts_from_cluster_map(source_cluster_map: str, source_original_ts:
     df = df[column_names_original]
 
     return df, s_clustered_datetimes
+
+#convert datetime columns into hour of year
+def convert_to_hour_of_year(timestamp_series):
+    """
+    Converts a Pandas Series of 'yyyy-mm-dd hh:mm:ss' strings to hour of the year (0–8759).
+    
+    Parameters:
+        timestamp_series (pd.Series): Series of timestamps as strings.
+        
+    Returns:
+        pd.Series: Series of integers representing the hour of the year.
+    """
+    # Convert to datetime
+    dt = pd.to_datetime(timestamp_series)
+
+    # Calculate hour of year
+    hour_of_year = (dt - pd.Timestamp(year=dt.dt.year.min(), month=1, day=1)).dt.total_seconds() // 3600
+
+    return hour_of_year.astype(int)
+
+def hour_of_year_from_timestamp(timestamp):
+
+    return int((timestamp - datetime(timestamp.year, 1, 1)).total_seconds() // 3600)

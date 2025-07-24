@@ -2,17 +2,11 @@ import pandas as pd
 import os
 import json
 import calliope
-from utility_functions.helper_SoC_proxy import generate_soc_proxy_3, standardised_profile_comparison
+from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import utility_functions.helper_timeseries_tools as tt
-from utility_functions.helper_plot_soc_comparison import  figure_compare_muliple_SoCs
-from utility_functions.helper_model_config import standardised_model_config, clustered_model_config
-from utility_functions.helper_normalise import normalise_by_method
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
-from sklearn.metrics.pairwise import cosine_similarity
-from utility_functions.helper_model_config import standardised_model_config, clustered_model_config
-from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope_timeseries
+
 import re
 
 
@@ -73,8 +67,8 @@ import re
 
 #config
 set_model_paths = [
-    'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2010_2014_reference.netcdf',
-    # 'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2015_2019_reference.netcdf'
+    # 'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2010_2014_reference.netcdf',
+    'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2015_2019_reference.netcdf'
 ]
 
 set_n_representative_days = [
@@ -277,6 +271,11 @@ dispatchable_techs = {
         # 'relative_dispatchable': 0 #TODO: add in capacity for relative dispatchable
     }
 
+soc_decomposition = {
+        'method': 'fft_lowpass',
+        'time_horizon_hours': 24
+        }
+
 list_df_clustered = []
 list_labels = []
 
@@ -291,7 +290,15 @@ for path in set_model_paths:
 
     #compute soc proxy of reference model
     ref_df_soc_proxy = tt.calliope_ts_to_pandas('SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv',f"{ref_model[:4]}-01-1",f"{ref_model[-4:]}-12-31")
-    ref_df_soc_proxy, ref_df_soc_proxy_alpha, ref_weighted_mean_installed_capacity = generate_soc_proxy_3(ref_df_soc_proxy,'demand_power',capacity_weights, dispatchable_techs, storage_process_losses)
+    ref_df_soc_proxy, ref_capacity_factors, ref_nominal_capacities = generate_soc_proxy(
+            df=ref_df_soc_proxy,
+            demand_field='demand_power',
+            renewables_fields_and_weights=capacity_weights, 
+            dispatchable_techs=dispatchable_techs,
+            storage_process_losses=storage_process_losses,
+            soc_decomposition = soc_decomposition
+        )
+    
 
     #re-index
     ref_df_soc_proxy = ref_df_soc_proxy.set_index('timesteps')
@@ -308,7 +315,14 @@ for path in set_model_paths:
 
             #compute soc proxy of given model model
             cluster_df_soc_proxy,s_cluster_datetimes = tt.extrapolate_ts_from_cluster_map(f"SoC_proxy_TSA/cache/cluster_maps/map_{ref_model}_n_{n_days}_method_{method}.csv",'SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv')
-            cluster_df_soc_proxy, cluster_df_soc_proxy_alpha, cluster_weighted_mean_installed_capacity = generate_soc_proxy_3(cluster_df_soc_proxy,'demand_power',capacity_weights, dispatchable_techs, storage_process_losses)
+            cluster_df_soc_proxy, cluster_capacity_factors, cluster_nominal_capacities = generate_soc_proxy(
+                df=cluster_df_soc_proxy,
+                demand_field='demand_power',
+                renewables_fields_and_weights=capacity_weights, 
+                dispatchable_techs=dispatchable_techs,
+                storage_process_losses=storage_process_losses,
+                soc_decomposition = soc_decomposition
+            )
             cluster_df_soc_proxy = cluster_df_soc_proxy.set_index('timesteps')
 
             #append the real profile
@@ -350,4 +364,4 @@ plt.legend()
 plt.tight_layout()
 
 plt.show()
-            
+        

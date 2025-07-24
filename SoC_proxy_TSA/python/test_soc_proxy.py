@@ -1,24 +1,60 @@
-from utility_functions.helper_SoC_proxy import generate_SoC_proxy
+from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
+import calliope
+import re
 import utility_functions.helper_timeseries_tools as tt
-from utility_functions.helper_plot_soc_comparison import figure_compare_SoC
-# import timeseries using helper function that also filters over date range
-df_reference = tt.calliope_ts_to_pandas('SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv','2010-01-01','2010-12-31')
+import time
 
-df_clustered,s_cluster_datetimes = tt.extrapolate_ts_from_cluster_map('SoC_proxy_TSA/cache/outputdata.csv','SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv')
+
+# import timeseries using helper function that also filters over date range
+
 
 capacity_weights = {
-    'solar': 1,
+    'solar': 2,
     'onshore_wind': 1,
     'offshore_wind': 1
 }
 
-df_reference,threshold_SoC_reference = generate_SoC_proxy(df_reference,'demand_power',capacity_weights)
-df_clustered,threshold_SoC_clustered = generate_SoC_proxy(df_clustered,'demand_power',capacity_weights)
+storage_process_losses = {
+    'charging_efficiency': 0.65 * 0.99, #electrolyser efficiency * ldes injection efficiency
+    'discharging_efficiency': 0.56 * 0.99 #electrolyser efficiency * ldes injection efficiency
+}
 
-#plot and compare
-figure_compare_SoC(
-    df_reference=df_reference,
-    df_test=df_clustered,
-    label_graph_1 = f"Reference, α={round(threshold_SoC_reference,4)}",
-    label_graph_2 = f"Clustered, α={round(threshold_SoC_clustered,4)}"
+dispatchable_techs = {
+        'known_dispatchable_capacity_portion_mean_demand': .25 #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
+        # 'relative_dispatchable': 0 #TODO: add in capacity for relative dispatchable
+    }
+
+
+path = 'C:/Users/dhawkins/Offline Workspace/Development/energy-system-modelling-with-LDES/SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2015_2019_reference.netcdf'
+reference_model = calliope.read_netcdf(path)
+ref_model = re.search(r'20\d{2}_20\d{2}', path).group()
+
+#compute soc proxy of reference model
+ref_df_soc_proxy = tt.calliope_ts_to_pandas('SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv',f"{ref_model[:4]}-01-1",f"{ref_model[-4:]}-12-31")
+
+start_time = time.time()
+
+df, cap_fac, installed_caps_nominal = generate_soc_proxy(
+    df=ref_df_soc_proxy,
+    demand_field='demand_power',
+    renewables_fields_and_weights={
+        'solar': 2,
+        'onshore_wind': 1,
+        'offshore_wind': 1
+        }, 
+    dispatchable_techs=dispatchable_techs,
+    storage_process_losses={
+        'charging_efficiency': 0.65 * 0.99, #electrolyser efficiency * ldes injection efficiency
+        'discharging_efficiency': 0.56 * 0.99 #electrolyser efficiency * ldes injection efficiency
+        },
+    soc_decomposition = {
+        'method': 'fft_lowpass',
+        'time_horizon_hours': 24
+        },
+    timestamp_col= 'timesteps'
     )
+end_time = time.time()
+runtime = end_time - start_time
+
+print(f"Runtime: {runtime*1000:.5f} milliseconds")
+print('done')

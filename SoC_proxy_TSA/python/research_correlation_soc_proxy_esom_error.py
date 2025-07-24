@@ -519,7 +519,7 @@ capacity_weights = {
     'offshore_wind': 16
 }
 
-df_reference,threshold_SoC_reference = generate_SoC_proxy(df_reference,'demand_power',capacity_weights)
+df_reference,threshold_SoC_reference,demand_scaling_factor = generate_SoC_proxy(df_reference,'demand_power',capacity_weights)
 df_reference = df_reference.set_index('timesteps')
 
 list_df_clustered = []
@@ -531,7 +531,7 @@ results_df = pd.DataFrame(columns=["model_name","alpha_error", "standardised_pea
 for i in [93,90,80,77,99,82,86,5]:
     print(f"Computing statistics for sample {i}")
     df_clustered,s_cluster_datetimes = tt.extrapolate_ts_from_cluster_map(f"SoC_proxy_TSA/cache/cluster_maps/n_days_{n_days}_seed_{i}.csv",'SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv')
-    df, alpha = generate_SoC_proxy(df_clustered,'demand_power',capacity_weights)
+    df, alpha, scalar = generate_SoC_proxy(df_clustered,'demand_power',capacity_weights)
     df = df.set_index('timesteps')
 
     list_df_clustered.append(df)

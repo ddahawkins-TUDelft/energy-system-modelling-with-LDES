@@ -82,3 +82,5 @@ def monte_carlo_tsa(df_source, date_lower_bound, date_upper_bound, feature_cols,
 
     assignment = assignment[['timesteps', 'rep_day_label', 'PeriodNum']]
     return assignment
+
+# def multiyear_tsa(source, clustering_method, n_clusters):

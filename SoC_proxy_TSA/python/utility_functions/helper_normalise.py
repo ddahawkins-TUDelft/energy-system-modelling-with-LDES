@@ -41,8 +41,8 @@ def normalise_by_method(data, method="mean"):
 
     # Convert back to original type
     if output_type == 'dict':
-        return normed.to_dict()
+        return normed.to_dict(),factor
     elif output_type == 'list':
-        return normed.tolist()
+        return normed.tolist(), factor
     elif output_type == 'series':
-        return normed
+        return normed, factor

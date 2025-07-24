@@ -54,3 +54,4 @@ def apply_tsam_to_calliope_timeseries(model: calliope.Model, number_typical_peri
     log_message = f"TSA successfully applied. Results of {number_typical_periods} day {cluster_method} method saved to {path_to_cluster_csv}."
 
     return cluster_days, log_message
+

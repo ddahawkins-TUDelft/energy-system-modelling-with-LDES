@@ -1,4 +1,4 @@
-from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
+from utility_functions.helper_SoC_proxy_fast_compute_with_curtailment_correction import generate_soc_proxy
 import calliope
 import re
 import utility_functions.helper_timeseries_tools as tt
@@ -32,6 +32,33 @@ ref_model = re.search(r'20\d{2}_20\d{2}', path).group()
 #compute soc proxy of reference model
 ref_df_soc_proxy = tt.calliope_ts_to_pandas('SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv',f"{ref_model[:4]}-01-1",f"{ref_model[-4:]}-12-31")
 
+dictionary_costs = {
+    'storage': {
+        'capex': 0.003190,
+        'opex': 0
+    },
+    'charging': {
+        'capex': 1.2,
+        'opex': 0
+    },
+    'discharging': {
+        'capex': 0.093,
+        'opex': 0
+    },
+    'solar': {
+        'capex': 0.56,
+        'opex': 0
+    },
+    'onshore_wind': {
+        'capex': 2.12,
+        'opex': 0
+    },
+    'offshore_wind': {
+        'capex': 1.11,
+        'opex': 0
+    },
+}
+
 start_time = time.time()
 
 df, cap_fac, installed_caps_nominal = generate_soc_proxy(
@@ -51,7 +78,8 @@ df, cap_fac, installed_caps_nominal = generate_soc_proxy(
         'method': 'fft_lowpass',
         'time_horizon_hours': 24
         },
-    timestamp_col= 'timesteps'
+    timestamp_col= 'timesteps',
+    dictionary_costs = dictionary_costs
     )
 end_time = time.time()
 runtime = end_time - start_time

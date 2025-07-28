@@ -6,6 +6,8 @@ from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import utility_functions.helper_timeseries_tools as tt
 import numpy as np
 import matplotlib.pyplot as plt
+from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope_timeseries
+from utility_functions.helper_model_config import clustered_model_config
 
 import re
 
@@ -62,7 +64,7 @@ import re
 
 # #_______________________________________________________________________________________________
 # # 
-# #                                  Generate Reference
+# #                                  Generate Clustered Models
 # #_______________________________________________________________________________________________
 
 #config
@@ -73,63 +75,78 @@ set_model_paths = [
 
 set_n_representative_days = [
     # 10,
-    # 20,
+    20, 
     # 30,
-    # 40,
-    50
+    # 40, 
+    # 50
 ]
 
-set_methods = [
-    'hierarchical'
+set_clustering_method = [
+    'hierarchical',
 ]
 
-# #model parameters
-# params = {
-#         'output_directory_name': 'multi_year_soc_proxy_effectiveness',
-#         'output_model_name': 'standard',
-#         'config_yaml_name': 'model',
-#         'horizon_start':  '2010-01-01',
-#         'horizon_end':  '2010-12-31',
-#         'filename_time_varying_parameters': 'full_horizon/time_varying_parameters',
-#         'calliope_full_log': [False, False],
-#         # 'dict_additional_overrides': {},
-#         'path_to_cluster_csv': 'SoC_proxy_TSA/cache/outputdata.csv'
-#     }
+set_representative_methods = [
+    'medoidRepresentation',
+    'distributionRepresentation'
+]
 
-# #loop over models
-# for path in set_model_paths:
-#     model = calliope.read_netcdf(path)
-#     ref_model = re.search(r'20\d{2}_20\d{2}', path).group()
-#     params['horizon_start']= f"{ref_model[:4]}-01-01"
-#     params['horizon_end']= f"{ref_model[-4:]}-12-31"
+#model parameters
+params = {
+        'output_directory_name': 'multi_year_soc_proxy_effectiveness',
+        'output_model_name': 'standard',
+        'config_yaml_name': 'model',
+        'horizon_start':  '2010-01-01',
+        'horizon_end':  '2010-12-31',
+        'filename_time_varying_parameters': 'full_horizon/time_varying_parameters',
+        'calliope_full_log': [False, False],
+        # 'dict_additional_overrides': {},
+        'path_to_cluster_csv': 'SoC_proxy_TSA/cache/outputdata.csv',
+        'path_to_new_timeseries': ''
+    }
 
-#     #loop pver n_repdays
-#     for n_days in set_n_representative_days:
+#loop over models
+for path in set_model_paths:
+    model = calliope.read_netcdf(path)
+    ref_model = re.search(r'20\d{2}_20\d{2}', path).group()
+    params['horizon_start']= f"{ref_model[:4]}-01-01"
+    params['horizon_end']= f"{ref_model[-4:]}-12-31"
 
-#         #loop over clustering methods
-#         for method in set_methods:
-#             params['output_model_name'] = f"clustered_{ref_model}_n_{n_days}_method_{method}"
-#             params['path_to_cluster_csv'] = f"SoC_proxy_TSA/cache/cluster_maps/map_{ref_model}_n_{n_days}_method_{method}.csv"
-#             apply_tsam_to_calliope_timeseries(model,n_days,24,method,params['path_to_cluster_csv'])
-#             clustered_model, filename_clustered_model = clustered_model_config(params)
+    #loop pver n_repdays
+    for n_days in set_n_representative_days:
 
-#             #build
-#             print(f"  ---- Building: Model Descr: {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
-#             clustered_model.build()
+        #loop over clustering methods
+        for method in set_clustering_method:
 
-#             #solve
-#             print(f"  ---- Solving: Model Descr: {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
-#             clustered_model.solve()
+            #loop over representation methods
+            for rep_method in set_representative_methods:
 
-#             #print results
-#             print(f"  ----- Results: Obj. Function: {clustered_model.results.cost.sum().item():e}, Solve Time: {round(clustered_model.results.timestamp_solve_complete - clustered_model.results.timestamp_solve_start,1)}s")
+                #check file doesnt already exist
+                output_dir = os.path.join("SoC_proxy_TSA", "results", params["output_directory_name"])
+                os.makedirs(output_dir, exist_ok=True)
+                output_path = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+                if os.path.exists(output_path):
+                    print(f"{output_path} already exists, skipping...")
+                else:
+                    params['output_model_name'] = f"clustered_{ref_model}_n_{n_days}_{method}_{rep_method}"
+                    params['path_to_cluster_csv'] = f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
+                    params['path_to_new_timeseries'] = f"SoC_proxy_TSA/cache/clustered_timeseries/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
+                    apply_tsam_to_calliope_timeseries(model,n_days,24,method, rep_method, params['path_to_cluster_csv'], params['path_to_new_timeseries'])
+                    clustered_model = clustered_model_config(params)
 
-#             #auto-save, first checks if full directory tree exists (if not, creates it)
-#             output_dir = os.path.join("SoC_proxy_TSA", "results", params["output_directory_name"])
-#             os.makedirs(output_dir, exist_ok=True)
-#             output_path = os.path.join(output_dir,filename_clustered_model)
-#             clustered_model.to_netcdf(output_path)
-#             print(f"  ----- Saved: Model saved to: {output_path}")
+                    #build
+                    print(f"  ---- Building: Model Descr: {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
+                    clustered_model.build()
+
+                    #solve
+                    print(f"  ---- Solving: Model Descr: {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
+                    clustered_model.solve()
+
+                    #print results
+                    print(f"  ----- Results: Obj. Function: {clustered_model.results.cost.sum().item():e}, Solve Time: {round(clustered_model.results.timestamp_solve_complete - clustered_model.results.timestamp_solve_start,1)}s")
+
+                    #auto-save, first checks if full directory tree exists (if not, creates it)
+                    clustered_model.to_netcdf(output_path)
+                    print(f"  ----- Saved: Model saved to: {output_path}")
 
 #_______________________________________________________________________________________________
 # 
@@ -200,12 +217,12 @@ def get_capacities(calliope_model, type: str = 'standard'):
     return ldes_capacity, capacities, df_state_of_charge
 
 
-def extract_soc_from_clustered_model(ref_model, n_days, method):
+def extract_soc_from_clustered_model(results_path,ref_model, n_days, method, rep_method):
 
-    model = calliope.read_netcdf(f"SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/clustered_{ref_model}_clustered_{ref_model}_n_{n_days}_method_{method}.netcdf")
+    model = calliope.read_netcdf(results_path)
     
     #process the clustering map
-    cluster_map = pd.read_csv(f"SoC_proxy_TSA/cache/cluster_maps/map_{ref_model}_n_{n_days}_method_{method}.csv")
+    cluster_map = pd.read_csv(f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv")
     cluster_map = cluster_map.rename(columns={
     'timesteps': 'datesteps',
     'PeriodNum': 'mapped_datesteps'
@@ -276,6 +293,33 @@ soc_decomposition = {
         'time_horizon_hours': 24
         }
 
+dictionary_costs = {
+    'storage': {
+        'capex': 0.003190,
+        'opex': 0
+    },
+    'charging': {
+        'capex': 1.2,
+        'opex': 0
+    },
+    'discharging': {
+        'capex': 0.093,
+        'opex': 0
+    },
+    'solar': {
+        'capex': 0.56,
+        'opex': 0
+    },
+    'onshore_wind': {
+        'capex': 2.12,
+        'opex': 0
+    },
+    'offshore_wind': {
+        'capex': 1.11,
+        'opex': 0
+    },
+}
+
 list_df_clustered = []
 list_labels = []
 
@@ -296,7 +340,8 @@ for path in set_model_paths:
             renewables_fields_and_weights=capacity_weights, 
             dispatchable_techs=dispatchable_techs,
             storage_process_losses=storage_process_losses,
-            soc_decomposition = soc_decomposition
+            soc_decomposition = soc_decomposition,
+            # dictionary_costs=dictionary_costs #parameter for a test version of the code
         )
     
 
@@ -307,36 +352,41 @@ for path in set_model_paths:
     for n_days in set_n_representative_days:
 
         #loop over clustering methods
-        for method in set_methods:
-            print('Processing:', f"{ref_model}_n_{n_days}_method_{method}")
-            cluster_model = calliope.read_netcdf(f"SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/clustered_{ref_model}_clustered_{ref_model}_n_{n_days}_method_{method}.netcdf")
-            cluster_df_soc = extract_soc_from_clustered_model(ref_model,n_days,method)
-            cluster_ldes_capacity, cluster_capacities, cluster_soc = get_capacities(cluster_model, 'clustered')
+        for method in set_clustering_method:
 
-            #compute soc proxy of given model model
-            cluster_df_soc_proxy,s_cluster_datetimes = tt.extrapolate_ts_from_cluster_map(f"SoC_proxy_TSA/cache/cluster_maps/map_{ref_model}_n_{n_days}_method_{method}.csv",'SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv')
-            cluster_df_soc_proxy, cluster_capacity_factors, cluster_nominal_capacities = generate_soc_proxy(
-                df=cluster_df_soc_proxy,
-                demand_field='demand_power',
-                renewables_fields_and_weights=capacity_weights, 
-                dispatchable_techs=dispatchable_techs,
-                storage_process_losses=storage_process_losses,
-                soc_decomposition = soc_decomposition
-            )
-            cluster_df_soc_proxy = cluster_df_soc_proxy.set_index('timesteps')
+            for rep_method in set_representative_methods:
+                print('Processing:', f"{ref_model}_n_{n_days}_{method}_{rep_method}")
 
-            #append the real profile
-            list_df_clustered.append(cluster_df_soc)
-            list_labels.append(f"Cluster SoC, soc_peak={np.max(cluster_df_soc['soc_proxy_LDES']):.1e}")
-            
-            #append the proxy
-            list_df_clustered.append(cluster_df_soc_proxy)
-            list_labels.append(f"Cluster Proxy,soc_peak={np.max(cluster_df_soc_proxy['soc_proxy_LDES']):.1e}")
+                results_path = os.path.join("SoC_proxy_TSA", "results", params["output_directory_name"],f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+                cluster_model = calliope.read_netcdf(results_path)
+                cluster_df_soc = extract_soc_from_clustered_model(results_path,ref_model,n_days,method, rep_method)
+                cluster_ldes_capacity, cluster_capacities, cluster_soc = get_capacities(cluster_model, 'clustered')
+
+                #compute soc proxy of given model model
+                cluster_df_soc_proxy,s_cluster_datetimes = tt.extrapolate_ts_from_cluster_map(f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv",'SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv')
+                cluster_df_soc_proxy, cluster_capacity_factors, cluster_nominal_capacities = generate_soc_proxy(
+                    df=cluster_df_soc_proxy,
+                    demand_field='demand_power',
+                    renewables_fields_and_weights=capacity_weights, 
+                    dispatchable_techs=dispatchable_techs,
+                    storage_process_losses=storage_process_losses,
+                    soc_decomposition = soc_decomposition,
+                    # dictionary_costs=dictionary_costs #parameter for a test version of the code
+                )
+                cluster_df_soc_proxy = cluster_df_soc_proxy.set_index('timesteps')
+
+                #append the real profile
+                list_df_clustered.append(cluster_df_soc)
+                list_labels.append(f"SoC, {method}_{rep_method}, soc_peak={np.max(cluster_df_soc['soc_proxy_LDES']):.1e}")
+                
+                #append the proxy
+                list_df_clustered.append(cluster_df_soc_proxy)
+                list_labels.append(f"Proxy, {method}_{rep_method}, soc_peak={np.max(cluster_df_soc_proxy['soc_proxy_LDES']):.1e}")
 
 #plot and compare
 #assign pastel colours
 colours = plt.cm.Pastel1.colors
-colours = ['blue', 'cyan']
+colours = ['#4950EB', '#9599ED','#EB2D62','#E87998']
 
 #exploring the clustered soc
 df_daily = cluster_df_soc.groupby('datesteps').agg({
@@ -352,9 +402,9 @@ plt.figure(figsize=(15, 5))
 for x in range(len(list_df_clustered)):
     plt.plot(list_df_clustered[x].index, list_df_clustered[x]['soc_proxy_LDES'], label=list_labels[x], color=colours[x % len(colours)], zorder=1)
 
-plt.plot(ref_df_soc_proxy.index, ref_df_soc_proxy['soc_proxy_LDES'], label=f"Reference Proxy,soc_peak={np.max(ref_df_soc_proxy['soc_proxy_LDES']):.1e}", color='grey', zorder=101)   
+plt.plot(ref_df_soc_proxy.index, ref_df_soc_proxy['soc_proxy_LDES'], label=f"Proxy, Reference, soc_peak={np.max(ref_df_soc_proxy['soc_proxy_LDES']):.1e}", color='grey', zorder=101)   
 # plt.plot(cluster_soc.index, cluster_soc['soc'], label=f"Cluster SoC, soc_peak={np.max(cluster_soc['soc']):.1e}, ldes={cluster_ldes_capacity:.1e}",color='gray', zorder=103)   
-plt.plot(ref_soc.index, ref_soc['soc'], label=f"Reference SoC, soc_peak={np.max(ref_soc['soc']):.1e}",color='black', zorder=102)   
+plt.plot(ref_soc.index, ref_soc['soc'], label=f"SoC, Reference, soc_peak={np.max(ref_soc['soc']):.1e}",color='black', zorder=102)   
 #*np.mean(ref_df_soc_proxy['soc_proxy'])/np.mean(ref_soc['soc'])
 plt.xlabel('Time')
 plt.ylabel('State of Charge')

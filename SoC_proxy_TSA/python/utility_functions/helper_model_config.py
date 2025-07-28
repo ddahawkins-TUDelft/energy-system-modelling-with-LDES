@@ -76,8 +76,11 @@ def clustered_model_config(params):
             calliope_override_dictionary['config.init.time_subset'] = [params['horizon_start'],params['horizon_end']]
     
     #define tvp source
-        if 'filename_time_varying_parameters' in params:
+        if 'path_to_new_timeseries' in params and params['path_to_new_timeseries']:
+             calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_to_new_timeseries']}"
+        elif 'filename_time_varying_parameters' in params:
             calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"
+
     
     #provide option for custom override parameters
         if 'dict_additional_overrides' in params:
@@ -98,7 +101,7 @@ def clustered_model_config(params):
         )
 
         #determine filename based on scenario
-        filename = filenamer(params, 'clustered','netcdf')
+        # filename = filenamer(params, 'clustered','netcdf')
     
    #export configured calliope model
-        return model, filename
+        return model

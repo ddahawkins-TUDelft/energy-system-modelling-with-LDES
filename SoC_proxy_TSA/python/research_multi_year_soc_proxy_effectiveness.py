@@ -6,9 +6,8 @@ from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import utility_functions.helper_timeseries_tools as tt
 import numpy as np
 import matplotlib.pyplot as plt
-from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope_timeseries
-from utility_functions.helper_model_config import clustered_model_config
-
+from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope
+from utility_functions.helper_model_config import clustered_model_config, reconstructured_full_model_config
 import re
 
 
@@ -70,23 +69,26 @@ import re
 #config
 set_model_paths = [
     # 'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2010_2014_reference.netcdf',
-    'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2015_2019_reference.netcdf'
+    # 'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2015_2019_reference.netcdf',
+    'SoC_proxy_TSA/results/multi_year_soc_proxy_effectiveness/standard_2015_2016_reference.netcdf'
 ]
 
 set_n_representative_days = [
     # 10,
-    20, 
+    40, 
     # 30,
     # 40, 
     # 50
 ]
 
 set_clustering_method = [
+    'k_means',
+    'exact k_medoid',
     'hierarchical',
 ]
 
 set_representative_methods = [
-    'medoidRepresentation',
+    # 'medoidRepresentation',
     'distributionRepresentation'
 ]
 
@@ -95,10 +97,10 @@ params = {
         'output_directory_name': 'multi_year_soc_proxy_effectiveness',
         'output_model_name': 'standard',
         'config_yaml_name': 'model',
-        'horizon_start':  '2010-01-01',
-        'horizon_end':  '2010-12-31',
+        'horizon_start':  '',
+        'horizon_end':  '',
         'filename_time_varying_parameters': 'full_horizon/time_varying_parameters',
-        'calliope_full_log': [False, False],
+        'calliope_full_log': [True, True],
         # 'dict_additional_overrides': {},
         'path_to_cluster_csv': 'SoC_proxy_TSA/cache/outputdata.csv',
         'path_to_new_timeseries': ''
@@ -123,30 +125,49 @@ for path in set_model_paths:
                 #check file doesnt already exist
                 output_dir = os.path.join("SoC_proxy_TSA", "results", params["output_directory_name"])
                 os.makedirs(output_dir, exist_ok=True)
-                output_path = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
-                if os.path.exists(output_path):
-                    print(f"{output_path} already exists, skipping...")
+                output_path_cluster = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+                output_path_reconstructed = os.path.join(output_dir,f"full_reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+
+                
+                params['output_model_name'] = f"clustered_{ref_model}_n_{n_days}_{method}_{rep_method}"
+                params['path_to_cluster_csv'] = f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
+                params['path_to_new_timeseries'] = f"SoC_proxy_TSA/cache/clustered_timeseries/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
+                apply_tsam_to_calliope(model,n_days,24,method, rep_method, params['path_to_cluster_csv'], params['path_to_new_timeseries'])
+                #run the clustered model
+                if os.path.exists(output_path_cluster):
+                    print(f"{output_path_cluster} already exists, skipping...")
                 else:
-                    params['output_model_name'] = f"clustered_{ref_model}_n_{n_days}_{method}_{rep_method}"
-                    params['path_to_cluster_csv'] = f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
-                    params['path_to_new_timeseries'] = f"SoC_proxy_TSA/cache/clustered_timeseries/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
-                    apply_tsam_to_calliope_timeseries(model,n_days,24,method, rep_method, params['path_to_cluster_csv'], params['path_to_new_timeseries'])
                     clustered_model = clustered_model_config(params)
 
-                    #build
+                    #build, solve, save clustered model
                     print(f"  ---- Building: Model Descr: {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
                     clustered_model.build()
-
                     #solve
                     print(f"  ---- Solving: Model Descr: {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
                     clustered_model.solve()
-
                     #print results
                     print(f"  ----- Results: Obj. Function: {clustered_model.results.cost.sum().item():e}, Solve Time: {round(clustered_model.results.timestamp_solve_complete - clustered_model.results.timestamp_solve_start,1)}s")
-
                     #auto-save, first checks if full directory tree exists (if not, creates it)
-                    clustered_model.to_netcdf(output_path)
-                    print(f"  ----- Saved: Model saved to: {output_path}")
+                    clustered_model.to_netcdf(output_path_cluster)
+                    print(f"  ----- Saved: Model saved to: {output_path_cluster}")
+                
+                #run the reconstructed full model
+                if os.path.exists(output_path_reconstructed):
+                    print(f"{output_path_reconstructed} already exists, skipping...")
+                else:
+                    full_model_reconstructed_from_clustered_timeseries = reconstructured_full_model_config(params)
+
+                    #build, solve, save clustered model
+                    print(f"  ---- Building: Model Descr: Reconstructed {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
+                    full_model_reconstructed_from_clustered_timeseries.build()
+                    #solve
+                    print(f"  ---- Solving: Model Descr: Reconstructed {params['output_directory_name']}/{params['output_model_name']}, Time Horizon: {params['horizon_start']} until {params['horizon_end']} --- ")
+                    full_model_reconstructed_from_clustered_timeseries.solve()
+                    #print results
+                    print(f"  ----- Results: Obj. Function: {full_model_reconstructed_from_clustered_timeseries.results.cost.sum().item():e}, Solve Time: {round(full_model_reconstructed_from_clustered_timeseries.results.timestamp_solve_complete - full_model_reconstructed_from_clustered_timeseries.results.timestamp_solve_start,1)}s")
+                    #auto-save, first checks if full directory tree exists (if not, creates it)
+                    full_model_reconstructed_from_clustered_timeseries.to_netcdf(output_path_reconstructed)
+                    print(f"  ----- Saved: Model saved to: {output_path_reconstructed}")
 
 #_______________________________________________________________________________________________
 # 
@@ -330,7 +351,6 @@ for path in set_model_paths:
     reference_model = calliope.read_netcdf(path)
     ref_model = re.search(r'20\d{2}_20\d{2}', path).group()
     ref_ldes_capacity, ref_capacities, ref_soc = get_capacities(reference_model)
-    val = np.max(ref_soc['soc'])
 
     #compute soc proxy of reference model
     ref_df_soc_proxy = tt.calliope_ts_to_pandas('SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv',f"{ref_model[:4]}-01-1",f"{ref_model[-4:]}-12-31")
@@ -342,7 +362,7 @@ for path in set_model_paths:
             storage_process_losses=storage_process_losses,
             soc_decomposition = soc_decomposition,
             # dictionary_costs=dictionary_costs #parameter for a test version of the code
-        )
+    )
     
 
     #re-index
@@ -357,10 +377,15 @@ for path in set_model_paths:
             for rep_method in set_representative_methods:
                 print('Processing:', f"{ref_model}_n_{n_days}_{method}_{rep_method}")
 
+                #get soc results from clustered model
                 results_path = os.path.join("SoC_proxy_TSA", "results", params["output_directory_name"],f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
                 cluster_model = calliope.read_netcdf(results_path)
                 cluster_df_soc = extract_soc_from_clustered_model(results_path,ref_model,n_days,method, rep_method)
                 cluster_ldes_capacity, cluster_capacities, cluster_soc = get_capacities(cluster_model, 'clustered')
+
+                #get soc results from reconstructed model
+                reconstructed_model = calliope.read_netcdf(os.path.join("SoC_proxy_TSA", "results", params["output_directory_name"],f"full_reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf"))
+                reconstructed_ldes_capacity, reconstructed_capacities, reconstructed_soc = get_capacities(reconstructed_model)
 
                 #compute soc proxy of given model model
                 cluster_df_soc_proxy,s_cluster_datetimes = tt.extrapolate_ts_from_cluster_map(f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv",'SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv')
@@ -375,6 +400,19 @@ for path in set_model_paths:
                 )
                 cluster_df_soc_proxy = cluster_df_soc_proxy.set_index('timesteps')
 
+                # #compute soc proxy of reference model
+                reconstructed_df_soc_proxy = tt.calliope_ts_to_pandas('SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv',f"{ref_model[:4]}-01-1",f"{ref_model[-4:]}-12-31")
+                reconstructed_df_soc_proxy, reconstructed_capacity_factors, reconstructed_nominal_capacities = generate_soc_proxy(
+                        df=reconstructed_df_soc_proxy,
+                        demand_field='demand_power',
+                        renewables_fields_and_weights=capacity_weights, 
+                        dispatchable_techs=dispatchable_techs,
+                        storage_process_losses=storage_process_losses,
+                        soc_decomposition = soc_decomposition,
+                        # dictionary_costs=dictionary_costs #parameter for a test version of the code
+                    )
+                reconstructed_df_soc_proxy = reconstructed_df_soc_proxy.set_index('timesteps')
+
                 #append the real profile
                 list_df_clustered.append(cluster_df_soc)
                 list_labels.append(f"SoC, {method}_{rep_method}, soc_peak={np.max(cluster_df_soc['soc_proxy_LDES']):.1e}")
@@ -382,6 +420,16 @@ for path in set_model_paths:
                 #append the proxy
                 list_df_clustered.append(cluster_df_soc_proxy)
                 list_labels.append(f"Proxy, {method}_{rep_method}, soc_peak={np.max(cluster_df_soc_proxy['soc_proxy_LDES']):.1e}")
+
+                #append the reconstructed profile
+                reconstructed_soc['soc_proxy_LDES'] = reconstructed_soc['soc']
+                list_df_clustered.append(reconstructed_soc)
+                list_labels.append(f"Reconstructed, {method}_{rep_method}, soc_peak={np.max(reconstructed_soc['soc_proxy_LDES']):.1e}")
+
+                #append the proxy
+                list_df_clustered.append(reconstructed_df_soc_proxy)
+                list_labels.append(f"Proxy, Reconstructed, {method}_{rep_method}, soc_peak={np.max(reconstructed_df_soc_proxy['soc_proxy_LDES']):.1e}")
+
 
 #plot and compare
 #assign pastel colours

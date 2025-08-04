@@ -79,7 +79,8 @@ def clustered_model_config(params):
         if 'path_to_new_timeseries' in params and params['path_to_new_timeseries']:
              calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_to_new_timeseries']}"
         elif 'filename_time_varying_parameters' in params:
-            calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"
+            raise Exception('No new timeseries provided.')
+            # calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"
 
     
     #provide option for custom override parameters
@@ -96,6 +97,53 @@ def clustered_model_config(params):
             path_model_config_yaml,
             scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
             time_cluster = f"../../{params['path_to_cluster_csv']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
+            override_dict=calliope_override_dictionary
+
+        )
+
+        #determine filename based on scenario
+        # filename = filenamer(params, 'clustered','netcdf')
+    
+   #export configured calliope model
+        return model
+
+def reconstructured_full_model_config(params):
+     
+    #auto-config paths and directories
+        # path_output_directory = os.path(f"../../results/{params['output_directory_name']}")
+        # path_output_netcdf = os.path(f"../../results/{params['output_directory_name']}/{params['output_model_name']}.netcdf")
+        path_model_config_yaml = os.path.normpath(f"SoC_proxy_TSA/model_config/{params['config_yaml_name']}.yaml")
+
+    #auto-config calliope logging
+        calliope.set_log_verbosity("ERROR", include_solver_output=params['calliope_full_log'][0])
+
+    #initialise dictionary
+        calliope_override_dictionary={}
+    
+    #define horizons
+        if 'horizon_start' in params and 'horizon_start' in params:
+            calliope_override_dictionary['config.init.time_subset'] = [params['horizon_start'],params['horizon_end']]
+    
+    #define tvp source
+        if 'path_to_new_timeseries' in params and params['path_to_new_timeseries']:
+             calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_to_new_timeseries']}"
+        elif 'filename_time_varying_parameters' in params:
+            raise Exception('No new timeseries provided.')
+            # calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"
+
+    
+    #provide option for custom override parameters
+        if 'dict_additional_overrides' in params:
+            calliope_override_dictionary.update(params['dict_additional_overrides'])
+
+    #add inter-storage-cluster-math functions because clustering has been applied and we need to preserve SoC values
+        add_math_config = ["../custom_mathematics/add_maths_cycle_constraints.yaml"]
+        calliope_override_dictionary['config.build.add_math'] = add_math_config
+
+    #auto-config calliope model
+        model = calliope.Model(
+            path_model_config_yaml,
+            scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
             override_dict=calliope_override_dictionary
 
         )

@@ -26,21 +26,50 @@ def compute_soc_proxy(surplus, charging_eff, discharging_eff):
     soc_proxy -= soc_proxy[-1] * np.linspace(0, 1, len(soc_proxy))
     return soc_proxy
 
-def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: float, discharging_eff: float):
+def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: float, discharging_eff: float, return_corrected_surplus: bool = True, check_cyclical: bool = False):
     """
-    Wrapper to apply compute_soc_proxy to a DataFrame column and return a Series.
+    Wrapper to apply compute_soc_proxy to a DataFrame column and return Series.
 
     Parameters:
         df (pd.DataFrame): Input DataFrame containing the surplus column.
         surplus_col (str): Column name containing surplus values.
         charging_eff (float): Charging efficiency.
-        discharging_eff (float): Discharging efficiency.
+        discharging_eff (float): Discharging efficiency. 
+        return_corrected_surplus(bool): decision to also return the corrected surpluses. Defaults true.
+        check_cyclical (bool): check that surpluses sum to 0 (no energy lost or created). Defaults false.
 
     Returns:
         pd.Series: Computed SoC proxy.
+        (Optional) pd.Series: corrected_surplus
     """
     soc_proxy = compute_soc_proxy(df[surplus_col].values.astype(np.float64), charging_eff, discharging_eff)
-    return pd.Series(soc_proxy, index=df.index)
+    soc_series = pd.Series(soc_proxy, index=df.index)
+
+    if not return_corrected_surplus and not check_cyclical:
+        return soc_series
+
+    # Compute delta SoC
+    delta_soc = soc_series.diff().fillna(0)
+
+    # Infer actual surplus from SoC deltas and efficiencies
+    corrected_surplus = np.where(
+        delta_soc >= 0,
+        delta_soc / charging_eff,
+        delta_soc * discharging_eff
+    )
+
+    corrected_surplus = pd.Series(corrected_surplus, index=df.index)
+
+    if check_cyclical:
+        residual = soc_series.iloc[-1] - soc_series.iloc[0]
+        if abs(residual) > 1e-6:
+            print(f"⚠ Warning: SoC not cyclical (end-start = {residual:.3e})")
+        
+
+    if return_corrected_surplus:
+        return soc_series, corrected_surplus
+    else:
+        return soc_series
 
 def decompose_surplus(
     df: pd.DataFrame,
@@ -69,8 +98,28 @@ def decompose_surplus(
     """
     if 'surplus' not in df.columns:
         raise ValueError("DataFrame must contain a 'surplus' column.")
+    
+    # Get timestamps safely
+    if timestamp_col:
+        timestamps = pd.to_datetime(df[timestamp_col])
+    else:
+        if not isinstance(df.index, pd.DatetimeIndex):
+            raise ValueError("Timestamp column not provided and index is not a DatetimeIndex.")
+        timestamps = df.index.to_series()
 
-    timestamps = pd.to_datetime(df[timestamp_col]) if timestamp_col else pd.to_datetime(df.index)
+    # Ensure timestamps are sorted
+    timestamps = timestamps.sort_values()
+
+    # Validate there are at least 2 unique time steps
+    if timestamps.nunique() < 2:
+        raise ValueError("Not enough unique timestamps to compute time intervals.")
+
+    timestep_seconds = (timestamps.iloc[1] - timestamps.iloc[0]).total_seconds()
+    if timestep_seconds == 0:
+        raise ValueError("Timestamps have zero time difference. Check the index or timestamp column.")
+    timestep_hours = timestep_seconds / 3600
+
+    
     surplus = df['surplus'].values
     n = len(surplus)
     timestep_hours = (timestamps.iloc[1] - timestamps.iloc[0]).total_seconds() / 3600
@@ -107,8 +156,10 @@ def decompose_surplus(
     # Store results in dataframe
     df['surplus_LDES'] = surplus_LDES
     df['surplus_SDES'] = surplus_SDES
-    df['soc_proxy_LDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_LDES), 'temp_surplus', charging_efficiency, discharging_efficiency)
-    df['soc_proxy_SDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_SDES), 'temp_surplus', charging_efficiency, discharging_efficiency)
+    df['soc_proxy_LDES'], df['surplus_LDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_LDES), 'temp_surplus', charging_efficiency, discharging_efficiency, return_corrected_surplus=True, check_cyclical=True)
+    df['soc_proxy_SDES'], df['surplus_SDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_SDES), 'temp_surplus', charging_efficiency, discharging_efficiency, return_corrected_surplus=True, check_cyclical=True)
+
+    # print('>>> Proxy successfully applied, including a Round Trip Efficiency correction and a check of surplus balances.')
 
     return df
 
@@ -125,7 +176,7 @@ def generate_soc_proxy(
         'method': 'fft_lowpass',
         'time_horizon_hours': 24
     },
-    timestamp_col: str = 'timesteps'
+    timestamp_col: str = None
 ):
     """
     Function that takes in timeseries data and configution options, and returns state of charge (SoC) proxies for both long-duration energys storages and short-duration energy storages. 

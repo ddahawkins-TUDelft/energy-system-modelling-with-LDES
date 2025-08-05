@@ -77,7 +77,8 @@ def clustered_model_config(params):
     
     #define tvp source
         if 'path_to_new_timeseries' in params and params['path_to_new_timeseries']:
-             calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_to_new_timeseries']}"
+             if params['path_to_new_timeseries'] != 'original':
+                calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_to_new_timeseries']}"
         elif 'filename_time_varying_parameters' in params:
             raise Exception('No new timeseries provided.')
             # calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"

@@ -9,5 +9,5 @@ dependencies:
   - gurobi
   - tsam
   - matplotlib
-  - numba 
+  - scipy
 prefix: C:\Users\dhawkins\AppData\Local\miniforge3\envs\calliope-v07

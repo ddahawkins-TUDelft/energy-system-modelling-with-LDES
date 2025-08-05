@@ -52,9 +52,10 @@ set_clustering_method = [
 ]
 
 set_representative_methods = [
-    'medoidRepresentation',
-    # 'distributionRepresentation',
-    # 'minmaxmeanRepresentation'
+    # 'medoidRepresentation',
+    'distributionRepresentation',
+    # 'minmaxmeanRepresentation',
+    # 'socRepresentation'
 ]
 
 
@@ -116,10 +117,11 @@ for path in set_model_paths:
 
                 #call tsam to apply TSA clustering method to the timeseries inputs
                 apply_tsam_to_calliope_with_soc_proxy(model,n_days,24,method, rep_method, f"{params['path_to_cluster_csv']}_with_soc_proxy.csv", f"{params['path_to_new_timeseries']}_with_soc_proxy.csv", proxy_parameters)
-                apply_tsam_to_calliope(model,n_days,24,method, rep_method, f"{params['path_to_cluster_csv']}.csv", f"{params['path_to_new_timeseries']}.csv")
+                if rep_method != 'socRepresentation':
+                    apply_tsam_to_calliope(model,n_days,24,method, rep_method, f"{params['path_to_cluster_csv']}.csv", f"{params['path_to_new_timeseries']}.csv")
 
-                path_netcdf_cluster = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
-                path_netcdf_reconstructed = os.path.join(output_dir,f"reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+                    path_netcdf_cluster = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+                    path_netcdf_reconstructed = os.path.join(output_dir,f"reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
                 path_netcdf_cluster_with_soc = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}_with_soc_proxy.netcdf")
                 path_netcdf_reconstructed_with_soc = os.path.join(output_dir,f"reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}_with_soc_proxy.netcdf")
 
@@ -127,41 +129,42 @@ for path in set_model_paths:
                 params['path_to_new_timeseries'] = f"SoC_proxy_TSA/cache/clustered_timeseries/{ref_model}_n_{n_days}_{method}_{rep_method}.csv"
 
                 #run the clustered model
-                if os.path.exists(path_netcdf_cluster):
-                    print(f">>> Skipping: {path_netcdf_cluster} already exists.")
-                else:
-                    
-                    clustered_model = clustered_model_config(params)
+                if rep_method != 'socRepresentation':
+                    if os.path.exists(path_netcdf_cluster):
+                        print(f">>> Skipping: {path_netcdf_cluster} already exists.")
+                    else:
+                        
+                        clustered_model = clustered_model_config(params)
 
-                    #build, solve, save clustered model
-                    print(f">> Building: {path_netcdf_cluster}")
-                    clustered_model.build()
-                    #solve
-                    print(f">>> Solving: {path_netcdf_cluster}")
-                    clustered_model.solve()
-                    #print results
-                    print(f">>> Results: Obj. Function: {clustered_model.results.cost.sum().item():e}, Solve Time: {round(clustered_model.results.timestamp_solve_complete - clustered_model.results.timestamp_solve_start,1)}s")
-                    #auto-save, first checks if full directory tree exists (if not, creates it)
-                    clustered_model.to_netcdf(path_netcdf_cluster)
-                    print(f">>> Saved: {path_netcdf_cluster}")
+                        #build, solve, save clustered model
+                        print(f">> Building: {path_netcdf_cluster}")
+                        clustered_model.build()
+                        #solve
+                        print(f">>> Solving: {path_netcdf_cluster}")
+                        clustered_model.solve()
+                        #print results
+                        print(f">>> Results: Obj. Function: {clustered_model.results.cost.sum().item():e}, Solve Time: {round(clustered_model.results.timestamp_solve_complete - clustered_model.results.timestamp_solve_start,1)}s")
+                        #auto-save, first checks if full directory tree exists (if not, creates it)
+                        clustered_model.to_netcdf(path_netcdf_cluster)
+                        print(f">>> Saved: {path_netcdf_cluster}")
 
-                #run the reconstructed full model
-                # if os.path.exists(path_netcdf_reconstructed):
-                #     print(f">>> Skipping: {path_netcdf_reconstructed} already exists.")
-                # else:
-                #     full_model_reconstructed_from_clustered_timeseries = reconstructured_full_model_config(params)
+                    #run the reconstructed full model
+                    # if os.path.exists(path_netcdf_reconstructed):
+                    #     print(f">>> Skipping: {path_netcdf_reconstructed} already exists.")
+                    # else:
+                    #     full_model_reconstructed_from_clustered_timeseries = reconstructured_full_model_config(params)
 
-                #     #build, solve, save clustered model
-                #     print(f">> Building: {path_netcdf_reconstructed}")
-                #     full_model_reconstructed_from_clustered_timeseries.build()
-                #     #solve
-                #     print(f">>> Solving: {path_netcdf_reconstructed}")
-                #     full_model_reconstructed_from_clustered_timeseries.solve()
-                #     #print results
-                #     print(f">>> Results: Obj. Function: {full_model_reconstructed_from_clustered_timeseries.results.cost.sum().item():e}, Solve Time: {round(full_model_reconstructed_from_clustered_timeseries.results.timestamp_solve_complete - full_model_reconstructed_from_clustered_timeseries.results.timestamp_solve_start,1)}s")
-                #     #auto-save, first checks if full directory tree exists (if not, creates it)
-                #     full_model_reconstructed_from_clustered_timeseries.to_netcdf(path_netcdf_reconstructed)
-                #     print(f">>> Saved: {path_netcdf_reconstructed}")
+                    #     #build, solve, save clustered model
+                    #     print(f">> Building: {path_netcdf_reconstructed}")
+                    #     full_model_reconstructed_from_clustered_timeseries.build()
+                    #     #solve
+                    #     print(f">>> Solving: {path_netcdf_reconstructed}")
+                    #     full_model_reconstructed_from_clustered_timeseries.solve()
+                    #     #print results
+                    #     print(f">>> Results: Obj. Function: {full_model_reconstructed_from_clustered_timeseries.results.cost.sum().item():e}, Solve Time: {round(full_model_reconstructed_from_clustered_timeseries.results.timestamp_solve_complete - full_model_reconstructed_from_clustered_timeseries.results.timestamp_solve_start,1)}s")
+                    #     #auto-save, first checks if full directory tree exists (if not, creates it)
+                    #     full_model_reconstructed_from_clustered_timeseries.to_netcdf(path_netcdf_reconstructed)
+                    #     print(f">>> Saved: {path_netcdf_reconstructed}")
                 
                 #update params
 
@@ -258,9 +261,11 @@ for path in set_model_paths:
                 dictionary_paths = {
                     'clustered with proxy': os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}_with_soc_proxy.netcdf"),
                     # 'reconstructed with proxy': os.path.join(output_dir,f"reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}_with_soc_proxy.netcdf")
-                    'clustered': os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf"),
-                    # 'reconstructed': os.path.join(output_dir,f"reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf"),
                 }
+
+                if rep_method != 'socRepresentation':
+                    dictionary_paths['clustered'] = os.path.join(output_dir,f"{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
+                    # dictionary_paths['reconstructed'] = os.path.join(output_dir,f"reconstructed_{ref_model}_n_{n_days}_{method}_{rep_method}.netcdf")
 
                 #loop over the four versions of each clustered, reconstructed, clustered with soc proxy, reconstructed with soc proxy
                 for key,path in dictionary_paths.items():
@@ -278,8 +283,8 @@ for path in set_model_paths:
                     if re.match(r'^clustered\b', key):
                         cluster_df_soc = tt.extract_soc_from_clustered_model(path,ref_model,n_days,method, rep_method, map_with_soc_proxy)
                         cluster_df_soc_proxy,_ = tt.extrapolate_ts_from_cluster_map(
-                            f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}.csv",
-                            f"SoC_proxy_TSA/cache/clustered_timeseries/{ref_model}_n_{n_days}_{method}_{rep_method}.csv",
+                            f"SoC_proxy_TSA/cache/cluster_maps/{ref_model}_n_{n_days}_{method}_{rep_method}{"_with_soc_proxy" if map_with_soc_proxy else ""}.csv",
+                            f"SoC_proxy_TSA/cache/clustered_timeseries/{ref_model}_n_{n_days}_{method}_{rep_method}{"_with_soc_proxy" if map_with_soc_proxy else ""}.csv",
                         )
 
                     else:
@@ -320,7 +325,7 @@ plt.plot(ref_df_soc_proxy.index, ref_df_soc_proxy['soc_proxy_LDES'], label=f"Pro
 
 # === Plotting logic ===
 show_soc = True
-show_proxy = True
+show_proxy = False
 
 # Gather filtered curves based on flags
 plot_data = []

@@ -148,10 +148,12 @@ def apply_tsam_to_calliope_with_soc_proxy(model: calliope.Model, number_typical_
     raw_data.drop(columns=['mean_capacity_factor','surplus','surplus_SDES', 'soc_proxy_LDES', 'soc_proxy_SDES'], inplace=True)
     raw_data.rename(columns={'surplus_LDES': 'soc_stresses'}, inplace=True)
 
-    if rep_method == 'minmaxmeanRepresentation':
+ 
+
+    if rep_method == 'minmaxmeanRepresentation' or rep_method == 'socRepresentation':
         
         representationDict = {key: 'mean' for key in proxy_parameters['capacity_weights']}
-        representationDict['demand_power'] = 'max'
+        representationDict['demand_power'] = 'mean'
         representationDict['soc_stresses'] = 'max'
     else:
         representationDict = None

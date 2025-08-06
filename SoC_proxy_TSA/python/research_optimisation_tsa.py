@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from utility_functions.helper_model_config import clustered_model_config
 import os
 from sklearn.preprocessing import StandardScaler
+from utility_functions.helper_compare_models import compare_models
 
 def extract_timeseries_from_calliope(model: calliope.Model):
         #extract timeseries from calliope model
@@ -383,6 +384,11 @@ def run_calliope_model_on_cluster(ref_model, reference_model, path_cluster_map, 
     cluster_df_soc = pd.DataFrame() #initialising these to be save
 
     #--------------------------------------------
+
+    comparison_result = compare_models(
+        model_reference = reference_model, 
+        model_test =clustered_model, 
+        df_clustermap_test_model=pd.read_csv(path_cluster_map))
 
     #process the clustering map
     cluster_map = pd.read_csv(path_cluster_map)

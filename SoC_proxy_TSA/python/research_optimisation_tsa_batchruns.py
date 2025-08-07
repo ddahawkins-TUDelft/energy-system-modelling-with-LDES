@@ -13,6 +13,8 @@ import os
 from sklearn.preprocessing import StandardScaler
 from utility_functions.helper_compare_models import compare_models
 import time
+import multiprocessing
+max_threads = multiprocessing.cpu_count()
 
 def extract_timeseries_from_calliope(model: calliope.Model):
         #extract timeseries from calliope model
@@ -155,24 +157,14 @@ def compute_distance_matrix(feature_df: pd.DataFrame, metric: str = "euclidean")
     return distance_matrix
 
 def compute_proxy_distance_matrix(feature_df: pd.DataFrame, proxy_parameters: dict, matrix_weights: list = [1,1,1], metric: str = "euclidean"):
-
-    feature_df,_,_ = generate_soc_proxy(
-            df=feature_df,
-            demand_field='demand_power',
-            renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
-            dispatchable_techs=proxy_parameters['dispatchable_techs'],
-            storage_process_losses=proxy_parameters['storage_process_losses'],
-            soc_decomposition = proxy_parameters['soc_decomposition'],
-            timestamp_col=None
-    )
-    
-    source_cols = [col for col in feature_df.columns if col in ['solar', 'onshore_wind', 'offshore_wind']]
-    demand_col = 'demand_power'
-    surplus_col = 'surplus_LDES'
+   
+    source_cols = [col for col in feature_df.columns if any(col.startswith(prefix) for prefix in ['solar', 'onshore_wind', 'offshore_wind'])]
+    demand_cols = [col for col in feature_df.columns if col.startswith('demand_power')]
+    surplus_cols = [col for col in feature_df.columns if col.startswith('surplus_LDES')]
 
     renewables = feature_df[source_cols].copy()
-    demand = feature_df[[demand_col]].copy()
-    surplus = feature_df[[surplus_col]].copy()
+    demand = feature_df[demand_cols].copy()
+    surplus = feature_df[surplus_cols].copy()
 
     # Scale each group
     scaler_renew = StandardScaler()
@@ -183,10 +175,16 @@ def compute_proxy_distance_matrix(feature_df: pd.DataFrame, proxy_parameters: di
     X_surplus_scaled = scaler_surplus.fit_transform(surplus)
     X_demand_scaled = scaler_demand.fit_transform(demand)
 
+    #rescales the signals based on number of fields i.e. downscale renewables because there are multiple techs within that signal
+    X_renew_scaled = scaler_renew.fit_transform(renewables) / np.sqrt(X_renew_scaled.shape[1])
+    X_demand_scaled = scaler_demand.fit_transform(demand) / np.sqrt(X_demand_scaled.shape[1])
+    X_surplus_scaled = scaler_surplus.fit_transform(surplus) / np.sqrt(X_surplus_scaled.shape[1])
+
+
     # Weight them (optional)
     weight_sum = np.sum(matrix_weights)
     weight_renew = matrix_weights[0]/weight_sum
-    weight_surplus = matrix_weights[1]/weight_sum
+    weight_surplus = matrix_weights[1]/weight_sum  #TODO: results may have been better when this was 0.4 and the others 0.3. Will try.
     weight_demand = matrix_weights[2]/weight_sum
 
     X_combined = np.hstack([
@@ -195,108 +193,123 @@ def compute_proxy_distance_matrix(feature_df: pd.DataFrame, proxy_parameters: di
         weight_demand * X_demand_scaled
     ])
 
+    # Print norms of the signals as a guide on their strength of influence on the distancing matrix
+    # print("Feature matrix shape:", X_combined.shape)
+    # print("Renewable contribution (norm):", np.linalg.norm(weight_renew * X_renew_scaled))
+    # print("Demand contribution (norm):", np.linalg.norm(weight_demand * X_demand_scaled))
+    # print("Surplus contribution (norm):", np.linalg.norm(weight_surplus * X_surplus_scaled))
+
     # Compute distance matrix
     distance_matrix = cdist(X_combined, X_combined, metric=metric)
 
     return distance_matrix 
 
-def solve_standard_milp_tsa(distance_matrix: np.ndarray, k: int, solver: str = "gurobi", time_start = time.time()):
+def solve_standard_milp_tsa(
+    distance_matrix: np.ndarray,
+    k: int,
+    solver: str = "gurobi",
+    mipgap: float = 0.01,
+    verbose: bool = True
+):
     """
-    Solve a MILP time series aggregation problem using Pyomo and a given distance matrix.
+    Solve a MILP time series aggregation problem using Pyomo and a dense distance matrix.
 
-    Parameters:
+    Parameters
     ----------
     distance_matrix : np.ndarray
-        A symmetric matrix of shape (n_days, n_days) representing pairwise distances.
+        Dense symmetric matrix of shape (n_days, n_days) with pairwise distances.
     k : int
-        The number of representative days to select.
+        Number of representative days to select.
     solver : str
         MILP solver to use (e.g., "gurobi", "cbc", "glpk").
+    mipgap : float
+        Relative MIP optimality gap (e.g., 0.01 = 1%).
+    verbose : bool
+        Whether to print log output.
 
-    Returns:
+    Returns
     -------
     dict
-        Dictionary with:
-            'selected_days': list of indices selected as representative days
-            'assignments': dict mapping each day to its assigned representative
-            'model': the Pyomo model instance (for inspection)
+        {
+            'selected_days': list of representative day indices,
+            'assignments': dict mapping each day to its representative,
+            'model': Pyomo model object,
+            'results': Solver result object
+        }
     """
 
-    print('>>>>> Building pyomo model')
+    if verbose:
+        print(">>>>> Building Pyomo model")
 
     n_days = distance_matrix.shape[0]
     I = range(n_days)
     J = range(n_days)
 
-    # Create model
     model = pyo.ConcreteModel()
 
     # Sets
-    print('>>>>> Initialising sets and parameters')
     model.I = pyo.Set(initialize=I)
     model.J = pyo.Set(initialize=J)
 
-    # Parameters
-
-    # Precompute dictionary from distance matrix
+    # Parameters #TODO: implement a threshold here to encourage sparsity e.g. all values <0.01*Matrix Rangeare set to 0. We can explore the impact of this on model run times vs. outcome accuracy.
     D_dict = {
         (i, j): float(distance_matrix[i, j])
-        for i in range(n_days)
-        for j in range(n_days)
+        for i in I for j in J
     }
 
-    model.ij_pairs = pyo.Set(dimen=2, initialize=D_dict.keys())
-    model.D = pyo.Param(model.ij_pairs, initialize=D_dict, within=pyo.NonNegativeReals)
-
+    model.D = pyo.Param(model.I, model.J, initialize=D_dict, within=pyo.NonNegativeReals)
 
     # Decision variables
-    print(f'>>>>>  Creating {n_days} binary variables for y[i] @ t={time.time()-time_start:.2f}')
-    model.y = pyo.Var(model.I, domain=pyo.Binary)  # y[i] = 1 if day i is selected
-    print(f'>>>>>  Creating {n_days*n_days} binary variables for x[i,j]')
-    model.x = pyo.Var(model.I, model.J, domain=pyo.Binary)  # x[i,j] = 1 if day j is assigned to rep i
+    model.y = pyo.Var(model.I, domain=pyo.Binary)
+    model.x = pyo.Var(model.I, model.J, domain=pyo.Binary)
 
-    # Objective: Minimize total distance
-    print(f'>>>>>  Assigning objective function and constraints @ t={time.time()-time_start:.2f}')
-    def obj_rule(model):
-        return sum(model.x[i, j] * model.D[i, j] for i in model.I for j in model.J)
+    # Objective: Minimize total assignment cost
+    def obj_rule(m):
+        return sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J)
     model.obj = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
 
     # Constraints
 
-    # Each day j must be assigned to exactly one representative i
-    def assign_once_rule(model, j):
-        return sum(model.x[i, j] for i in model.I) == 1
+    # Each day assigned to exactly one representative
+    def assign_once_rule(m, j):
+        return sum(m.x[i, j] for i in m.I) == 1
     model.assign_once = pyo.Constraint(model.J, rule=assign_once_rule)
 
-    # x[i,j] can only be 1 if y[i] is selected
-    def assign_only_if_selected_rule(model, i, j):
-        return model.x[i, j] <= model.y[i]
-    model.link_x_y = pyo.Constraint(model.I, model.J, rule=assign_only_if_selected_rule)
+    # Linking constraint: x[i,j] only active if y[i] is selected
+    def link_x_y_rule(m, i, j):
+        return m.x[i, j] <= m.y[i]
+    model.link_x_y = pyo.Constraint(model.I, model.J, rule=link_x_y_rule)
 
-    # Limit number of representatives
-    def num_reps_rule(model):
-        return sum(model.y[i] for i in model.I) == k
+    # Exactly k representatives
+    def num_reps_rule(m):
+        return sum(m.y[i] for i in m.I) == k
     model.num_reps = pyo.Constraint(rule=num_reps_rule)
 
-    # Solve
-    print(f'>>>>>  Building and solving the model @ t={time.time()-time_start:.2f}')
-    solver_obj = pyo.SolverFactory(solver)
+    if verbose:
+        print(">>>>> Solving MILP with", solver)
 
-    results = solver_obj.solve(model,
-        tee=True,
+    solver_obj = pyo.SolverFactory(solver)
+    results = solver_obj.solve(
+        model,
+        tee=verbose,
         options={
-            'LogToConsole': 1,     # Force Gurobi to show log
-            'TimeLimit': 3000,      
-            # 'MIPGap': 0.01         
-        })
+            'TimeLimit': 3000,
+            'MipGap': mipgap,
+            'Threads': min(max_threads-2 if max_threads>2 else 1, 16), #give gurobi as many as it can take, 16 is where efficiency drops 
+            'LogToConsole': int(verbose),
+            # Optional: Uncomment if needed
+            # 'Presolve': 1,
+            # 'Heuristics': 0.5,
+            # 'Cuts': 2,
+        }
+    )
 
     # Extract solution
     selected_days = [i for i in model.I if pyo.value(model.y[i]) > 0.5]
-    assignments = {}
-    for i in model.I:
-        for j in model.J:
-            if pyo.value(model.x[i, j]) > 0.5:
-                assignments[j] = i
+    assignments = {
+        j: next(i for i in model.I if pyo.value(model.x[i, j]) > 0.5)
+        for j in model.J
+    }
 
     return {
         "selected_days": selected_days,
@@ -304,6 +317,7 @@ def solve_standard_milp_tsa(distance_matrix: np.ndarray, k: int, solver: str = "
         "model": model,
         "results": results
     }
+
 
 def save_milp_result_to_calliope_csv(
     result: dict,
@@ -408,89 +422,6 @@ def run_calliope_model_on_cluster(ref_model, id_string, reference_model, path_cl
         model_test =clustered_model, 
         df_clustermap_test_model=pd.read_csv(path_cluster_map))
     
-
-    # cluster_df_soc_proxy = pd.DataFrame() #initialising these to be save
-    # cluster_df_soc = pd.DataFrame() #initialising these to be save
-
-    # #process the clustering map
-    # cluster_map = pd.read_csv(path_cluster_map)
-    # cluster_map = cluster_map.rename(columns={
-    # 'timesteps': 'datesteps',
-    # 'PeriodNum': 'mapped_datesteps'
-    # })
-    # cluster_map['datesteps'] = pd.to_datetime(cluster_map['datesteps'], format='%Y-%m-%d')
-    # cluster_map['mapped_datesteps'] = pd.to_datetime(cluster_map['mapped_datesteps'], format='%Y-%m-%d')
-
-    # #pull the intracluster soc
-    # df_intracluster_soc = (   
-    #         (clustered_model.results['storage'].fillna(0))
-    #         .to_series()
-    #         # .where(lambda x: x != 0)
-    #         .dropna()
-    #         .to_frame('intra_soc')
-    #         .reset_index()
-    #     )
-    # df_intracluster_soc=df_intracluster_soc[df_intracluster_soc['techs'] == 'h2_salt_cavern']
-    # df_intracluster_soc['mapped_datesteps'] = pd.to_datetime(df_intracluster_soc['timesteps'], format='%Y-%m-%d')
-
-
-    # #pull the intercluster soc
-    # df_intercluster_soc = (   
-    #     (clustered_model.results['storage_inter_cluster'].fillna(0))
-    #     .to_series()
-    #     # .where(lambda x: x != 0)
-    #     .dropna()
-    #     .to_frame('inter_soc')
-    #     .reset_index()
-    # )
-    # df_intercluster_soc=df_intercluster_soc[df_intercluster_soc['techs'] == 'h2_salt_cavern']
-    # df_intracluster_soc['mapped_datesteps'] = df_intracluster_soc['mapped_datesteps'].dt.normalize()
-    
-    # #merge everything and filter
-    # cluster_df_soc = df_intercluster_soc.merge(cluster_map, on='datesteps', how='left')
-    # cluster_df_soc = cluster_df_soc.merge(df_intracluster_soc, on='mapped_datesteps', how='left')
-    # cluster_df_soc = cluster_df_soc[['datesteps','timesteps','inter_soc','intra_soc']]
-
-    # #create a proper measure of timestamps
-    # time_only = cluster_df_soc['timesteps'].dt.time
-    # cluster_df_soc['full_timestamp'] = cluster_df_soc['datesteps'].dt.normalize() + pd.to_timedelta(time_only.astype(str))    
-    # cluster_df_soc = cluster_df_soc.set_index('full_timestamp')
-
-
-    # #compute a comprehensive SoC, combining intracluster variatinos and intercluster variations
-    # cluster_df_soc['soc'] = cluster_df_soc['inter_soc']+cluster_df_soc['intra_soc']
-
-    # cluster_df_soc_proxy,_ = tt.extrapolate_ts_from_cluster_map(
-    #     path_cluster_map,
-    #     'SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv',
-    # )
-
-    # cluster_df_soc_proxy, _, _ = generate_soc_proxy(
-    #     df=cluster_df_soc_proxy,
-    #     demand_field='demand_power',
-    #     renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
-    #     dispatchable_techs=proxy_parameters['dispatchable_techs'],
-    #     storage_process_losses=proxy_parameters['storage_process_losses'],
-    #     soc_decomposition = proxy_parameters['soc_decomposition'],
-    #     timestamp_col='timesteps'
-    # )
-    # cluster_df_soc_proxy = cluster_df_soc_proxy.set_index('timesteps')
-
-    # plt.figure(figsize=(12, 6))
-
-    # plt.plot(ref_soc.index, ref_soc['soc'], label=f"SoC, Reference, soc_peak={np.max(ref_soc['soc']):.1e} on {ref_soc['soc'].idxmax().strftime('%Y-%m-%d')}",color='black', zorder=102)  
-    # plt.plot(ref_df_soc_proxy.index, ref_df_soc_proxy['soc_proxy_LDES'], label=f"Proxy, Reference, soc_peak={np.max(ref_df_soc_proxy['soc_proxy_LDES']):.1e} on {ref_df_soc_proxy['soc_proxy_LDES'].idxmax().strftime('%Y-%m-%d')}", color='grey', zorder=101)   
-    # plt.plot(cluster_df_soc.index, cluster_df_soc['soc'], label="SoC, Cluster", color='red', zorder=1)
-    # plt.plot(cluster_df_soc_proxy.index, cluster_df_soc_proxy['soc_proxy_LDES'], label="SoC Proxy, Cluster", color='orange', zorder=1)
-
-    # plt.xlabel('Time')
-    # plt.ylabel('State of Charge')
-    # plt.title('Storage State of Charge Over Time')
-    # plt.grid(True)
-    # plt.legend()
-    # plt.tight_layout()
-    # plt.show()
-
     return comparison_result
 
 def run():
@@ -521,7 +452,9 @@ def run():
 
     }
 
-    cluster_map_path = 'SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_36_customMilpTSA.csv'
+    cluster_map_path = 'SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_weights_1_1_1_hourly_features.csv'
+    milp_string = "custom_milp_weights_1_1_1_hourly_features"
+    id_string = f"{2015}_{2019}_k_{37}_{milp_string}"
 
     if os.path.exists(cluster_map_path):
         print(f"Skipping MILP: {cluster_map_path} already exists.")
@@ -531,9 +464,20 @@ def run():
         df_raw = extract_timeseries_from_calliope(full_model)
         # print(df_raw.head())   # See a sample of the output
 
+        feature_df,_,_ = generate_soc_proxy(
+            df=df_raw,
+            demand_field='demand_power',
+            renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
+            dispatchable_techs=proxy_parameters['dispatchable_techs'],
+            storage_process_losses=proxy_parameters['storage_process_losses'],
+            soc_decomposition = proxy_parameters['soc_decomposition'],
+            timestamp_col=None
+        )
+        feature_df.drop(['mean_capacity_factor', 'surplus','surplus_SDES','soc_proxy_LDES','soc_proxy_SDES'], axis=1, inplace=True)
+
         #restructure as daily feature sets
-        df_daily = aggregate_to_daily_features(df_raw, agg_func="mean") #alternative that agrgegates to daily and drops the hourly info
-        # df_daily = generate_daily_feature_matrix(df_raw)
+        # df_daily = aggregate_to_daily_features(df_raw, agg_func="mean") #alternative that agrgegates to daily and drops the hourly info
+        df_daily = generate_daily_feature_matrix(df_raw)
         # print(df_daily.shape)
 
         #compute euclidiean distances
@@ -542,56 +486,19 @@ def run():
         # print(distance_matrix.shape)  
         # print(distance_matrix[:3, :3])  # See a sample of the output
         print("Running MILP TSA...")
-        result = solve_standard_milp_tsa(distance_matrix, k=36)
+        result = solve_standard_milp_tsa(distance_matrix, k=37)
         save_milp_result_to_calliope_csv(
             result=result,
             df_daily=df_daily,  # this has hourly timesteps
             output_path=cluster_map_path
         )
 
-    run_calliope_model_on_cluster('2015_2019', full_model, cluster_map_path, proxy_parameters)
+    run_calliope_model_on_cluster('2015_2019', id_string, full_model, cluster_map_path, proxy_parameters)
     
     
 def batch_run():
 
     time_start = time.time()
-
-    proxy_parameters = {
-        'capacity_weights': {
-            'solar': 1,
-            'onshore_wind': .5, # making the baseline assumption of an even distribution between solar and wind -based products i.e. the sum of onshore and offshore wind equals solar
-            'offshore_wind': .5 
-        },
-        'storage_process_losses': {
-            'charging_efficiency': 0.65 * 0.99, #electrolyser efficiency * ldes injection efficiency
-            'discharging_efficiency': 0.56 * 0.99 #electrolyser efficiency * ldes injection efficiency
-        },
-        'dispatchable_techs': {
-            'known_dispatchable_capacity_portion_mean_demand': .25 #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
-        },
-        'soc_decomposition': {
-            'method': 'fft_lowpass',
-            'time_horizon_hours': 24
-        }
-    }
-
-    
-    set_year_range = [
-        [2015,2019]
-    ]
-
-    set_k_periods_as_percent_compression = [
-        0.01,
-        0.01,
-        0.03,
-        0.04,
-        0.05
-    ]
-
-    set_distance_matrix_weights = [
-        # renewables : state of charge : demand
-        [1,1,1]
-    ]
 
     #loop over years
     for year in set_year_range:
@@ -622,6 +529,16 @@ def batch_run():
                     #extract timeseries
                     df_raw = extract_timeseries_from_calliope(model_reference)
 
+                    feature_df,_,_ = generate_soc_proxy(
+                        df=df_raw,
+                        demand_field='demand_power',
+                        renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
+                        dispatchable_techs=proxy_parameters['dispatchable_techs'],
+                        storage_process_losses=proxy_parameters['storage_process_losses'],
+                        soc_decomposition = proxy_parameters['soc_decomposition'],
+                        timestamp_col=None
+                    )
+
                     #restructure as daily feature sets
                     df_daily = aggregate_to_daily_features( #alternative that agrgegates to daily and drops the hourly info
                         df_raw, 
@@ -639,14 +556,173 @@ def batch_run():
                         )
 
                     print(f">>>  Running MILP TSA @t= {time.time()-time_start:.2f}")
-                    result = solve_standard_milp_tsa(distance_matrix, k=k, time_start=time_start)
+                    result = solve_standard_milp_tsa(distance_matrix, k=k)
                     save_milp_result_to_calliope_csv(
                         result=result,
                         df_daily=df_daily,  # this has hourly timesteps
                         output_path=cluster_map_path
                     )
 
-                    print(f">>>  Running calliope on clustered model @t= {time.time()-time_start:.2f}")
-                    run_calliope_model_on_cluster(f"{year[0]}_{year[1]}", id_string, model_reference, cluster_map_path, proxy_parameters)
+                print(f">>>  Running calliope on clustered model @t= {time.time()-time_start:.2f}")
+                run_calliope_model_on_cluster(f"{year[0]}_{year[1]}", id_string, model_reference, cluster_map_path, proxy_parameters)
 
+
+def batch_review():
+
+    time_start = time.time()
+
+    list_results = []
+    list_labels = []
+
+    #loop over years
+    for year in set_year_range:
+
+        #load model
+        path_reference_model = f"SoC_proxy_TSA/results/tsa_dev/standard_{year[0]}_{year[1]}_reference.netcdf"
+        model_reference = calliope.read_netcdf(path_reference_model)
+
+        #loop over number of rep periods
+        for compression in set_k_periods_as_percent_compression:
+
+            k = int(round(compression*(1+year[1]-year[0])*365.25))
+
+            #loop over distance matrix weights
+            for matrix_weights in set_distance_matrix_weights:
+
+                milp_string = f"custom_milp_weights_{matrix_weights[0]}_{matrix_weights[1]}_{matrix_weights[2]}"
+                id_string = f"{year[0]}_{year[1]}_k_{k}_{milp_string}"
+
+                path_clustered_model = f"SoC_proxy_TSA/results/tsa_dev/clustered_{id_string}.netcdf"
+                path_cluster_map = f"SoC_proxy_TSA/cache/cluster_maps/{id_string}.csv"
+
+                print(f">>>  Processing {id_string}")
+
+                if not os.path.exists(path_clustered_model):
+                    raise Exception(f"{id_string} does not exist.")
+                else:
+                    
+                    model_clustered = calliope.read_netcdf(path_clustered_model)
+
+                    result = compare_models(
+                            model_reference = model_reference, 
+                            model_test =model_clustered, 
+                            df_clustermap_test_model=pd.read_csv(path_cluster_map)
+                        )[0]
+                    
+                    result['id']={
+                        'k_period': k,
+                        'id_string:': id_string,
+                        'matrix_weights': matrix_weights
+                    }
+
+                    list_results.append(result)
+
+                    list_labels.append(id_string)
+    
+    df_standard_milp_soc = compare_models(
+        model_reference=model_reference,
+        model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_standard.netcdf'), 
+        df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_standard.csv')
+    )[0]['df_soc']
+
+    df_standard_hourly_milp_soc = compare_models(
+        model_reference=model_reference,
+        model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_standard_hourly.netcdf'), 
+        df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_standard_hourly.csv')
+    )[0]['df_soc']
+
+    df_test_hourly_milp_soc = compare_models(
+        model_reference=model_reference,
+        model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_weights_1_1_1_hourly_features.netcdf'), 
+        df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_weights_1_1_1_hourly_features.csv')
+    )[0]['df_soc']
+    
+
+    df_reference_soc = compare_models(
+                            model_reference = model_reference, 
+                            model_test =model_clustered, 
+                            df_clustermap_test_model=pd.read_csv(path_cluster_map)
+                        )[1]
+    
+    plt.figure(figsize=(12, 6))
+    plt.plot(df_reference_soc.index, df_reference_soc['soc'], label="SoC, Reference",color='black', zorder=102)  
+    plt.plot(df_standard_milp_soc.index, df_standard_milp_soc['soc'], label="SoC, Standard MILP",color='grey', zorder=101)  
+    plt.plot(df_standard_hourly_milp_soc.index, df_standard_hourly_milp_soc['soc'], label="SoC, Hourly MILP",color='blue', zorder=101)
+    plt.plot(df_test_hourly_milp_soc.index, df_test_hourly_milp_soc['soc'], label="SoC, Hourly MILP with proxy",color='orange', zorder=101)  
+
+    for key, result in enumerate(list_results):
+        if result['id']['k_period']:
+            plt.plot(result['df_soc'].index, result['df_soc']['soc'], label=list_labels[key], zorder=101)   
+    plt.xlabel('Time')
+    plt.ylabel('State of Charge')
+    plt.title('Storage State of Charge Over Time')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+proxy_parameters = {
+    'capacity_weights': {
+        'solar': 1,
+        'onshore_wind': .5, # making the baseline assumption of an even distribution between solar and wind -based products i.e. the sum of onshore and offshore wind equals solar
+        'offshore_wind': .5 
+    },
+    'storage_process_losses': {
+        'charging_efficiency': 0.65 * 0.99, #electrolyser efficiency * ldes injection efficiency
+        'discharging_efficiency': 0.56 * 0.99 #electrolyser efficiency * ldes injection efficiency
+    },
+    'dispatchable_techs': {
+        'known_dispatchable_capacity_portion_mean_demand': .25 #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
+    },
+    'soc_decomposition': {
+        'method': 'fft_lowpass',
+        'time_horizon_hours': 24
+    }
+}
+
+
+set_year_range = [
+    [2015,2019]
+]
+
+set_k_periods_as_percent_compression = [
+    # 0.01,
+    0.02,
+    # 0.03,
+    # 0.04,
+    # 0.05
+]
+
+set_distance_matrix_weights = [
+    # renewables : state of charge : demand
+
+    [100,100,100],
+    # [1,0,1],
+    # # [1,0.1,1],
+    # # [1,0.2,1],
+    # # [1,0.3,1],
+    # # [1,0.4,1],
+    # [1,0.5,1],
+    # [1,0.6,1],
+    # [1,0.7,1],
+    # [1,0.8,1],
+    # [1,0.9,1],
+    # [1,1,1],
+    # [1,1.1,1],
+    # [1,1.2,1],        
+    # [1,1.25,1],
+    # [1,1.3,1],
+    # [1,1.4,1],
+    # [1,1.5,1],
+    # # [1,1.6,1],
+    # [1,1.7,1],
+    # [1,1.75,1],
+    # [1,1.8,1],
+    # [1,1.9,1],
+    # [1,2,1],
+] 
+
+# run()              
 batch_run()
+batch_review()

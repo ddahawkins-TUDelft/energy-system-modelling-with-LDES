@@ -182,6 +182,7 @@ def compare_models(model_reference, model_test, df_clustermap_test_model: pd.Dat
 
     e_time_full_charge, e_time_full_discharge = peak_timing_error(y_true, y_pred,)
 
+    result['df_soc'] = df_test_soc
     result['soc_metrics'] ={
         'full_charge_datetime_error': e_time_full_charge,
         'full_discharge_datetime_error': e_time_full_discharge,
@@ -236,7 +237,7 @@ def compare_models(model_reference, model_test, df_clustermap_test_model: pd.Dat
             'ldes_capex_error': df_capex.loc['LDES_energy']['error_absolute_normalised']
         }
 
-    return result
+    return result, df_reference_soc
 
 def first_derivative_correlation(y_true, y_pred, standardise=False):
     """

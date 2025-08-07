@@ -625,17 +625,17 @@ def batch_review():
         df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_standard.csv')
     )[0]['df_soc']
 
-    df_standard_hourly_milp_soc = compare_models(
-        model_reference=model_reference,
-        model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_standard_hourly.netcdf'), 
-        df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_standard_hourly.csv')
-    )[0]['df_soc']
+    # df_standard_hourly_milp_soc = compare_models(
+    #     model_reference=model_reference,
+    #     model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_standard_hourly.netcdf'), 
+    #     df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_standard_hourly.csv')
+    # )[0]['df_soc']
 
-    df_test_hourly_milp_soc = compare_models(
-        model_reference=model_reference,
-        model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_weights_1_1_1_hourly_features.netcdf'), 
-        df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_weights_1_1_1_hourly_features.csv')
-    )[0]['df_soc']
+    # df_test_hourly_milp_soc = compare_models(
+    #     model_reference=model_reference,
+    #     model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_weights_1_1_1_hourly_features.netcdf'), 
+    #     df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_weights_1_1_1_hourly_features.csv')
+    # )[0]['df_soc']
     
 
     df_reference_soc = compare_models(
@@ -647,8 +647,8 @@ def batch_review():
     plt.figure(figsize=(12, 6))
     plt.plot(df_reference_soc.index, df_reference_soc['soc'], label="SoC, Reference",color='black', zorder=102)  
     plt.plot(df_standard_milp_soc.index, df_standard_milp_soc['soc'], label="SoC, Standard MILP",color='grey', zorder=101)  
-    plt.plot(df_standard_hourly_milp_soc.index, df_standard_hourly_milp_soc['soc'], label="SoC, Hourly MILP",color='blue', zorder=101)
-    plt.plot(df_test_hourly_milp_soc.index, df_test_hourly_milp_soc['soc'], label="SoC, Hourly MILP with proxy",color='orange', zorder=101)  
+    # plt.plot(df_standard_hourly_milp_soc.index, df_standard_hourly_milp_soc['soc'], label="SoC, Hourly MILP",color='blue', zorder=101)
+    # plt.plot(df_test_hourly_milp_soc.index, df_test_hourly_milp_soc['soc'], label="SoC, Hourly MILP with proxy",color='orange', zorder=101)  
 
     for key, result in enumerate(list_results):
         if result['id']['k_period']:
@@ -697,30 +697,19 @@ set_k_periods_as_percent_compression = [
 set_distance_matrix_weights = [
     # renewables : state of charge : demand
 
-    [100,100,100],
-    # [1,0,1],
-    # # [1,0.1,1],
-    # # [1,0.2,1],
-    # # [1,0.3,1],
-    # # [1,0.4,1],
-    # [1,0.5,1],
-    # [1,0.6,1],
-    # [1,0.7,1],
-    # [1,0.8,1],
-    # [1,0.9,1],
     [1,1,1],
-    # [1,1.1,1],
-    # [1,1.2,1],        
-    # [1,1.25,1],
-    # [1,1.3,1],
-    # [1,1.4,1],
-    # [1,1.5,1],
-    # # [1,1.6,1],
-    # [1,1.7,1],
-    # [1,1.75,1],
-    # [1,1.8,1],
-    # [1,1.9,1],
-    # [1,2,1],
+    [1.25,1,1],
+    [1,1.25,1],
+    [1,1,1.25],
+    [0.75,1,1],
+    [1,0.75,1],
+    [1,1,0.75],
+    [1.5,1,1],
+    [1,1.5,1],
+    [1,1,1.5],
+    [0.5,1,1],
+    [1,0.5,1],
+    [1,1,0.5],
 ] 
 
 # run()              

@@ -61,8 +61,8 @@ def clustered_model_config(params):
         calliope.set_log_verbosity("ERROR", include_solver_output=params['calliope_full_log'][0])
 
     #check clustering input has been included and is a csv
-        if 'path_cluster_map' in params:
-             if not params['path_cluster_map'].endswith('.csv'):
+        if 'path_to_cluster_csv' in params:
+             if not params['path_to_cluster_csv'].endswith('.csv'):
                 raise Exception('The path_to_cluster_csv variable is not a csv.')
         else:     
              raise Exception('The path_to_cluster_csv variable is not set within the params dictionary.')
@@ -76,10 +76,13 @@ def clustered_model_config(params):
             calliope_override_dictionary['config.init.time_subset'] = [params['horizon_start'],params['horizon_end']]
     
     #define tvp source
-        if 'path_timeseries' in params and params['path_timeseries']:
-            calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_timeseries']}"
+        if 'path_to_new_timeseries' in params and params['path_to_new_timeseries']:
+             if params['path_to_new_timeseries'] != 'original':
+                calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../../{params['path_to_new_timeseries']}"
         elif 'filename_time_varying_parameters' in params:
-            raise Exception('No timeseries provided.')
+            raise Exception('No new timeseries provided.')
+            # calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"
+
     
     #provide option for custom override parameters
         if 'dict_additional_overrides' in params:
@@ -94,10 +97,13 @@ def clustered_model_config(params):
         model = calliope.Model(
             path_model_config_yaml,
             scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
-            time_cluster = f"../../{params['path_cluster_map']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
+            time_cluster = f"../../{params['path_to_cluster_csv']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
             override_dict=calliope_override_dictionary
 
         )
+
+        #determine filename based on scenario
+        # filename = filenamer(params, 'clustered','netcdf')
     
    #export configured calliope model
         return model

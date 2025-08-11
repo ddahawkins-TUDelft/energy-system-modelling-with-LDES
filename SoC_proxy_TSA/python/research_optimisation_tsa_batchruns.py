@@ -372,8 +372,6 @@ def run_calliope_model_on_cluster(ref_model, id_string, reference_model, path_cl
         'output_directory_name': 'tsa_dev',
         'output_model_name': 'clustered_2015_2019_customMilpTSA',
         'config_yaml_name': 'model',
-        'horizon_start':  '2015-01-01',
-        'horizon_end':  '2019-12-31',
         'filename_time_varying_parameters': 'full_horizon/time_varying_parameters',
         'calliope_full_log': [False, False],
         # 'dict_additional_overrides': {},

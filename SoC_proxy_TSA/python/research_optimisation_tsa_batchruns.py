@@ -603,11 +603,12 @@ def batch_review():
                     
                     model_clustered = calliope.read_netcdf(path_clustered_model)
 
-                    result = compare_models(
+                    result, df_reference_soc, = compare_models(
                             model_reference = model_reference, 
                             model_test =model_clustered, 
-                            df_clustermap_test_model=pd.read_csv(path_cluster_map)
-                        )[0]
+                            df_clustermap_test_model=pd.read_csv(path_cluster_map),
+                            proxy_parameters=proxy_parameters
+                        )
                     
                     result['id']={
                         'k_period': k,
@@ -636,29 +637,54 @@ def batch_review():
     #     model_test =calliope.read_netcdf('SoC_proxy_TSA/results/tsa_dev/clustered_2015_2019_k_37_custom_milp_weights_1_1_1_hourly_features.netcdf'), 
     #     df_clustermap_test_model=pd.read_csv('SoC_proxy_TSA/cache/cluster_maps/2015_2019_n_37_custom_milp_weights_1_1_1_hourly_features.csv')
     # )[0]['df_soc']
+
+    #plot error metrics for soc proxy vs soc
     
 
-    df_reference_soc = compare_models(
-                            model_reference = model_reference, 
-                            model_test =model_clustered, 
-                            df_clustermap_test_model=pd.read_csv(path_cluster_map)
-                        )[1]
-    
-    plt.figure(figsize=(12, 6))
-    plt.plot(df_reference_soc.index, df_reference_soc['soc'], label="SoC, Reference",color='black', zorder=102)  
-    plt.plot(df_standard_milp_soc.index, df_standard_milp_soc['soc'], label="SoC, Standard MILP",color='grey', zorder=101)  
-    # plt.plot(df_standard_hourly_milp_soc.index, df_standard_hourly_milp_soc['soc'], label="SoC, Hourly MILP",color='blue', zorder=101)
-    # plt.plot(df_test_hourly_milp_soc.index, df_test_hourly_milp_soc['soc'], label="SoC, Hourly MILP with proxy",color='orange', zorder=101)  
+    x =[] 
+    y=[]
+    y2=[]
+
 
     for key, result in enumerate(list_results):
-        if result['id']['k_period']:
-            plt.plot(result['df_soc'].index, result['df_soc']['soc'], label=list_labels[key], zorder=101)   
+        x.append(result['capacity_metrics']['ldes_capacity_error'])
+        y.append(result['soc_proxy_metrics']['full_charge_datetime_error'])
+        y2.append(1-result['soc_proxy_metrics']['full_discharge_datetime_error'])
+
+    plt.figure(figsize=(12, 6))
+    # plt.scatter(x, y, label="charge error", zorder=102)  
+    # plt.scatter(x, y2, label="discharge error", zorder=102)  
+
+    plt.plot(list_results[0]['df_soc_proxies'].index, list_results[0]['df_soc_proxies']['soc_proxy_LDES_reference'], label='ref_proxy', color='grey')
+    plt.plot(df_reference_soc.index, df_reference_soc['soc'], label='ref_soc', color='black')
+
+
+    for key, result in enumerate(list_results):
+        plt.plot(
+            result['df_soc_proxies'].index,
+            result['df_soc_proxies']['soc_proxy_LDES_test'],
+            label=result['id']['matrix_weights']
+        )
+
+
+
+
+    
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(df_reference_soc.index, df_reference_soc['soc'], label="SoC, Reference",color='black', zorder=102)  
+    # plt.plot(df_standard_milp_soc.index, df_standard_milp_soc['soc'], label="SoC, Standard MILP",color='grey', zorder=101)  
+    # # plt.plot(df_standard_hourly_milp_soc.index, df_standard_hourly_milp_soc['soc'], label="SoC, Hourly MILP",color='blue', zorder=101)
+    # # plt.plot(df_test_hourly_milp_soc.index, df_test_hourly_milp_soc['soc'], label="SoC, Hourly MILP with proxy",color='orange', zorder=101)  
+
+    # for key, result in enumerate(list_results):
+    #     if result['id']['k_period']:
+    #         plt.plot(result['df_soc'].index, result['df_soc']['soc'], label=list_labels[key], zorder=101)   
     plt.xlabel('Time')
-    plt.ylabel('State of Charge')
+    plt.ylabel('SoC')
     plt.title('Storage State of Charge Over Time')
     plt.grid(True)
     plt.legend()
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
 
 
@@ -703,15 +729,15 @@ set_distance_matrix_weights = [
     [1,1,1.25],
     [0.75,1,1],
     [1,0.75,1],
-    [1,1,0.75],
-    [1.5,1,1],
-    [1,1.5,1],
-    [1,1,1.5],
-    [0.5,1,1],
-    [1,0.5,1],
-    [1,1,0.5],
+    # [1,1,0.75],
+    # [1.5,1,1],
+    # [1,1.5,1],
+    # [1,1,1.5],
+    # [0.5,1,1],
+    # [1,0.5,1],
+    # [1,1,0.5],
 ] 
 
 # run()              
-batch_run()
+# batch_run()
 batch_review()

@@ -6,8 +6,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 from pandas import Timestamp
 from scipy.signal import convolve
 from numpy.fft import fft, ifft, fftfreq
+from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
+import utility_functions.helper_timeseries_tools as tt
 
-def compare_models(model_reference, model_test, df_clustermap_test_model: pd.DataFrame):
+def compare_models(
+        model_reference, 
+        model_test, 
+        df_clustermap_test_model: pd.DataFrame,
+        proxy_parameters: dict = None
+    ):
 
     # -------------------------------------------------------------
     # 
@@ -236,8 +243,84 @@ def compare_models(model_reference, model_test, df_clustermap_test_model: pd.Dat
             'mean_absolute_capex_error': np.mean(df_capex['error_absolute_normalised']),
             'ldes_capex_error': df_capex.loc['LDES_energy']['error_absolute_normalised']
         }
+    # -------------------------------------------------------------
+    # 
+    #              CAPEX Error
+    # 
+    # -------------------------------------------------------------
+
+
+    if proxy_parameters:
+
+        df_reference_soc_proxy = (
+        model_reference.inputs[[
+            k for k, v in model_reference.inputs.data_vars.items()
+            if "timesteps" in v.dims and len(v.dims) > 1
+        ]]
+        .to_dataframe()
+        .stack()
+        .unstack("timesteps")
+        .T
+        )
+        
+
+        df_reference_soc_proxy.columns = [col[1] if isinstance(col, tuple) else col for col in df_reference_soc_proxy.columns]
+
+        #apply the soc proxy for input into TSAM clustering
+        df_reference_soc_proxy, _, _ = generate_soc_proxy(
+                df=df_reference_soc_proxy,
+                demand_field='demand_power',
+                renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
+                dispatchable_techs=proxy_parameters['dispatchable_techs'],
+                storage_process_losses=proxy_parameters['storage_process_losses'],
+                soc_decomposition = proxy_parameters['soc_decomposition'],
+        )
+
+        # #now drop the capacity factor, general surplus, dynamic soc, and SDES fields, instead retaining only the LDES Surplus field which serves as the static input: SoC stresses
+        df_reference_soc_proxy.drop(columns=['mean_capacity_factor','surplus','surplus_SDES', 'soc_proxy_SDES'], inplace=True)
+        df_reference_soc_proxy.drop(columns=['onshore_wind','demand_power','offshore_wind', 'solar'], inplace=True)
+
+        #cluster soc proxy
+        df_test_soc_proxy, _ = tt.extrapolate_ts_from_cluster_map(
+            source_cluster_map=df_clustermap_test_model,
+            source_original_ts='SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv'
+        )
+        df_test_soc_proxy.set_index('timesteps', inplace=True)
+
+        #apply the soc proxy for input into TSAM clustering
+        df_test_soc_proxy, _, _ = generate_soc_proxy(
+                df=df_test_soc_proxy,
+                demand_field='demand_power',
+                renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
+                dispatchable_techs=proxy_parameters['dispatchable_techs'],
+                storage_process_losses=proxy_parameters['storage_process_losses'],
+                soc_decomposition = proxy_parameters['soc_decomposition'],
+        )
+
+        # #now drop the capacity factor, general surplus, dynamic soc, and SDES fields, instead retaining only the LDES Surplus field which serves as the static input: SoC stresses
+        df_test_soc_proxy.drop(columns=['mean_capacity_factor','surplus','surplus_SDES', 'soc_proxy_SDES'], inplace=True)
+        df_test_soc_proxy.drop(columns=['onshore_wind','demand_power','offshore_wind', 'solar'], inplace=True)
+
+        #combine
+        df_soc_proxies = df_reference_soc_proxy.merge(df_test_soc_proxy, how='left', on='timesteps',suffixes=['_reference','_test'])
+        y_pred= df_soc_proxies['surplus_LDES_test']
+        y_true= df_soc_proxies['surplus_LDES_reference']
+
+        e_time_full_charge, e_time_full_discharge = peak_timing_error(y_true, y_pred,)
+
+        result['df_soc_proxies'] = df_soc_proxies
+        result['soc_proxy_metrics'] ={
+            'full_charge_datetime_error': e_time_full_charge,
+            'full_discharge_datetime_error': e_time_full_discharge,
+            'pearson_r': pearson_r_standardised(y_true, y_pred),
+            'cosine_similarity': cos_similarity(y_true, y_pred),
+            'first_derivative_correlation': first_derivative_correlation(y_true, y_pred, standardise=True),
+            'normalised_rmse': rmse(y_true, y_pred)[1]
+        }
+
 
     return result, df_reference_soc
+
 
 def first_derivative_correlation(y_true, y_pred, standardise=False):
     """
@@ -353,3 +436,35 @@ def rmse(y_true, y_pred):
     nrmse = rmse / (y_true.max() - y_true.min())
 
     return rmse, nrmse
+
+def extract_timeseries_from_calliope(model: calliope.Model):
+        #extract timeseries from calliope model
+    raw_data = (
+    model.inputs[[
+        k for k, v in model.inputs.data_vars.items()
+        if "timesteps" in v.dims and len(v.dims) > 1
+    ]]
+    .to_dataframe()
+    .stack()
+    .unstack("timesteps")
+    .T
+    )
+    
+
+    raw_data.columns = [col[1] if isinstance(col, tuple) else col for col in raw_data.columns]
+
+    # #apply the soc proxy for input into TSAM clustering
+    # raw_data, capacity_factors, nominal_capacities = generate_soc_proxy(
+    #         df=raw_data,
+    #         demand_field='demand_power',
+    #         renewables_fields_and_weights=proxy_parameters['capacity_weights'], 
+    #         dispatchable_techs=proxy_parameters['dispatchable_techs'],
+    #         storage_process_losses=proxy_parameters['storage_process_losses'],
+    #         soc_decomposition = proxy_parameters['soc_decomposition'],
+    # )
+
+    # #now drop the capacity factor, general surplus, dynamic soc, and SDES fields, instead retaining only the LDES Surplus field which serves as the static input: SoC stresses
+    # raw_data.drop(columns=['mean_capacity_factor','surplus','surplus_SDES', 'soc_proxy_LDES', 'soc_proxy_SDES'], inplace=True)
+    # raw_data.rename(columns={'surplus_LDES': 'soc_stresses'}, inplace=True)
+
+    return raw_data

@@ -30,10 +30,16 @@ def calliope_ts_to_pandas(source: str, date_range_lower_bound: str="", date_rang
 
     return df_timeseries
     
-def extrapolate_ts_from_cluster_map(source_cluster_map: str, source_original_ts: str):
+def extrapolate_ts_from_cluster_map(source_cluster_map, source_original_ts: str):
 
-    #import clustering map and apply date format to all columns
-    df = pd.read_csv(source_cluster_map)
+    if isinstance(source_cluster_map, str):
+        #import clustering map and apply date format to all columns
+        df = pd.read_csv(source_cluster_map)
+    elif isinstance(source_cluster_map, pd.DataFrame):
+        df=source_cluster_map
+        df.rename(columns={df.columns[0]: 'timesteps', df.columns[1]: 'PeriodNum'}, inplace=True)
+    else:
+        raise Exception('source_cluster_map has not been assigned a valid input')
     #capture proper date formats
     for col in df.columns:
         if df[col].dtype=='object':

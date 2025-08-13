@@ -9,7 +9,9 @@ import shutil
 from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import numpy as np
-from utility_functions.helper_optimisation_tsa import compute_distance_matrix
+from utility_functions.helper_optimisation_tsa import compute_distance_matrix, milp_tsa, save_milp_result_to_cluster_map
+import time
+from utility_functions.helper_compare_models import compare_models
 
 
 
@@ -37,11 +39,13 @@ class tsa_model:
             'subdirectories': {
                 'calliope_models': 'calliope_models',
                 'cluster_maps': 'cluster_maps',
-                'timeseries': 'timeseries'
+                'timeseries': 'timeseries',
+                'parameters': 'parameters'
                 },
             'calliope_model': '',
             'cluster_map': '',
-            'timeseries': path_timeseries
+            'timeseries': path_timeseries,
+            'parameters': ''
         }
 
     def set_directory(self, directory: str):
@@ -79,6 +83,10 @@ class tsa_model:
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}"):
             os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}")
         self.paths['cluster_map'] = f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}/{self.id}.csv"
+
+        if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}"):
+            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}")
+        self.paths['parameters'] = f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}/{self.id}.json"
         
         #here we copy the source timeseries data into the model's directory and reassign the path id
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}"):
@@ -95,7 +103,11 @@ class tsa_model:
         #check id exists
         if not self.id:
             raise Exception('A unique ID has not been assigned, please fully configure the model with appropriate parameters and then call tsa_model.compute_id().')
-        print(f'> Configure: Validating and Configuring Calliope model: {self.id}')
+        print(f'> Calliope: Validating and Configuring Calliope model: {self.id}')
+
+        # if os.path.exists(self.paths['calliope_model']):
+        #     print(f'> Calliope: Results already exist for: {self.id}, loading model instead.')
+        # else:
         
         #checks model type and checks relevant files exist
         if not os.path.exists(self.paths['timeseries']):
@@ -135,13 +147,13 @@ class tsa_model:
         if not self.paths['calliope_model']:
             raise Exception('A valid save path has not been configured.')
         if os.path.exists(self.paths['calliope_model']):
-            print(f'> Build: Results already exist for: {self.id}, loading model instead.')
+            print(f'> Calliope: Results already exist for: {self.id}, loading model instead.')
             self.calliope_model.model = calliope.read_netcdf(self.paths['calliope_model'])
             self.calliope_model.status = 'solved'
         else:
             if self.calliope_model.status != 'configured':
                 raise Exception('Calliope model has not been configured.')
-            print(f'> Building Calliope model: {self.id}')
+            print(f'> Calliope: Building Calliope model: {self.id}')
             self.calliope_model.model.build()
             self.calliope_model.status = 'built'
         
@@ -149,17 +161,17 @@ class tsa_model:
         if not self.paths['calliope_model']:
             raise Exception('A valid save path has not been configured.')
         if os.path.exists(self.paths['calliope_model']):
-            print('> Solve: skipping...')
+            print('> Calliope: skipping...')
             self.calliope_model.model = calliope.read_netcdf(self.paths['calliope_model'])
             self.calliope_model.status = 'solved'
         else:
             if self.calliope_model.status != 'built':
                 raise Exception('Calliope model has not been built.')
-            print(f'> Solve: Solving Calliope model: {self.id}')
+            print(f'> Calliope: Solving Calliope model: {self.id}')
             self.calliope_model.model.solve()
             self.calliope_model.status = 'solved'
             self.calliope_model.model.to_netcdf(self.paths['calliope_model'])
-            print(f'> Save: Solution saved to: {self.paths['calliope_model']}')
+            print(f'> Calliope: Solution saved to: {self.paths['calliope_model']}')
 
     #SOC Proxy FUNCTIONS -------------------------------------------------------------------------------------------------
     
@@ -168,6 +180,9 @@ class tsa_model:
     #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
 
     def compute_features_dataframe(self):
+
+        if os.path.exists(self.paths['cluster_map']):
+            print(f'> TSA: Warning, {self.paths['cluster_map']} already exists.')
         print(f'> TSA: Extracting features dataframe for {self.id}') #TODO:
 
         #load the timeseries
@@ -233,6 +248,10 @@ class tsa_model:
 
 
     def compute_distance_matrix(self):
+
+        if os.path.exists(self.paths['cluster_map']):
+            print(f'> TSA: Warning, {self.paths['cluster_map']} already exists.')
+
         print(f'> TSA: Creating distance matrix for {self.id}')
 
         self.tsa.distance_matrix = compute_distance_matrix(
@@ -246,14 +265,76 @@ class tsa_model:
         )
 
     def apply_tsa(self):
-        print(f'> TSA: Applying TSA for {self.id}')
-        #observe whether cluster or opt
-        #take in params
-        #run the MILP solver
-        #save cluster map
 
+        #check if file already exists
+        if os.path.exists(self.paths['cluster_map']):
+            print(f'> TSA: Skipping TSA as cluster map already exists at {self.paths['cluster_map']}')
+        else:
+            print(f'> TSA: Applying TSA for {self.id}')
+            start_time = time.time()
+            #get index for saving
+            df_timeseries = calliope_ts_to_pandas(
+                self.paths['timeseries'],
+                date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
+                date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
+            )
+            df_timeseries.set_index('timesteps', inplace=True)
+            df_timeseries = df_timeseries.resample("D").agg('mean')
+            dates_index = df_timeseries.index
 
+            print(f'> TSA: Solving MILP {self.id}')
+            result = milp_tsa(
+                distance_matrix=self.tsa.distance_matrix,
+                k=self.tsa.params['k_periods'],
+                solver='gurobi',
+                mipgap=0.01,
+                verbose=True
+            )
+            print(f'> TSA: Solution found. MILP took {time.time()-start_time:.2f}')
 
+            save_milp_result_to_cluster_map(
+                result=result, 
+                dates_index=dates_index,
+                output_path=self.paths['cluster_map']
+            )
+            print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')
+        
+    #Save/Load FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    def save_params(self):
+        
+        params = {
+            "calliope_params": self.calliope_model.params,
+            "soc_proxy_params": self.soc_proxy.params,
+            "tsa_params": self.tsa.params
+        }
+
+        with open(self.paths['parameters'], "w") as f:
+            json.dump(params, f, indent=4)  # indent=4 makes it readable   
+        
+        print(f'> Model: Parameter json saved to {self.paths['parameters']}')
+
+    def load_params(self, assign: bool = False):
+
+        with open(self.paths['parameters'], "r") as f:
+            params = json.load(f)
+
+        # Unpack back into your variables
+        calliope_params = params["calliope_params"]
+        soc_proxy_params = params["soc_proxy_params"]
+        tsa_params = params["tsa_params"]
+
+        
+
+        if assign:
+            self.calliope_model.params = calliope_params
+            self.soc_proxy.params = soc_proxy_params
+            self.tsa.params = tsa_params
+            print(f'> Model: Parameter json loaded from {self.paths['parameters']} and assigned to model')
+        else:
+            print(f'> Model: Parameter json loaded from {self.paths['parameters']}')
+
+        return calliope_params, soc_proxy_params, tsa_params
 
 
 
@@ -322,10 +403,6 @@ class tsa:
             self.cluster_map = cluster_map
     
     
-
-
-
-
 
 #general function for verifying an input dictionary contains the right keys and value typès given a template
 def validate_params(params: dict, template: dict, allow_extra=False):

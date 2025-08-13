@@ -1,10 +1,48 @@
-import pandas as pd
-import calliope 
-import numpy as np
 from utility_functions.class_tsa_model import tsa_model
+from utility_functions.helper_visualise import visualise_soc, visualise
 
 
-m = tsa_model(tsa_type='optimisation', path_timeseries='SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
+def run(calliope_params, soc_proxy_params, tsa_params):
+
+    #Model FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    m = tsa_model(tsa_type='optimisation', path_timeseries='SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
+
+
+    m.soc_proxy.set_params(soc_proxy_params)
+    m.tsa.set_params(tsa_params)
+    m.calliope_model.set_params(calliope_params)
+    m.compute_id()
+    m.assign_paths(directory='SoC_proxy_TSA/data')
+    m.save_params()
+
+
+    #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    m.compute_features_dataframe()
+    m.compute_distance_matrix()
+    m.apply_tsa() 
+
+
+    #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    m.configure_calliope()
+    m.build_calliope()
+    m.solve_and_save_calliope()
+
+    #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    
+    # visualise_soc(
+    #     model=m.calliope_model.model,
+    #     cluster_params={
+    #         'path_cluster_map': m.paths['cluster_map'],
+    #         'path_timeseries': m.paths['timeseries']
+    #     })
+
+    #RETURN FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    return m
 
 calliope_params = {
         'type': 'clustered',
@@ -39,36 +77,49 @@ tsa_params = {
             'demand': 1,
             'proxy': 1,
         },
-    'resample_to_daily_resolution': False,
+    'resample_to_daily_resolution': True,
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
     'distance_matrix_metric': 'euclidean',
     'name_demand': ['demand_power'],
-        'soc_proxy': {
-            'use_soc_proxy': True,
-            'proxy_inputs_to_consider': ['surplus_LDES'],
-            'proxy_window': ['2016-01-01','2017-12-31'] 
-        }
+    'soc_proxy': {
+        'use_soc_proxy': True,
+        'proxy_inputs_to_consider': ['surplus_LDES'],
+        'proxy_window': None
+    }
 }
 
+period_length = 1826
+
+options_compressions = [
+    # round(period_length*0.01),
+    round(period_length*0.02),
+    round(period_length*0.03),
+    round(period_length*0.04),
+    # round(period_length*0.05),
+]
+
+options_use_proxy = [True, False]
+
+list_model_dict = []
+
+for compression in options_compressions:
+    for use_proxy in options_use_proxy:
+        tsa_params['k_periods'] = compression
+        tsa_params['soc_proxy']['use_soc_proxy']=use_proxy
+
+        m=run(calliope_params, soc_proxy_params, tsa_params)
+        list_model_dict.append({
+            'model': m.calliope_model.model,
+            'type': m.calliope_model.params['type'],
+            'name': f'k={m.tsa.params['k_periods']}{', with soc proxy' if m.tsa.params['soc_proxy']['use_soc_proxy'] else ''}',
+            'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
+        })
+
+visualise(
+    list_model_dict=list_model_dict,
+    x_field='Time',
+    y_field='State of Charge'
+)
 
 
-m.soc_proxy.set_params(soc_proxy_params)
-m.tsa.set_params(tsa_params)
-m.calliope_model.set_params(calliope_params)
-m.compute_id()
-m.assign_paths(directory='SoC_proxy_TSA/data')
 
-
-#TSA FUNCTIONS -------------------------------------------------------------------------------------------------
-
-m.compute_features_dataframe()
-m.compute_distance_matrix()
-m.apply_tsa()
-
-#CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
-
-# m.configure_calliope()
-# m.build_calliope()
-# m.solve_and_save_calliope()
-
-print('done')

@@ -2,6 +2,10 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 from scipy.spatial.distance import cdist
+import multiprocessing
+max_threads = multiprocessing.cpu_count()
+import pyomo.environ as pyo
+import json
 
 def compute_distance_matrix(
     feature_df: pd.DataFrame,
@@ -90,3 +94,164 @@ def compute_distance_matrix(
                 D += wP * (D_P * M)
 
     return D
+
+def milp_tsa(
+    distance_matrix: np.ndarray,
+    k: int,
+    solver: str = "gurobi",
+    mipgap: float = 0.01,
+    verbose: bool = True
+):
+    """
+    Solve a MILP time series aggregation problem using Pyomo and a dense distance matrix.
+
+    Parameters
+    ----------
+    distance_matrix : np.ndarray
+        Dense symmetric matrix of shape (n_days, n_days) with pairwise distances.
+    k : int
+        Number of representative days to select.
+    solver : str
+        MILP solver to use (e.g., "gurobi", "cbc", "glpk").
+    mipgap : float
+        Relative MIP optimality gap (e.g., 0.01 = 1%).
+    verbose : bool
+        Whether to print log output.
+
+    Returns
+    -------
+    dict
+        {
+            'selected_days': list of representative day indices,
+            'assignments': dict mapping each day to its representative,
+            'model': Pyomo model object,
+            'results': Solver result object
+        }
+    """
+
+    if verbose:
+        print(">>> MILP: Building Pyomo model")
+
+    n_days = distance_matrix.shape[0]
+    I = range(n_days)
+    J = range(n_days)
+
+    model = pyo.ConcreteModel()
+
+    # Sets
+    model.I = pyo.Set(initialize=I)
+    model.J = pyo.Set(initialize=J)
+
+    # Parameters #TODO: implement a threshold here to encourage sparsity e.g. all values <0.01*Matrix Range are set to 0. We can explore the impact of this on model run times vs. outcome accuracy.
+    D_dict = {
+        (i, j): float(distance_matrix[i, j])
+        for i in I for j in J
+    }
+
+    model.D = pyo.Param(model.I, model.J, initialize=D_dict, within=pyo.NonNegativeReals)
+
+    # Decision variables
+    model.y = pyo.Var(model.I, domain=pyo.Binary)
+    model.x = pyo.Var(model.I, model.J, domain=pyo.Binary)
+
+    # Objective: Minimize total assignment cost
+    def obj_rule(m):
+        return sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J)
+    model.obj = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
+
+    # Constraints
+
+    # Each day assigned to exactly one representative
+    def assign_once_rule(m, j):
+        return sum(m.x[i, j] for i in m.I) == 1
+    model.assign_once = pyo.Constraint(model.J, rule=assign_once_rule)
+
+    # Linking constraint: x[i,j] only active if y[i] is selected
+    def link_x_y_rule(m, i, j):
+        return m.x[i, j] <= m.y[i]
+    model.link_x_y = pyo.Constraint(model.I, model.J, rule=link_x_y_rule)
+
+    # Exactly k representatives
+    def num_reps_rule(m):
+        return sum(m.y[i] for i in m.I) == k
+    model.num_reps = pyo.Constraint(rule=num_reps_rule)
+
+    if verbose:
+        print(">>> MILP: Solving with", solver)
+
+    solver_obj = pyo.SolverFactory(solver)
+    results = solver_obj.solve(
+        model,
+        tee=verbose,
+        options={
+            'TimeLimit': 3600,
+            'MipGap': mipgap,
+            'Threads': min(max_threads-2 if max_threads>2 else 1, 16), #give gurobi as many as it can take, 16 is where efficiency drops 
+            'LogToConsole': int(verbose),
+            # Optional: Uncomment if needed
+            # 'Presolve': 1,
+            # 'Heuristics': 0.5,
+            # 'Cuts': 2,
+        }
+    )
+
+    # Extract solution
+    selected_days = [i for i in model.I if pyo.value(model.y[i]) > 0.5]
+    assignments = {
+        j: next(i for i in model.I if pyo.value(model.x[i, j]) > 0.5)
+        for j in model.J
+    }
+
+    return {
+        "selected_days": selected_days,
+        "assignments": assignments,
+        "model": model,
+        "results": results
+    }
+
+def save_milp_result_to_cluster_map(
+    result: dict,
+    dates_index: pd.DatetimeIndex,
+    output_path: str
+):
+    """
+    Save the MILP TSA result in the Calliope-compatible format:
+    timesteps,PeriodNum
+
+    Parameters
+    ----------
+    result : dict
+        Output of `solve_standard_milp_tsa`, including 'assignments' and 'selected_days'.
+    original_df : pd.DataFrame
+        DataFrame used to generate the feature matrix, must have a DatetimeIndex.
+    df_daily : pd.DataFrame
+        DataFrame used to capture daily information.
+    output_path : str
+        Path to the CSV file to write.
+    """
+    if not isinstance(dates_index, pd.DatetimeIndex):
+        raise ValueError("df_daily must have a DatetimeIndex")
+
+    # Convert index to list so we can use integer positions
+    daily_dates = dates_index.to_list()
+
+    # Map day index → representative day
+    day_to_rep = {
+        daily_dates[day_idx]: daily_dates[result['assignments'][day_idx]]
+        for day_idx in result['assignments']
+    }
+
+    # Build final dataframe
+    mapping_df = pd.DataFrame.from_dict(day_to_rep, orient="index", columns=["PeriodNum"])
+    mapping_df.index.name = "timesteps"
+    mapping_df = mapping_df.reset_index()
+
+    # Format as strings for Calliope compatibility
+    mapping_df["timesteps"] = mapping_df["timesteps"].dt.strftime("%Y-%m-%d")
+    mapping_df["PeriodNum"] = mapping_df["PeriodNum"].dt.strftime("%Y-%m-%d")
+
+    # Save to CSV
+    mapping_df.to_csv(output_path, index=False)
+
+
+

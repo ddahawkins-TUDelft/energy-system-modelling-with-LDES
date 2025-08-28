@@ -91,11 +91,11 @@ tsa_params = {
 period_length = 1826
 
 options_compressions = [
-    # round(period_length*0.01),
+    round(period_length*0.01),
     round(period_length*0.02),
     round(period_length*0.03),
     round(period_length*0.04),
-    # round(period_length*0.05),
+    round(period_length*0.05),
 ]
 
 options_use_proxy = [True, False]

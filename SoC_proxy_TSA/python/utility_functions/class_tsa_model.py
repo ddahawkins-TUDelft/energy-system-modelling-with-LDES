@@ -10,6 +10,8 @@ from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import numpy as np
 from utility_functions.helper_optimisation_tsa import compute_distance_matrix, milp_tsa, save_milp_result_to_cluster_map
+from utility_functions.helper_cluster_tsa import cluster_tsa
+from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply_tsam_to_calliope_with_soc_proxy
 import time
 from utility_functions.helper_compare_models import compare_models
 
@@ -213,35 +215,36 @@ class tsa_model:
             df_timeseries = df_timeseries[original_columns]
 
         #if aggregating daily bool is True, then aggregate otherwise transpose the hourly data into daily profiles to reduce MILP load
-        if self.tsa.params['resample_to_daily_resolution']:
-            # Select only numeric columns (e.g., drop metadata if present)
-            df_timeseries = df_timeseries.select_dtypes(include=[np.number])
-            # Group by day and apply aggregation
-            df_timeseries = df_timeseries.resample("D").agg('mean')
-        else:
-            # Create containers
-            daily_rows = []
-            days = []
+        if self.tsa.type == 'optimisation':
+            if self.tsa.params['resample_to_daily_resolution']:
+                # Select only numeric columns (e.g., drop metadata if present)
+                df_timeseries = df_timeseries.select_dtypes(include=[np.number])
+                # Group by day and apply aggregation
+                df_timeseries = df_timeseries.resample("D").agg('mean')
+            else:
+                # Create containers
+                daily_rows = []
+                days = []
 
-            # Group by day (normalize keeps midnight timestamps)
-            for day, group in df_timeseries.groupby(pd.Grouper(freq="D")):
-                if len(group) != 24:
-                    # Skip incomplete days (DST or edges)
-                    continue
-                # Build a 24h vector per variable and concatenate
-                row = np.concatenate([group[var].to_numpy() for var in original_columns])
-                daily_rows.append(row)
-                days.append(day.normalize())
+                # Group by day (normalize keeps midnight timestamps)
+                for day, group in df_timeseries.groupby(pd.Grouper(freq="D")):
+                    if len(group) != 24:
+                        # Skip incomplete days (DST or edges)
+                        continue
+                    # Build a 24h vector per variable and concatenate
+                    row = np.concatenate([group[var].to_numpy() for var in original_columns])
+                    daily_rows.append(row)
+                    days.append(day.normalize())
 
-            # Build column names once
-            col_names = [f"{var}_h{h:02d}" for var in original_columns for h in range(24)]
+                # Build column names once
+                col_names = [f"{var}_h{h:02d}" for var in original_columns for h in range(24)]
 
-            # Build daily dataframe with a proper Date index
-            df_timeseries = pd.DataFrame(
-                daily_rows,
-                columns=col_names,
-                index=pd.DatetimeIndex(days, name="timesteps")
-            )
+                # Build daily dataframe with a proper Date index
+                df_timeseries = pd.DataFrame(
+                    daily_rows,
+                    columns=col_names,
+                    index=pd.DatetimeIndex(days, name="timesteps")
+                )
 
         #assign the output
         self.tsa.df_features = df_timeseries
@@ -264,6 +267,16 @@ class tsa_model:
             proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
         )
 
+    def configure_tsa(self):
+
+        if self.tsa.type == 'optimisation':
+            self.compute_features_dataframe()
+            self.compute_distance_matrix()
+        elif self.tsa.type == 'cluster':
+            self.compute_features_dataframe()
+        else:
+            raise Exception('No TSA type Configured.')
+
     def apply_tsa(self):
 
         #check if file already exists
@@ -272,31 +285,48 @@ class tsa_model:
         else:
             print(f'> TSA: Applying TSA for {self.id}')
             start_time = time.time()
-            #get index for saving
-            df_timeseries = calliope_ts_to_pandas(
-                self.paths['timeseries'],
-                date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
-                date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
-            )
-            df_timeseries.set_index('timesteps', inplace=True)
-            df_timeseries = df_timeseries.resample("D").agg('mean')
-            dates_index = df_timeseries.index
 
-            print(f'> TSA: Solving MILP {self.id}')
-            result = milp_tsa(
-                distance_matrix=self.tsa.distance_matrix,
-                k=self.tsa.params['k_periods'],
-                solver='gurobi',
-                mipgap=0.01,
-                verbose=True
-            )
-            print(f'> TSA: Solution found. MILP took {time.time()-start_time:.2f}')
+            if self.tsa.type == 'optimisation':
+                
+                #get index for saving
+                df_timeseries = calliope_ts_to_pandas(
+                    self.paths['timeseries'],
+                    date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
+                    date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
+                )
+                df_timeseries.set_index('timesteps', inplace=True)
+                df_timeseries = df_timeseries.resample("D").agg('mean')
+                dates_index = df_timeseries.index
 
-            save_milp_result_to_cluster_map(
-                result=result, 
-                dates_index=dates_index,
-                output_path=self.paths['cluster_map']
-            )
+                print(f'> TSA: Solving MILP {self.id}')
+                result = milp_tsa(
+                    distance_matrix=self.tsa.distance_matrix,
+                    k=self.tsa.params['k_periods'],
+                    solver='gurobi',
+                    mipgap=0.01,
+                    verbose=True
+                )
+                print(f'> TSA: Solution found. MILP took {time.time()-start_time:.2f}')
+
+                save_milp_result_to_cluster_map(
+                    result=result, 
+                    dates_index=dates_index,
+                    output_path=self.paths['cluster_map']
+                )
+
+            elif self.tsa.type == 'cluster':
+                result = cluster_tsa(
+                    df_timeseries=self.tsa.df_features,
+                    number_typical_periods=self.tsa.params['k_periods'],
+                    hours_per_period=self.tsa.params['hours_per_period'],
+                    cluster_method=self.tsa.params['cluster_method'],
+                    rep_method=self.tsa.params['representation_method'],
+                    path_to_cluster_csv=self.paths['cluster_map'],
+                    path_to_new_timeseries=self.paths['timeseries'],
+                )
+                
+            else:
+                raise Exception('No TSA type Configured.')
             print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')
         
     #Save/Load FUNCTIONS -------------------------------------------------------------------------------------------------

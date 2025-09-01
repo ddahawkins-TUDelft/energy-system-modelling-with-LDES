@@ -1,5 +1,6 @@
 import pandas as pd
 import tsam.timeseriesaggregation as tsam
+from typing import Dict, List, Tuple
 
 
 def cluster_tsa(
@@ -12,7 +13,8 @@ def cluster_tsa(
     path_to_original_timeseries: str,
     path_to_new_timeseries: str, 
     soc_proxy_dict: dict,
-    weightDict: dict = None
+    weightDict: dict | None = None,
+    soc_features: dict | None = None
     ):
 
     #get the calliope export format for later export
@@ -21,24 +23,33 @@ def cluster_tsa(
     representationDict = None
     df_index = df_timeseries.index
 
-    use_daily_features = True
-
     # add the daily magnitude features
-    if use_daily_features:
-        for proxy_param in soc_proxy_dict['proxy_inputs_to_consider']:
-            df_timeseries=add_daily_proxy_magnitude_features(df_timeseries, delta_col=proxy_param)
 
-        daily_magntitude_features_weights = {
-        "soc_activity_MWh": 0.0001,          # captures the busyness of the day via absolute throughput of both charge and discahrge
-        "soc_charge_MWh": 1,            # captures total charged energy that day
-        "soc_discharge_MWh": 0.0001,         # captures total discharge energy that day
-        "soc_net_MWh": 1,               # captures net change
-        "soc_max_charge_rate": 0.0001,     # captures peak charging power
-        "soc_max_discharge_rate": 0.0001,  # captures peak discharging power
-        "soc_peak10h_charge": 0.0001,       # emphasize sustained charging ramps over a 10h cycle
-        "soc_peak10h_discharge": 0.0001     # emphasize sustained discharging ramps over a 10h cycle
-        }
-        weightDict.update(daily_magntitude_features_weights) 
+    weightDict = dict(weightDict or {})
+    added_cols_all: List[str] = []
+
+    #scale soc_feature weights with proxy weights
+    for key in soc_features.keys():
+        soc_features[key] = soc_features[key]*weightDict[soc_proxy_dict["proxy_inputs_to_consider"][0]]
+
+
+    if soc_features and soc_proxy_dict.get("use_soc_proxy"):
+        proxy_cols = list(soc_proxy_dict.get("proxy_inputs_to_consider", []))
+        multi_proxy = len(proxy_cols) > 1
+
+        for proxy_col in proxy_cols:
+            suffix = proxy_col if multi_proxy else None
+            df_timeseries, new_weights, added_cols = _add_requested_soc_features(
+                df_timeseries,
+                delta_col=proxy_col,
+                requested=soc_features,
+                suffix=suffix,
+            )
+            weightDict.update(new_weights)
+            added_cols_all.extend(added_cols)
+
+        
+        
 
     #perform tsam aggregation
     aggregation = tsam.TimeSeriesAggregation(
@@ -72,12 +83,16 @@ def cluster_tsa(
 
     #drop the merging columns and also soc_stresses which did not exist in the original dataset
     df_new_timeseries_values.drop(['PeriodNum','TimeStep'], axis=1, inplace=True)
-    if soc_proxy_dict['use_soc_proxy']:
-        df_new_timeseries_values.drop(soc_proxy_dict['proxy_inputs_to_consider'], axis=1, inplace=True)
-
-        if use_daily_features:
-            for key in daily_magntitude_features_weights.keys():
-                df_new_timeseries_values.drop(key, axis=1, inplace=True)
+    if soc_proxy_dict.get("use_soc_proxy"):
+        # drop original proxy inputs
+        df_new_timeseries_values.drop(
+            columns=soc_proxy_dict.get("proxy_inputs_to_consider", []),
+            errors="ignore",
+            inplace=True,
+        )
+        # drop only the features we actually added
+        if added_cols_all:
+            df_new_timeseries_values.drop(columns=added_cols_all, errors="ignore", inplace=True)
 
 
     df_new_timeseries_values.index = df_index.strftime('%Y/%m/%d %H:%M')
@@ -136,32 +151,78 @@ def cluster_tsa(
 
     return cluster_days, df_new_timeseries_values
 
-def add_daily_proxy_magnitude_features(df: pd.DataFrame, delta_col="surplus_LDES"):
+def _add_requested_soc_features(
+    df: pd.DataFrame,
+    delta_col: str,
+    requested: Dict[str, float],
+    suffix: str | None = None,
+) -> Tuple[pd.DataFrame, Dict[str, float], List[str]]:
+    """
+    Compute ONLY the requested SoC features from the hourly ΔSoC column `delta_col`,
+    broadcast them to hourly resolution, and return:
+        - augmented dataframe,
+        - a weight dict mapping *actual column names* -> weight,
+        - a list of added column names (for cleanup on export).
+    If `suffix` is provided, feature columns are named '{feature}__{suffix}'.
+    """
     d = df.copy()
-    by_day = d[delta_col].resample("1D")
+    s = d[delta_col]
+    by_day = s.resample("1D")
 
-    charge   = by_day.apply(lambda s: s.clip(lower=0).sum()).rename("soc_charge_MWh")
-    discharge= by_day.apply(lambda s: (-s.clip(upper=0)).sum()).rename("soc_discharge_MWh")
-    activity = by_day.apply(lambda s: s.abs().sum()).rename("soc_activity_MWh")
-    net      = by_day.sum().rename("soc_net_MWh")
-    max_ch   = by_day.max().rename("soc_max_charge_rate")
-    max_dis  = (-by_day.min()).rename("soc_max_discharge_rate")
+    # Base daily building blocks
+    daily_net = by_day.sum()                                     # MWh/day (+ charge, - discharge)
+    daily_dis = daily_net.clip(upper=0).abs()                    # discharge-only MWh/day
 
-    # sustained 6h ramps (optional)
-    def peak10h_pos(s): return s.rolling(10, min_periods=1).sum().max()
-    def peak10h_neg(s): return (-s).rolling(10, min_periods=1).sum().max()
-    peak6h_c = by_day.apply(peak10h_pos).rename("soc_peak10h_charge")
-    peak6h_d = by_day.apply(peak10h_neg).rename("soc_peak10h_discharge")
+    # Define how to build each feature (daily series, then broadcast)
+    def _name(f): return f"{f}__{suffix}" if suffix else f
 
-    daily = pd.concat([charge, discharge, activity, net, max_ch, max_dis, peak6h_c, peak6h_d], axis=1)
+    feature_builders = {
+        "soc_activity_MWh":       lambda: by_day.apply(lambda x: x.abs().sum()).rename(_name("soc_activity_MWh")),
+        "soc_charge_MWh":         lambda: by_day.apply(lambda x: x.clip(lower=0).sum()).rename(_name("soc_charge_MWh")),
+        "soc_discharge_MWh":      lambda: by_day.apply(lambda x: (-x.clip(upper=0)).sum()).rename(_name("soc_discharge_MWh")),
+        "soc_net_MWh":            lambda: daily_net.rename(_name("soc_net_MWh")),
+        "soc_max_charge_rate":    lambda: by_day.max().rename(_name("soc_max_charge_rate")),
+        "soc_max_discharge_rate": lambda: (-by_day.min()).rename(_name("soc_max_discharge_rate")),
+        "soc_peak10h_charge":     lambda: by_day.apply(lambda x: x.rolling(10, min_periods=1).sum().max()).rename(_name("soc_peak10h_charge")),
+        "soc_peak10h_discharge":  lambda: by_day.apply(lambda x: (-x).rolling(10, min_periods=1).sum().max()).rename(_name("soc_peak10h_discharge")),
+        "soc_discharge_30d":      lambda: daily_dis.rolling(30,  min_periods=1).sum().rename(_name("soc_discharge_30d")),
+        "soc_discharge_90d":      lambda: daily_dis.rolling(90,  min_periods=1).sum().rename(_name("soc_discharge_90d")),
+        "soc_energy_debt":        lambda: _energy_debt(daily_net).rename(_name("soc_energy_debt")),
+    }
 
-    # broadcast to hours
-    d = d.join(daily, on=d.index.floor("D"))
-    d.drop(labels='key_0',axis=1, inplace=True)
+    # Build only the requested features
+    daily_feats = []
+    actual_weights: Dict[str, float] = {}
+    added_cols: List[str] = []
 
-    # optional robust scaling so weights are easier to tune
-    # for c in daily.columns:
-    #     q99 = d[c].quantile(0.99) or 1.0
-    #     d[c] = d[c] / q99
+    for feat, wt in (requested or {}).items():
+        if feat not in feature_builders:
+            # silently ignore unknown features; you could log/print if preferred
+            continue
+        ser = feature_builders[feat]()   # a daily-indexed Series
+        daily_feats.append(ser)
+        actual_weights[ser.name] = float(wt)
+        added_cols.append(ser.name)
 
-    return d
+    if daily_feats:
+        daily_df = pd.concat(daily_feats, axis=1)
+
+        # Broadcast daily scalars to each hour in that day (no 'key_0' artifacts)
+        d = (
+            d.assign(__date=d.index.floor("D"))
+             .join(daily_df, on="__date")
+             .drop(columns="__date")
+        )
+
+    return d, actual_weights, added_cols
+
+
+def _energy_debt(daily_net: pd.Series) -> pd.Series:
+    """Cumulative discharge 'debt' that resets when net >= 0 (simple drawdown metric)."""
+    acc = 0.0
+    out = []
+    for x in daily_net:
+        # x > 0 reduces debt, x < 0 increases debt
+        acc = max(acc + (-x), 0.0)
+        out.append(acc)
+    return pd.Series(out, index=daily_net.index)

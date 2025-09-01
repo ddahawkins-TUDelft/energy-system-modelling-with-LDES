@@ -94,7 +94,18 @@ tsa_params = {
     },
     'cluster_method': 'hierarchical', #Options: k_medoids, k_means, hierarchical
     'representation_method': 'distributionRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
-    'hours_per_period': 24
+    'hours_per_period': 24,
+    'soc_features': {
+        'soc_net_MWh': 1,
+        'soc_energy_debt': 1,
+        'soc_discharge_30d': 1,
+        'soc_discharge_90d': 1
+    },
+    'extremes_spec': {
+        # 'soc_energy_debt': {"how": "max", "n": 1},
+        'soc_discharge_MWh': {"how": "max", "n": 1},
+    },
+    'soft_prune': True
 }
 
 period_length = 1826
@@ -123,9 +134,35 @@ options_matrix_weights = [
     {
             'renewables': 1,
             'demand': 1,
-            'proxy': 1,
+            'proxy': 10,
         }
 ]
+options_soc_features= [
+    {
+        'soc_discharge_MWh': 1,
+        'soc_charge_MWh': 1,
+    },
+    ]
+
+options_extreme_features = [
+    {
+        'extremes_spec':    {},
+        'soft_prune': False
+    },
+    {
+        'extremes_spec':    {
+            'soc_discharge_MWh': {"how": "max", "n": 1},
+        },
+        'soft_prune': True
+    },
+    {
+        'extremes_spec':    {
+            'soc_discharge_MWh': {"how": "max", "n": 1},
+            'soc_charge_MWh': {"how": "max", "n": 1},
+        },
+        'soft_prune': True
+    },
+    ]
 
 list_model_dict = []
 
@@ -134,20 +171,25 @@ for compression in options_compressions:
         for rep_method in options_rep_method:
             for cluster_method in options_cluster_method:
                 for weights in options_matrix_weights:
+                    for soc_features in options_soc_features:
+                        for extremes in options_extreme_features:
 
-                    tsa_params['k_periods'] = compression
-                    tsa_params['cluster_method']=cluster_method
-                    tsa_params['representation_method']=rep_method
-                    tsa_params['soc_proxy']['use_soc_proxy']=use_proxy
-                    tsa_params['matrix_weights']=weights
+                            tsa_params['k_periods'] = compression
+                            tsa_params['cluster_method']=cluster_method
+                            tsa_params['representation_method']=rep_method
+                            tsa_params['soc_proxy']['use_soc_proxy']=use_proxy
+                            tsa_params['matrix_weights']=weights
+                            tsa_params['soc_features']=soc_features
+                            tsa_params['extremes_spec']=extremes['extremes_spec']
+                            tsa_params['soft_prune']=extremes['soft_prune']
 
-                    m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
-                    list_model_dict.append({
-                        'model': m.calliope_model.model,
-                        'type': m.calliope_model.params['type'],
-                        'name': f'id={m.id}, proxy_wt={tsa_params['matrix_weights']['proxy']}', # {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
-                        'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
-                    })
+                            m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
+                            list_model_dict.append({
+                                'model': m.calliope_model.model,
+                                'type': m.calliope_model.params['type'],
+                                'name': f'id={m.id}, {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                                'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
+                            })
 
 visualise(
     list_model_dict=list_model_dict,

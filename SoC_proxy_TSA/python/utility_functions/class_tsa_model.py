@@ -11,6 +11,7 @@ from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import numpy as np
 from utility_functions.helper_optimisation_tsa import distance_matrix, milp_tsa, save_milp_result_to_cluster_map
 from utility_functions.helper_cluster_tsa import cluster_tsa
+from utility_functions.helper_cluster_tsa_with_extremes import cluster_tsa_with_extremes
 from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply_tsam_to_calliope_with_soc_proxy
 import time
 from utility_functions.helper_compare_models import compare_models
@@ -327,9 +328,9 @@ class tsa_model:
                     for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
                         weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
 
-                
 
-                result = cluster_tsa(
+
+                result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
                     number_typical_periods=self.tsa.params['k_periods'],
                     hours_per_period=self.tsa.params['hours_per_period'],
@@ -339,7 +340,10 @@ class tsa_model:
                     path_to_cluster_csv=self.paths['cluster_map'],
                     path_to_new_timeseries=self.paths['timeseries'],
                     soc_proxy_dict=self.tsa.params['soc_proxy'],
-                    weightDict=weightDict
+                    weightDict=weightDict,
+                    soc_features=self.tsa.params['soc_features'],
+                    extremes_spec=self.tsa.params['extremes_spec'],
+                    soft_prune=self.tsa.params['soft_prune']  
                 )
                 
             else:

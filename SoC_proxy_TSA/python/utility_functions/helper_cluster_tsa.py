@@ -1,33 +1,23 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-import numpy as np
-from scipy.spatial.distance import cdist
-import multiprocessing
-max_threads = multiprocessing.cpu_count()
-import pyomo.environ as pyo
-import json
 import tsam.timeseriesaggregation as tsam
-import calliope
-import pandas as pd
 
-def cluster_tsa(df_timeseries, number_typical_periods: int, hours_per_period: int, cluster_method: str, rep_method: str, path_to_cluster_csv: str, path_to_new_timeseries: str):
-    
 
-    ADJUST FOR FACT THAT SOC PROXY IS IMPLICITLY PROVIDED OR NOT
+def cluster_tsa(
+    df_timeseries, number_typical_periods: int, 
+    hours_per_period: int, 
+    cluster_method: str, 
+    rep_method: str, 
+    path_to_cluster_csv: str,
+    path_to_original_timeseries: str,
+    path_to_new_timeseries: str, 
+    soc_proxy_dict: dict):
 
-    #now drop the capacity factor, general surplus, dynamic soc, and SDES fields, instead retaining only the LDES Surplus field which serves as the static input: SoC stresses
-    df_timeseries.drop(columns=['mean_capacity_factor','surplus','surplus_SDES', 'soc_proxy_LDES', 'soc_proxy_SDES'], inplace=True)
-    df_timeseries.rename(columns={'surplus_LDES': 'soc_stresses'}, inplace=True)
+    #get the calliope export format for later export
+    calliope_field_headings = pd.read_csv(path_to_new_timeseries, header=None, nrows=5)
 
- 
+    representationDict = None
+    df_index = df_timeseries.index
 
-    if rep_method == 'minmaxmeanRepresentation' or rep_method == 'socRepresentation':
-        
-        representationDict = {key: 'mean' for key in proxy_parameters['capacity_weights']}
-        representationDict['demand_power'] = 'mean'
-        representationDict['soc_stresses'] = 'max'
-    else:
-        representationDict = None
 
     #perform tsam aggregation
     aggregation = tsam.TimeSeriesAggregation(
@@ -55,14 +45,16 @@ def cluster_tsa(df_timeseries, number_typical_periods: int, hours_per_period: in
     df_new_timeseries_values = matched_indices.merge(
     typPeriods,
     on=['PeriodNum', 'TimeStep'],
-    how='left'  # or 'inner' depending on your need
+    how='left' 
     )
 
     #drop the merging columns and also soc_stresses which did not exist in the original dataset
-    df_new_timeseries_values.drop(['PeriodNum','TimeStep','soc_stresses'], axis=1, inplace=True)
+    df_new_timeseries_values.drop(['PeriodNum','TimeStep'], axis=1, inplace=True)
+    if soc_proxy_dict['use_soc_proxy']:
+        df_new_timeseries_values.drop(soc_proxy_dict['proxy_inputs_to_consider'], axis=1, inplace=True)
 
-    df_new_timeseries_values.columns = save_columns
-    df_new_timeseries_values.index = save_index.strftime('%Y/%m/%d %H:%M')
+
+    df_new_timeseries_values.index = df_index.strftime('%Y/%m/%d %H:%M')
 
     if aggregation.clusterCenterIndices:
         #when using methods such as medoidRepresentation, we get an cluster center index which we can use to traceback the mapping of full res to clustered days
@@ -107,9 +99,11 @@ def cluster_tsa(df_timeseries, number_typical_periods: int, hours_per_period: in
         
         # Step 6: Set index to date if desired
         cluster_days = cluster_days.set_index('timesteps')
-
+   
+   #export CSVs, remembering to prepend the calliope bespoke fields for the timeseries export
+    calliope_field_headings.to_csv(path_to_new_timeseries, index=False, header=False, mode="w")
+    df_new_timeseries_values.to_csv(path_to_new_timeseries, index=True, header=False, mode="a")
     cluster_days.to_csv(path_to_cluster_csv)
-    df_new_timeseries_values.to_csv(path_to_new_timeseries)
 
     #generate logging message
     print(f">>> TSA successfully applied with SoC Proxy. Results saved to {path_to_cluster_csv}.")

@@ -321,8 +321,10 @@ class tsa_model:
                     hours_per_period=self.tsa.params['hours_per_period'],
                     cluster_method=self.tsa.params['cluster_method'],
                     rep_method=self.tsa.params['representation_method'],
+                    path_to_original_timeseries='',
                     path_to_cluster_csv=self.paths['cluster_map'],
                     path_to_new_timeseries=self.paths['timeseries'],
+                    soc_proxy_dict=self.tsa.params['soc_proxy']
                 )
                 
             else:

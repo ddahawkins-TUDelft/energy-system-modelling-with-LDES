@@ -1,5 +1,7 @@
 from utility_functions.class_tsa_model import tsa_model
 from utility_functions.helper_visualise import visualise_soc, visualise
+import os
+import calliope
 
 
 def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
@@ -16,21 +18,27 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
     m.assign_paths(directory='SoC_proxy_TSA/data')
     m.save_params()
 
-
-    #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
-
-    m.configure_tsa()
-    m.apply_tsa() 
+    if os.path.exists(m.paths['calliope_model']):
         
-    #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
 
-    m.configure_calliope()
-    m.build_calliope()
-    m.solve_and_save_calliope()
+        print(f'> Model: {m.paths['calliope_model']} already exists. Skipping...')
+        m.calliope_model.model = calliope.read_netcdf(m.paths['calliope_model'])
 
+    else:
+        #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
+
+        m.configure_tsa()
+        m.apply_tsa() 
+            
+        #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
+
+        m.configure_calliope()
+        m.build_calliope()
+        m.solve_and_save_calliope()
+        
     #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 
-    
+    # print(f'> Visual: LDES Dispatch for {m.id}, k={m.tsa.params['k_periods']}, {'with SoC Proxy' if m.tsa.params['soc_proxy']['use_soc_proxy'] else ''}')
     # visualise_soc(
     #     model=m.calliope_model.model,
     #     cluster_params={
@@ -81,11 +89,11 @@ tsa_params = {
     'name_demand': ['demand_power'],
     'soc_proxy': {
         'use_soc_proxy': True,
-        'proxy_inputs_to_consider': ['surplus_LDES'],
+        'proxy_inputs_to_consider': ['surplus_LDES'], #Options: surplus_LDES, soc_proxy_LDES
         'proxy_window': None
     },
-    'cluster_method': 'hierarchical',
-    'representation_method': 'distributionRepresentation',
+    'cluster_method': 'k_medoids', #Options: k_medoids, k_means, hierarchical
+    'representation_method': 'medoidRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
     'hours_per_period': 24
 }
 
@@ -93,9 +101,9 @@ period_length = 1826
 
 options_compressions = [
     round(period_length*0.01),
-    round(period_length*0.02),
+    # round(period_length*0.02),
     round(period_length*0.03),
-    round(period_length*0.04),
+    # round(period_length*0.04),
     round(period_length*0.05),
 ]
 
@@ -104,17 +112,22 @@ options_use_proxy = [True, False]
 list_model_dict = []
 
 for compression in options_compressions:
-    for use_proxy in options_use_proxy:
-        tsa_params['k_periods'] = compression
-        tsa_params['soc_proxy']['use_soc_proxy']=use_proxy
+    # for use_proxy in options_use_proxy:
+    for rep_method in ['medoidRepresentation','meanRepresentation','distributionRepresentation']:
+        for agg_method in ['hierarchical']:
+            for opt in [True, False]:
+                tsa_params['k_periods'] = compression
+                tsa_params['cluster_method']=agg_method
+                tsa_params['representation_method']=rep_method
+                tsa_params['soc_proxy']['use_soc_proxy']=opt
 
-        m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
-        list_model_dict.append({
-            'model': m.calliope_model.model,
-            'type': m.calliope_model.params['type'],
-            'name': f'k={m.tsa.params['k_periods']}{', with soc proxy' if m.tsa.params['soc_proxy']['use_soc_proxy'] else ''}',
-            'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
-        })
+                m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
+                list_model_dict.append({
+                    'model': m.calliope_model.model,
+                    'type': m.calliope_model.params['type'],
+                    'name': f'k={m.tsa.params['k_periods']}, agg={agg_method}, rep={rep_method}',
+                    'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
+                })
 
 visualise(
     list_model_dict=list_model_dict,

@@ -81,7 +81,7 @@ tsa_params = {
     'matrix_weights': {
             'renewables': 1,
             'demand': 1,
-            'proxy': 1,
+            'proxy': 10,
         },
     # 'resample_to_daily_resolution': True,
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
@@ -92,47 +92,68 @@ tsa_params = {
         'proxy_inputs_to_consider': ['surplus_LDES'], #Options: surplus_LDES, soc_proxy_LDES
         'proxy_window': None
     },
-    'cluster_method': 'k_medoids', #Options: k_medoids, k_means, hierarchical
-    'representation_method': 'medoidRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
+    'cluster_method': 'hierarchical', #Options: k_medoids, k_means, hierarchical
+    'representation_method': 'distributionRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
     'hours_per_period': 24
 }
 
 period_length = 1826
 
 options_compressions = [
-    round(period_length*0.01),
-    # round(period_length*0.02),
-    round(period_length*0.03),
+    # round(period_length*0.01),
+    round(period_length*0.02),
+    # round(period_length*0.03),
     # round(period_length*0.04),
-    round(period_length*0.05),
+    # round(period_length*0.05),
 ]
-
-options_use_proxy = [True, False]
+options_use_proxy = [True]
+options_rep_method = ['distributionRepresentation']  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
+options_cluster_method = ['hierarchical'] #Options: k_medoids, k_means, hierarchical
+options_matrix_weights = [
+    # {
+    #         'renewables': 1,
+    #         'demand': 1,
+    #         'proxy': 1,
+    #     },
+    # {
+    #         'renewables': 1,
+    #         'demand': 1,
+    #         'proxy': 10,
+    #     },
+    {
+            'renewables': 1,
+            'demand': 1,
+            'proxy': 1,
+        }
+]
 
 list_model_dict = []
 
 for compression in options_compressions:
-    # for use_proxy in options_use_proxy:
-    for rep_method in ['medoidRepresentation','meanRepresentation','distributionRepresentation']:
-        for agg_method in ['hierarchical']:
-            for opt in [True, False]:
-                tsa_params['k_periods'] = compression
-                tsa_params['cluster_method']=agg_method
-                tsa_params['representation_method']=rep_method
-                tsa_params['soc_proxy']['use_soc_proxy']=opt
+    for use_proxy in options_use_proxy:
+        for rep_method in options_rep_method:
+            for cluster_method in options_cluster_method:
+                for weights in options_matrix_weights:
 
-                m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
-                list_model_dict.append({
-                    'model': m.calliope_model.model,
-                    'type': m.calliope_model.params['type'],
-                    'name': f'k={m.tsa.params['k_periods']}, agg={agg_method}, rep={rep_method}',
-                    'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
-                })
+                    tsa_params['k_periods'] = compression
+                    tsa_params['cluster_method']=cluster_method
+                    tsa_params['representation_method']=rep_method
+                    tsa_params['soc_proxy']['use_soc_proxy']=use_proxy
+                    tsa_params['matrix_weights']=weights
+
+                    m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
+                    list_model_dict.append({
+                        'model': m.calliope_model.model,
+                        'type': m.calliope_model.params['type'],
+                        'name': f'id={m.id}, proxy_wt={tsa_params['matrix_weights']['proxy']}', # {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                        'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
+                    })
 
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time',
-    y_field='State of Charge'
+    y_field='State of Charge',
+    path_reference_model='SoC_proxy_TSA/data/calliope_models/standard_2015_2019_reference.netcdf'
 )
 
 

@@ -9,7 +9,7 @@ import shutil
 from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import numpy as np
-from utility_functions.helper_optimisation_tsa import compute_distance_matrix, milp_tsa, save_milp_result_to_cluster_map
+from utility_functions.helper_optimisation_tsa import distance_matrix, milp_tsa, save_milp_result_to_cluster_map
 from utility_functions.helper_cluster_tsa import cluster_tsa
 from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply_tsam_to_calliope_with_soc_proxy
 import time
@@ -257,7 +257,7 @@ class tsa_model:
 
         print(f'> TSA: Creating distance matrix for {self.id}')
 
-        self.tsa.distance_matrix = compute_distance_matrix(
+        self.tsa.distance_matrix = distance_matrix(
             feature_df= self.tsa.df_features,
             matrix_weights=self.tsa.params['matrix_weights'],
             metric=self.tsa.params['distance_matrix_metric'],
@@ -315,6 +315,20 @@ class tsa_model:
                 )
 
             elif self.tsa.type == 'cluster':
+
+                
+                # Compute weights dictionary
+                weightDict = {}
+                for renewable in self.tsa.params['names_renewables']:
+                    weightDict[renewable] = self.tsa.params['matrix_weights']['renewables']
+                for demand in self.tsa.params['name_demand']:
+                    weightDict[demand] = self.tsa.params['matrix_weights']['demand']
+                if self.tsa.params['soc_proxy']['use_soc_proxy']:
+                    for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
+                        weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
+
+                
+
                 result = cluster_tsa(
                     df_timeseries=self.tsa.df_features,
                     number_typical_periods=self.tsa.params['k_periods'],
@@ -324,7 +338,8 @@ class tsa_model:
                     path_to_original_timeseries='',
                     path_to_cluster_csv=self.paths['cluster_map'],
                     path_to_new_timeseries=self.paths['timeseries'],
-                    soc_proxy_dict=self.tsa.params['soc_proxy']
+                    soc_proxy_dict=self.tsa.params['soc_proxy'],
+                    weightDict=weightDict
                 )
                 
             else:

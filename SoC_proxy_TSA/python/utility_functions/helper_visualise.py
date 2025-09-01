@@ -8,6 +8,9 @@ import utility_functions.helper_timeseries_tools as tt
 import matplotlib
 matplotlib.use('TkAgg') #avoids the annoying Qt errors on windows
 import matplotlib.pyplot as plt
+from cycler import cycler
+matplotlib.rcParams['axes.prop_cycle'] = cycler(color=plt.cm.plasma(np.linspace(0.0, 0.92, 6)))
+
 
 def visualise_soc(model, cluster_params: dict = None):
 
@@ -95,10 +98,18 @@ def visualise_soc(model, cluster_params: dict = None):
 def visualise(
     list_model_dict: list,
     x_field,
-    y_field
+    y_field,
+    path_reference_model: calliope.Model = None,
     ):
 
     plt.figure(figsize=(12, 6))
+
+    if path_reference_model:
+        list_model_dict.append({
+            'model': calliope.read_netcdf(path_reference_model),
+            'type': 'reference',
+            'name': 'reference'
+        })
       
     for model_dict in list_model_dict:
         model = model_dict['model']
@@ -124,10 +135,10 @@ def visualise(
         else:
             raise Exception('Invalid variable type for plot')   
         if model_type == 'reference':
-            plt.plot(x_val, y_val, label=model_name, colour = 'black', zorder=100)
+            plt.plot(x_val, y_val, label=model_name, color = 'grey', zorder=100)
         else:
             plt.plot(x_val, y_val, label=model_name, zorder=1)
-
+    
     plt.xlabel(x_field)
     plt.ylabel(y_field)
     plt.title(f'{y_field} vs. {x_field}')

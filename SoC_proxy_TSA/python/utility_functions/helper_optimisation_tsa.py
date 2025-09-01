@@ -7,7 +7,7 @@ max_threads = multiprocessing.cpu_count()
 import pyomo.environ as pyo
 import json
 
-def compute_distance_matrix(
+def distance_matrix(
     feature_df: pd.DataFrame,
     *,
     matrix_weights: dict = {"renewables": 1.0, "demand": 1.0, "proxy": 1.0},

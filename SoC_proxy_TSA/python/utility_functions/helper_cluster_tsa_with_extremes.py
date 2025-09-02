@@ -82,82 +82,100 @@ def cluster_tsa_with_extremes(
     matched_indices = aggregation.indexMatching()
 
     # ===================================================
-    # SOFT EXTREMES (Option C): only if extremes_spec & flag
+    # EXTREMES (selection independent) + optional soft prune
     # ===================================================
-    if soft_prune and extremes_spec:
-        # 1) Build daily extreme dates (per proxy) + log why they were picked
-        # Optionally save a CSV next to your cluster_map path:
+    # Build extreme dates only if extremes_spec has items
+    extreme_dates = []
+    if extremes_spec:
         extremes_csv = path_to_cluster_csv.replace(".csv", "_extremes_report.csv")
         extreme_dates, extreme_report = _collect_extreme_dates(
             df_timeseries=df_timeseries,
             soc_proxy_dict=soc_proxy_dict,
             extremes_spec=extremes_spec,
-            # log_csv_path=extremes_csv,   # or None to skip file
-            verbose=True                 # console printout
+            # log_csv_path=extremes_csv,  # uncomment to save a CSV
+            verbose=True
         )
 
-        # 2) TSAM medoid dates (if exposed) or first-date per cluster as fallback
-        medoid_dates = _tsam_medoids_as_dates(df_timeseries, aggregation)
+    # TSAM medoid dates (or fallback)
+    medoid_dates = _tsam_medoids_as_dates(df_timeseries, aggregation)
 
-        # 3) Candidate pool S = medoids ∪ extremes (de-duplicated)
-        candidate_dates = _stable_union(medoid_dates, extreme_dates)
+    # Candidate pool S = medoids ∪ extremes (stable de-dup)
+    candidate_dates = _stable_union(medoid_dates, extreme_dates)
 
-        # If pool already <= k, we can just keep TSAM result (no change)
-        if len(candidate_dates) > number_typical_periods:
-            # 4) Prepare normalized+weighted feature space (align with TSAM)
-            cols_to_use = _numeric_cols(df_timeseries)
-            scaled = _minmax_scale(df_timeseries[cols_to_use])
-            scaled = _apply_weights(scaled, weightDict)
+    # If no extremes or pool size == k, keep TSAM result untouched
+    pool_grew = len(candidate_dates) > number_typical_periods
 
-            # Stack days -> day-vectors (N_days × (hours_per_period*#cols))
-            X, day_index = _stack_days(scaled, hours_per_period)
+    if soft_prune and pool_grew:
+        # ---------- PRUNE back to k (Option C) ----------
+        cols_to_use = _numeric_cols(df_timeseries)
+        scaled = _minmax_scale(df_timeseries[cols_to_use])
+        scaled = _apply_weights(scaled, weightDict)
+        X, day_index = _stack_days(scaled, hours_per_period)
+        day_to_row = {pd.Timestamp(d): i for i, d in enumerate(day_index)}
 
-            # Map dates -> row indices in X
-            day_to_row = {pd.Timestamp(d): i for i, d in enumerate(day_index)}
+        candidate_rows = [day_to_row[d] for d in candidate_dates if d in day_to_row]
+        if not candidate_rows:
+            raise ValueError("No candidate dates had complete daily coverage.")
 
-            # Filter to days that have complete blocks
-            candidate_rows = [day_to_row[d] for d in candidate_dates if d in day_to_row]
-            if len(candidate_rows) == 0:
-                raise ValueError("No candidate dates had complete daily coverage.")
+        D = _pairwise_distances(X, X[candidate_rows])
+        keep_rows = _prune_candidates_by_drop_cost(D, candidate_rows, target_k=number_typical_periods)
 
-            # 5) Compute distances from all days to candidate pool (N × m)
-            D = _pairwise_distances(X, X[candidate_rows])
+        chosen_dates = [day_index[r] for r in keep_rows]
 
-            # 6) Prune pool back to k by drop-cost
-            keep_rows = _prune_candidates_by_drop_cost(
-                D, candidate_rows, target_k=number_typical_periods
-            )
+        # Log which extremes survived
+        extreme_set = set(extreme_dates)
+        kept_extremes = [d for d in chosen_dates if d in extreme_set]
+        dropped_extremes = [d for d in extreme_dates if d not in set(chosen_dates)]
+        if kept_extremes:
+            print(">>> TSA: Kept extremes:", ", ".join(str(d.date()) for d in kept_extremes))
+        if dropped_extremes:
+            print(">>> TSA: Dropped extremes:", ", ".join(str(d.date()) for d in dropped_extremes))
 
-            # 7) Final representatives (dates) and day assignments
-            chosen_dates = [day_index[r] for r in keep_rows]
+        # Reassign days to nearest kept representative
+        D_final = _pairwise_distances(X, X[keep_rows])  # N × k
+        assign_idx = D_final.argmin(axis=1)             # 0..k-1
 
-            extreme_set = set(extreme_dates)
-            kept_extremes = [d for d in chosen_dates if d in extreme_set]
-            dropped_extremes = [d for d in extreme_dates if d not in set(chosen_dates)]
+        # pid -> representative date (0..k-1)
+        pid_to_date = {pid: chosen_dates[pid] for pid in range(len(chosen_dates))}
 
-            if kept_extremes:
-                print(">>> TSA: Kept extremes:", ", ".join(str(d.date()) for d in kept_extremes))
-            if dropped_extremes:
-                print(">>> TSA: Dropped extremes:", ", ".join(str(d.date()) for d in dropped_extremes))
+        # Override typPeriods & matched_indices
+        typPeriods = _build_typical_periods_from_dates(df=df_timeseries, chosen=pid_to_date, hours_per_period=hours_per_period)
+        matched_indices = _rebuild_matched_indices(
+            df_index=df_timeseries.index, assign_idx=assign_idx, days=day_index, hours_per_period=hours_per_period
+        )
 
-            # Assign each day to nearest kept representative
-            D_final = _pairwise_distances(X, X[keep_rows])  # N × k
-            assign_idx = D_final.argmin(axis=1)  # 0..k-1
-            # Map representative index -> actual date
-            pid_to_date = {pid: chosen_dates[pid] for pid in range(len(chosen_dates))}
+    elif (not soft_prune) and pool_grew:
+        # ---------- KEEP ALL candidates: k becomes k + E ----------
+        cols_to_use = _numeric_cols(df_timeseries)
+        scaled = _minmax_scale(df_timeseries[cols_to_use])
+        scaled = _apply_weights(scaled, weightDict)
+        X, day_index = _stack_days(scaled, hours_per_period)
+        day_to_row = {pd.Timestamp(d): i for i, d in enumerate(day_index)}
 
-            # 8) Build new typPeriods from real chosen days
-            typPeriods = _build_typical_periods_from_dates(
-                df=df_timeseries, chosen=pid_to_date, hours_per_period=hours_per_period
-            )
+        # Keep medoids first, then extremes not already in medoids (stable union did that)
+        chosen_dates = [d for d in candidate_dates if d in day_to_row]
+        if not chosen_dates:
+            raise ValueError("No candidate dates had complete daily coverage.")
 
-            # 9) Build new matched_indices using our assignment
-            matched_indices = _rebuild_matched_indices(
-                df_index=df_timeseries.index, 
-                assign_idx=assign_idx, 
-                days=day_index, 
-                hours_per_period=hours_per_period
-            )
+        chosen_rows = [day_to_row[d] for d in chosen_dates]
+
+        # Assign each day to its nearest representative among the whole pool (k+E)
+        D_final = _pairwise_distances(X, X[chosen_rows])    # N × (k+E)
+        assign_idx = D_final.argmin(axis=1)                 # 0..(k+E-1)
+
+        # pid -> representative date (0..k+E-1)
+        pid_to_date = {pid: chosen_dates[pid] for pid in range(len(chosen_dates))}
+
+        # Override typPeriods & matched_indices using ALL candidates
+        typPeriods = _build_typical_periods_from_dates(df=df_timeseries, chosen=pid_to_date, hours_per_period=hours_per_period)
+        matched_indices = _rebuild_matched_indices(
+            df_index=df_timeseries.index, assign_idx=assign_idx, days=day_index, hours_per_period=hours_per_period
+        )
+
+        print(f">>> TSA: Using k + E representatives = {len(chosen_dates)} "
+              f"(k={number_typical_periods}, E={len(chosen_dates) - number_typical_periods}).")
+    # else: either no extremes, or pool didn't grow → leave TSAM output as-is
+
 
     # =========================
     # EXPORT (unchanged shape)
@@ -184,7 +202,7 @@ def cluster_tsa_with_extremes(
     # --- Build Calliope-friendly cluster map: map numeric PeriodNum -> representative DATE ---
 
     # 1) Build rep_map: {PeriodNum (int) -> representative date (Timestamp)}
-    if soft_prune and extremes_spec and 'pid_to_date' in locals():
+    if 'pid_to_date' in locals():
         # soft-prune branch created pid_to_date: 0..k-1 -> Timestamp
         rep_map = {int(pid): pd.Timestamp(dt).normalize() for pid, dt in pid_to_date.items()}
     elif getattr(aggregation, "clusterCenterIndices", None):
@@ -392,54 +410,63 @@ def _daily_soc_features(df: pd.DataFrame, delta_col: str) -> pd.DataFrame:
 
 def _select_extreme_dates(
     daily_feats: pd.DataFrame,
-    extremes_spec: Dict[str, dict | str],
+    extremes_spec: Dict[str, dict | str | List[dict] | List[str]],
     top_n_default: int = 1,
     feature_prefix: str | None = None,   # e.g. proxy name
     return_report: bool = False
 ) -> List[pd.Timestamp] | Tuple[List[pd.Timestamp], List[dict]]:
     """
+    Supports value being a dict/str *or a list* of dict/str per feature, so you can
+    request both min and max, e.g.:
+        {"soc_charge_MWh": [{"how":"max","n":1}, {"how":"min","n":1}]}
     Returns a de-duplicated list of dates. If return_report=True, also returns a list of dicts:
       {"date", "feature", "how", "rank", "value"}.
-    If feature_prefix is set, 'feature' will include it (e.g. 'soc_energy_debt__surplus_LDES').
     """
     picks: List[pd.Timestamp] = []
     report: List[dict] = []
 
-    for feat, rule in extremes_spec.items():
+    for feat, rule in (extremes_spec or {}).items():
         if feat not in daily_feats.columns:
             continue
-        if isinstance(rule, str):
-            how, n = rule, top_n_default
-        else:
-            how = rule.get("how", "max")
-            n = int(rule.get("n", top_n_default))
 
-        series = daily_feats[feat].dropna()
-        if series.empty:
-            continue
+        # Normalize to a list of rule-objects
+        rules = rule if isinstance(rule, list) else [rule]
 
-        top = series.nlargest(n) if how == "max" else series.nsmallest(n)
+        for robj in rules:
+            if isinstance(robj, str):
+                how, n = robj, top_n_default
+            elif isinstance(robj, dict):
+                how = robj.get("how", "max")
+                n = int(robj.get("n", top_n_default))
+            else:
+                continue
 
-        # record picks + meta
-        for r, (dt, val) in enumerate(top.items(), start=1):
-            dt_norm = pd.Timestamp(dt).normalize()
-            picks.append(dt_norm)
-            if return_report:
-                rep_name = f"{feat}__{feature_prefix}" if feature_prefix else feat
-                report.append({
-                    "date": dt_norm,
-                    "feature": rep_name,
-                    "how": how,
-                    "rank": r,
-                    "value": float(val),
-                })
+            series = daily_feats[feat].dropna()
+            if series.empty:
+                continue
 
-    # stable unique on dates
+            top = series.nlargest(n) if how == "max" else series.nsmallest(n)
+
+            for rank, (dt, val) in enumerate(top.items(), start=1):
+                dt_norm = pd.Timestamp(dt).normalize()
+                picks.append(dt_norm)
+                if return_report:
+                    rep_name = f"{feat}__{feature_prefix}" if feature_prefix else feat
+                    report.append({
+                        "date": dt_norm,
+                        "feature": rep_name,
+                        "how": how,
+                        "rank": rank,
+                        "value": float(val),
+                    })
+
+    # Stable unique on dates (order preserved by first appearance)
     seen = set()
     ordered_unique = [d for d in picks if not (d in seen or seen.add(d))]
     if return_report:
         return ordered_unique, report
     return ordered_unique
+
 
 
 

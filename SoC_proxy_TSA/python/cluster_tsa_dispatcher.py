@@ -126,11 +126,6 @@ options_matrix_weights = [
     #         'demand': 1,
     #         'proxy': 1,
     #     },
-    # {
-    #         'renewables': 1,
-    #         'demand': 1,
-    #         'proxy': 10,
-    #     },
     {
             'renewables': 1,
             'demand': 1,
@@ -141,6 +136,7 @@ options_soc_features= [
     {
         'soc_discharge_MWh': 1,
         'soc_charge_MWh': 1,
+        'soc_net_MWh': 1,
     },
     ]
 
@@ -152,13 +148,22 @@ options_extreme_features = [
     {
         'extremes_spec':    {
             'soc_discharge_MWh': {"how": "max", "n": 1},
+            "soc_charge_MWh": {"how": "max", "n": 1},
+            'soc_net_MWh': [
+                {"how": "max", "n": 1},
+                {"how": "min", "n": 1},
+            ],
         },
-        'soft_prune': True
+        'soft_prune': False
     },
     {
         'extremes_spec':    {
             'soc_discharge_MWh': {"how": "max", "n": 1},
-            'soc_charge_MWh': {"how": "max", "n": 1},
+            "soc_charge_MWh": {"how": "max", "n": 1},
+            'soc_net_MWh': [
+                {"how": "max", "n": 1},
+                {"how": "min", "n": 1},
+            ],
         },
         'soft_prune': True
     },

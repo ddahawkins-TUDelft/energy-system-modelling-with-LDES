@@ -67,7 +67,7 @@ class tsa_model:
 
         # 2) Drop ephemeral keys that should NOT affect identity
         _drop_keys(calliope_p, {
-            "output_model_name", "path_netcdf", "path_cluster_map", "path_timeseries", "calliope_full_log"
+            "output_model_name", "path_netcdf", "path_cluster_map", "path_timeseries", "calliope_full_log", 'horizon_start', 'horizon_end'
         })
 
         # 3) Canonicalize order-insensitive fields (sort lists / dicts)

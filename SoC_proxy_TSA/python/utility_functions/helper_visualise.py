@@ -142,8 +142,8 @@ def visualise(
         line._hover_info = {
         "Name": model_name,
         "Type": model_type,
-        "Min": float(np.nanmin(y_val)),
-        "Max": float(np.nanmax(y_val)),
+        "Peak": f'{float(np.nanmax(y_val)):.2e}',
+        "Peak Date": f'{y_val.idxmax()}',
         }
     
     plt.xlabel(x_field)

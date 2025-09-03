@@ -2,6 +2,7 @@ from utility_functions.class_tsa_model import tsa_model
 from utility_functions.helper_visualise import visualise
 import os
 import calliope
+import yaml
 
 
 def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
@@ -81,31 +82,23 @@ tsa_params = {
     'matrix_weights': {
             'renewables': 1,
             'demand': 1,
-            'proxy': 10,
+            'proxy': 1,
         },
     # 'resample_to_daily_resolution': True,
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
     # 'distance_matrix_metric': 'euclidean',
     'name_demand': ['demand_power'],
     'soc_proxy': {
-        'use_soc_proxy': True,
+        'use_soc_proxy': False,
         'proxy_inputs_to_consider': ['surplus_LDES'], #Options: surplus_LDES, soc_proxy_LDES
         'proxy_window': None
     },
     'cluster_method': 'hierarchical', #Options: k_medoids, k_means, hierarchical
     'representation_method': 'distributionRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
     'hours_per_period': 24,
-    'soc_features': {
-        'soc_net_MWh': 1,
-        'soc_energy_debt': 1,
-        'soc_discharge_30d': 1,
-        'soc_discharge_90d': 1
-    },
-    'extremes_spec': {
-        # 'soc_energy_debt': {"how": "max", "n": 1},
-        'soc_discharge_MWh': {"how": "max", "n": 1},
-    },
-    'soft_prune': True
+    'soc_features': {},
+    'extremes_spec': {},
+    'soft_prune': False
 }
 
 period_length = (calliope_params['date_range'][-1]-calliope_params['date_range'][0]+1)*365
@@ -216,6 +209,8 @@ options_soc_features = [
 
 ]
 
+# with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
+#     batch_config = yaml.safe_load(f)
 
 list_model_dict = []
 

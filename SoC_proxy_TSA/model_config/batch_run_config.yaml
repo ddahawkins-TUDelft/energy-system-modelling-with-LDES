@@ -1,0 +1,34 @@
+reference:
+
+  calliope_params:
+
+  soc_proxy_params:
+
+  tsa_params:
+    k_periods: 37
+    soc_proxy: 
+        use_soc_proxy: False
+        proxy_inputs_to_consider: ['surplus_LDES'] #Options: surplus_LDES, soc_proxy_LDES
+        proxy_window: None
+
+soc_proxy_baseline:
+
+  calliope_params:
+
+  soc_proxy_params:
+
+  tsa_params:
+    k_periods: 37
+    soc_proxy: 
+        use_soc_proxy: True
+        proxy_inputs_to_consider: ['surplus_LDES'] #Options: surplus_LDES, soc_proxy_LDES
+        proxy_window: None
+    matrix_weights: 
+          renewables: 1
+          demand: 1
+          proxy: 10
+    soc_features:
+      soc_discharge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+

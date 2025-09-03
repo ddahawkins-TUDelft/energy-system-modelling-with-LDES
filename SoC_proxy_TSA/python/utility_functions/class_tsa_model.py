@@ -201,9 +201,54 @@ class tsa_model:
             self.calliope_model.model.to_netcdf(self.paths['calliope_model'])
             print(f'> Calliope: Solution saved to: {self.paths['calliope_model']}')
 
+
     #SOC Proxy FUNCTIONS -------------------------------------------------------------------------------------------------
     
     # none necessary
+
+    def generate_soc_proxy_expost(self):
+    
+        if self.tsa.params['soc_proxy']['use_soc_proxy']:
+            if self.tsa.type == 'cluster':
+                from utility_functions.helper_timeseries_tools import extrapolate_ts_from_cluster_map
+
+                df_timeseries,_ = extrapolate_ts_from_cluster_map(
+                    self.paths['cluster_map'], 
+                    self.paths['timeseries'])
+
+            
+            else:
+
+                from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
+
+                df_timeseries = calliope_ts_to_pandas(
+                    source=self.paths['timeseries'], 
+                )
+
+            df_timeseries.set_index('timesteps', inplace=True)
+            df_timeseries.columns.name = None 
+            original_columns = df_timeseries.columns.values.tolist()
+            original_columns.extend(self.tsa.params['soc_proxy']['proxy_inputs_to_consider'])
+            original_columns.append('soc_proxy_LDES')
+
+
+            df_timeseries,_,_ = generate_soc_proxy(
+                df=df_timeseries,
+                demand_field=self.tsa.params['name_demand'][0],
+                renewables_fields_and_weights= self.soc_proxy.params['capacity_weights'], 
+                dispatchable_techs=self.soc_proxy.params['dispatchable_techs'],
+                storage_process_losses=self.soc_proxy.params['storage_process_losses'],
+                soc_decomposition = self.soc_proxy.params['soc_decomposition'],
+                timestamp_col=None
+            )
+            df_timeseries = df_timeseries[original_columns]
+
+            self.soc_proxy.df = df_timeseries
+
+        else:
+
+            self.soc_proxy.df = None
+
 
     #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -231,7 +276,7 @@ class tsa_model:
 
             df_timeseries,_,_ = generate_soc_proxy(
                 df=df_timeseries,
-                demand_field='demand_power',
+                demand_field=self.tsa.params['name_demand'][0],
                 renewables_fields_and_weights= self.soc_proxy.params['capacity_weights'], 
                 dispatchable_techs=self.soc_proxy.params['dispatchable_techs'],
                 storage_process_losses=self.soc_proxy.params['storage_process_losses'],
@@ -449,6 +494,7 @@ class calliope_model:
 class soc_proxy:
     def __init__(self, params: dict = {}):
         self.params = params
+        self.df = None
 
     #function sets the parameters variable
     def set_params(self, params: dict):

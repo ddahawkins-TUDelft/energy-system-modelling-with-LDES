@@ -1,34 +1,422 @@
-reference:
+reference:  
+  without proxy (reference):
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: False
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
 
-  calliope_params:
-
-  soc_proxy_params:
-
-  tsa_params:
-    k_periods: 37
-    soc_proxy: 
-        use_soc_proxy: False
-        proxy_inputs_to_consider: ['surplus_LDES'] #Options: surplus_LDES, soc_proxy_LDES
-        proxy_window: None
-
-soc_proxy_baseline:
-
-  calliope_params:
-
-  soc_proxy_params:
-
-  tsa_params:
-    k_periods: 37
-    soc_proxy: 
-        use_soc_proxy: True
-        proxy_inputs_to_consider: ['surplus_LDES'] #Options: surplus_LDES, soc_proxy_LDES
-        proxy_window: None
-    matrix_weights: 
-          renewables: 1
-          demand: 1
-          proxy: 10
-    soc_features:
-      soc_discharge_MWh: 1
+  soc proxy (baseline):
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
       extremes_spec: {}
       soft_prune: False
 
+proxy weights:
+  soc proxy wt=1 (baseline):
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+      extremes_spec: {}
+      soft_prune: False
+
+  soc proxy wt=10:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+      extremes_spec: {}
+      soft_prune: False
+
+  soc proxy wt=100:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 100
+      soc_features:
+      extremes_spec: {}
+      soft_prune: False
+
+soc features:
+  soc_discharge_MWh:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+        soc_discharge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  soc_charge_MWh:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  soc_activity_MWh:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+        soc_activity_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  soc_net_MWh:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+        soc_net_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+soc feature combinations:
+  charge and discharge:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  charge and activity:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_activity_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+discharge activity and k:
+  discharge/activity k=18:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 18
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_activity_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  discharge/activity k=37:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_activity_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  discharge/activity k=54:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 54
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_activity_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  discharge/activity k=73:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 73
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_activity_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+discharge activity weights:
+  discharge/activity w=1:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_activity_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  discharge/activity w=10:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 10
+        soc_activity_MWh: 10
+      extremes_spec: {}
+      soft_prune: False
+
+  discharge/activity w=100:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 100
+        soc_activity_MWh: 100
+      extremes_spec: {}
+      soft_prune: False
+
+charge discharge and k:      
+  charge and discharge k=18:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 18
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  charge and discharge k=37:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  charge and discharge k=55:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 55
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  charge and discharge k=73:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 73
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False
+
+  charge and discharge k=91:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 91
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 10
+      soc_features:
+        soc_discharge_MWh: 1
+        soc_charge_MWh: 1
+      extremes_spec: {}
+      soft_prune: False

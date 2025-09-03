@@ -125,6 +125,9 @@ def visualise(
         if y_field == 'State of Charge':
             # y_list.append(df['soc'])
             y_val = df['soc']
+
+        elif y_field == 'SoC Proxy':
+            y_val = generate_soc_proxy_expost(model_dict['_model']) TODO: this will break on reference model so allow this function to accept arguments directly
         else:
             raise Exception('Invalid variable type for plot')
 
@@ -243,6 +246,45 @@ def get_df(model, cluster_params: dict = None):
     return df
 
 
+def generate_soc_proxy_expost(m):
 
+    from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
+
+    if m.tsa.type == 'cluster':
+
+        from utility_functions.helper_timeseries_tools import extrapolate_ts_from_cluster_map
+
+        df_timeseries,_ = extrapolate_ts_from_cluster_map(
+                    m.paths['cluster_map'], 
+                    m.paths['timeseries'])
+
+    
+    else:
+
+        from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
+
+        df_timeseries = calliope_ts_to_pandas(
+            source=m.paths['timeseries'],
+            date_range_lower_bound=f'{m.calliope_model.params['date_range'][0]}-01-01',
+            date_range_upper_bound=f'{m.calliope_model.params['date_range'][-1]}-12-31'
+        )
+
+    df_timeseries.set_index('timesteps', inplace=True)
+    df_timeseries.columns.name = None 
+
+    df_timeseries,_,_ = generate_soc_proxy(
+        df=df_timeseries,
+        demand_field=m.tsa.params['name_demand'][0],
+        renewables_fields_and_weights= m.soc_proxy.params['capacity_weights'], 
+        dispatchable_techs=m.soc_proxy.params['dispatchable_techs'],
+        storage_process_losses=m.soc_proxy.params['storage_process_losses'],
+        soc_decomposition = m.soc_proxy.params['soc_decomposition'],
+        timestamp_col=None
+    )
+    df_soc_proxy = df_timeseries['soc_proxy_LDES']
+
+    return df_soc_proxy
+
+    
 
         

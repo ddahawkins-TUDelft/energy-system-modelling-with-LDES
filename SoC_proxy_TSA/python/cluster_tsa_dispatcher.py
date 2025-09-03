@@ -3,11 +3,12 @@ from utility_functions.helper_visualise import visualise
 import os
 import calliope
 import yaml
+from copy import deepcopy
 
 
 def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 
-    #Model FUNCTIONS -------------------------------------------------------------------------------------------------
+    #MODEL SETUP FUNCTIONS -------------------------------------------------------------------------------------------------
 
     m = tsa_model(tsa_type=tsa_type, path_timeseries='SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
 
@@ -21,7 +22,6 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 
     if os.path.exists(m.paths['calliope_model']):
         
-
         print(f'> Model: {m.paths['calliope_model']} already exists. Skipping...')
         m.calliope_model.model = calliope.read_netcdf(m.paths['calliope_model'])
 
@@ -36,16 +36,10 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
         m.configure_calliope()
         m.build_calliope()
         m.solve_and_save_calliope()
-        
-    #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 
-    # print(f'> Visual: LDES Dispatch for {m.id}, k={m.tsa.params['k_periods']}, {'with SoC Proxy' if m.tsa.params['soc_proxy']['use_soc_proxy'] else ''}')
-    # visualise_soc(
-    #     model=m.calliope_model.model,
-    #     cluster_params={
-    #         'path_cluster_map': m.paths['cluster_map'],
-    #         'path_timeseries': m.paths['timeseries']
-    #     })
+    #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
+
+    m.generate_soc_proxy_expost()
 
     #RETURN FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -101,147 +95,59 @@ tsa_params = {
     'soft_prune': False
 }
 
-period_length = (calliope_params['date_range'][-1]-calliope_params['date_range'][0]+1)*365
 
-options_compressions = [
-    # round(period_length*0.01),
-    round(period_length*0.02),
-    # round(period_length*0.03),
-    # round(period_length*0.04),
-    # round(period_length*0.05),
-]
-options_rep_method = ['distributionRepresentation']  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
-options_cluster_method = ['hierarchical'] #Options: k_medoids, k_means, hierarchical
-options_matrix_weights = [
-    {
-            'renewables': 1,
-            'demand': 1,
-            'proxy': 10,
-        }
-]
+#DISPATCH CONFIGURATION  -------------------------------------------------------------------------------------------------
 
-options_soc_features = [
-    {   
-        'use_proxy': False,
-        'identifier': '',
-        'soc_features': {},
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': '',
-        'soc_features': {},
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': 'soc_activity_MWh',
-        'soc_features': {
-            'soc_activity_MWh': 1,
-        },
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': 'soc_charge_MWh',
-        'soc_features': {
-            'soc_charge_MWh': 1,
-        },
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': 'soc_discharge_MWh',
-        'soc_features': {
-            'soc_discharge_MWh': 1,
-        },
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': 'soc_net_MWh',
-        'soc_features': {
-            'soc_net_MWh': 1,
-        },
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': 'soc_max_charge_rate',
-        'soc_features': {
-            'soc_max_charge_rate': 1,
-        },
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    {   
-        'use_proxy': True,
-        'identifier': 'soc_max_discharge_rate',
-        'soc_features': {
-            'soc_max_discharge_rate': 1,
-        },
-        'extremes_spec':    {},
-        'soft_prune': False
-    },
-    
-    # {   
-    #     'use_proxy': True,
-    #     'identifier': 'Max Discharge, Max Charge, MinMax Net Flow | No Prune',
-    #     'soc_features': {
-    #         'soc_discharge_MWh': 1,
-    #         'soc_charge_MWh': 1,
-    #         'soc_net_MWh': 1,
-    #     },
-    #     'extremes_spec':    {
-    #         'soc_net_MWh': [
-    #             {"how": "max", "n": 1},
-    #             {"how": "min", "n": 1},
-    #         ],
-    #     },
-    #     'soft_prune': False
-    # },
+#open yaml config file which defines the model runs
+with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
+    batch_config = yaml.safe_load(f)
 
-]
+scenarios = ['soc features']
 
-# with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
-#     batch_config = yaml.safe_load(f)
+#EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
+#loop over the model runs, update parameters, and run
 list_model_dict = []
+for scenario_name, scenario_batch in batch_config.items():
+    if scenario_name in scenarios:
+        print(f'> Dispatch: running scenario {scenario_name}')
+        for model_name, config in scenario_batch.items():
+            
+            calliope_p = deepcopy(calliope_params)
+            soc_proxy_p = deepcopy(soc_proxy_params)
+            tsa_p = deepcopy(tsa_params)
 
-for compression in options_compressions:
-    for rep_method in options_rep_method:
-        for cluster_method in options_cluster_method:
-            for weights in options_matrix_weights:
-                for features in options_soc_features:
+            if config['calliope_params']:
+                for key, value in config['calliope_params'].items():
+                    if value:
+                        calliope_p[key] = value
 
-                    tsa_params['k_periods'] = compression
-                    tsa_params['cluster_method']=cluster_method
-                    tsa_params['representation_method']=rep_method
-                    tsa_params['soc_proxy']['use_soc_proxy']=features['use_proxy']
-                    tsa_params['matrix_weights']=weights
-                    tsa_params['soc_features']=features['soc_features']
-                    tsa_params['extremes_spec']=features['extremes_spec']
-                    tsa_params['soft_prune']=features['soft_prune']
+            if config['soc_proxy_params']:
+                for key, value in config['soc_proxy_params'].items():
+                    if value:
+                        soc_proxy_p[key] = value
+            
+            if config['tsa_params']:
+                for key, value in config['tsa_params'].items():
+                    if value:
+                        tsa_p[key] = value
 
-                    m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
-                    list_model_dict.append({
-                        'model': m.calliope_model.model,
-                        'type': m.calliope_model.params['type'],
-                        'name': f'id={m.id[:4]}... {'with proxy' if features['use_proxy'] else 'without proxy'}, k={m.tsa.params['k_periods']}, proxy_wt={m.tsa.params['matrix_weights']['proxy']}{', extremes=' if features['identifier'] else ''}{features['identifier']}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
-                        'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
-                    })
+            m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type='cluster')
+            list_model_dict.append({
+                'model': m.calliope_model.model,
+                'type': m.calliope_model.params['type'],
+                'name': f'id={m.id[:4]}... {model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                'cluster_params': {'path_cluster_map': m.paths['cluster_map']},
+                '_model': m
+            })
+
+#VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time',
-    y_field='State of Charge',
-    path_reference_model=f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'
+    y_field='SoC Proxy', #'State of Charge'
+    # path_reference_model=f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'
 )
 
 

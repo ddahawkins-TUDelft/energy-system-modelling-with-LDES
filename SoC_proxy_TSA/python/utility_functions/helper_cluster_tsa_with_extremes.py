@@ -46,13 +46,14 @@ def cluster_tsa_with_extremes(
     added_cols_all: List[str] = []
     df_index = df_timeseries.index
 
-    # --- scale soc_feature weights with proxy weights (your logic) ---
+    # --- scale soc_feature weights with proxy weights  ---
     if soc_features:
-        base_proxy = soc_proxy_dict["proxy_inputs_to_consider"][0]
-        if base_proxy not in weightDict:
-            raise KeyError(f"Proxy column '{base_proxy}' must have a base weight in weightDict.")
-        for key in list(soc_features.keys()):
-            soc_features[key] = soc_features[key] * weightDict[base_proxy]
+        if soc_proxy_dict.get("use_soc_proxy"):
+            base_proxy = soc_proxy_dict["proxy_inputs_to_consider"][0]
+            if base_proxy not in weightDict:
+                raise KeyError(f"Proxy column '{base_proxy}' must have a base weight in weightDict.")
+            for key in list(soc_features.keys()):
+                soc_features[key] = soc_features[key] * weightDict[base_proxy]
 
     # --- Add ONLY requested SoC features (broadcast daily -> hourly), with suffixing if multiple proxies ---
     if soc_features and soc_proxy_dict.get("use_soc_proxy"):

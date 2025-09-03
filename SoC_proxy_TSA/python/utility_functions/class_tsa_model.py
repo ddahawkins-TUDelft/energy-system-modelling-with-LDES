@@ -1,9 +1,7 @@
 import pandas as pd
 import calliope
 from typing import Literal
-import json
-import hashlib
-import os
+import copy, json, hashlib, os
 from utility_functions.helper_model_config import clustered_model_config, standardised_model_config
 import shutil
 from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
@@ -56,17 +54,41 @@ class tsa_model:
             os.makedirs(directory)
         self.paths['directory'] = directory
 
-    def compute_id(self, length=20):
-        # Select only the parameters you care about
-        relevant = {
-            "calliope": self.calliope_model.params,
-            "soc_proxy": self.soc_proxy.params,
-            "tsa": self.tsa.params
+    def compute_id(self, length: int = 20, include_timeseries_hash: bool = True):
+        """
+        Build a stable hash from:
+        - canonicalized subsets of calliope/soc_proxy/tsa params
+        - an optional hash of the *source* timeseries file contents
+        """
+        # 1) Start from deep copies so we don't mutate your originals
+        calliope_p = copy.deepcopy(self.calliope_model.params)
+        soc_p      = copy.deepcopy(self.soc_proxy.params)
+        tsa_p      = copy.deepcopy(self.tsa.params)
+
+        # 2) Drop ephemeral keys that should NOT affect identity
+        _drop_keys(calliope_p, {
+            "output_model_name", "path_netcdf", "path_cluster_map", "path_timeseries", "calliope_full_log"
+        })
+
+        # 3) Canonicalize order-insensitive fields (sort lists / dicts)
+        _canonicalize_params(calliope_p)
+        _canonicalize_params(soc_p)
+        _canonicalize_params(tsa_p)
+
+        # 4) Optional: include a content hash of the *source* timeseries (not the copied <id>.csv)
+        payload = {
+            "calliope": calliope_p,
+            "soc_proxy": soc_p,
+            "tsa": tsa_p,
         }
-        # Stable serialization
-        blob = json.dumps(relevant, sort_keys=True, separators=(",", ":"))
-        # Short hash
-        self.id = hashlib.sha256(blob.encode()).hexdigest()[:length]
+        src_ts = self.paths.get("timeseries")
+        if include_timeseries_hash and src_ts and os.path.exists(src_ts):
+            payload["timeseries_sha"] = _hash_file(src_ts)[:16]  # short content fingerprint
+
+        # 5) JSON with sorted keys + plain Python scalars (no numpy)
+        blob = json.dumps(_to_jsonable(payload), sort_keys=True, separators=(",", ":"))
+        self.id = hashlib.sha256(blob.encode("utf-8")).hexdigest()[:length]
+
     
     # Function which generates all the path names for various aspects of the model including calliope, cluster_maps, and timeseries
     def assign_paths(self, directory: str = None):
@@ -92,10 +114,13 @@ class tsa_model:
         self.paths['parameters'] = f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}/{self.id}.json"
         
         #here we copy the source timeseries data into the model's directory and reassign the path id
-        if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}"):
-            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}")
-        shutil.copy2(self.paths['timeseries'], f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}/{self.id}.csv")
-        self.paths['timeseries'] = f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}/{self.id}.csv"
+        ts_dir = f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}"
+        if not os.path.exists(ts_dir):
+            os.makedirs(ts_dir)
+        dest = f"{ts_dir}/{self.id}.csv"
+        if not os.path.exists(dest):
+            shutil.copy2(self.paths['timeseries'], dest)
+        self.paths['timeseries'] = dest
         
 
     #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -269,15 +294,20 @@ class tsa_model:
         )
 
     def configure_tsa(self):
-
         if self.tsa.type == 'optimisation':
+            if os.path.exists(self.paths['cluster_map']):
+                print(f'> TSA: cluster map exists → skipping features/matrix for {self.id}')
+                return
             self.compute_features_dataframe()
             self.compute_distance_matrix()
         elif self.tsa.type == 'cluster':
+            if os.path.exists(self.paths['cluster_map']):
+                print(f'> TSA: cluster map exists → skipping features for {self.id}')
+                return
             self.compute_features_dataframe()
         else:
             raise Exception('No TSA type Configured.')
-
+        
     def apply_tsa(self):
 
         #check if file already exists
@@ -483,3 +513,64 @@ def validate_params(params: dict, template: dict, allow_extra=False):
             raise ValueError(f"Unexpected extra keys: {extras}")
 
     return True
+
+def _drop_keys(d: dict, keys: set[str]):
+    for k in list(d.keys()):
+        if k in keys:
+            d.pop(k, None)
+
+def _canonicalize_params(obj):
+    """
+    In-place canonicalization:
+      - sort dict keys (handled later by json sort_keys, but we also normalize nested dicts)
+      - sort lists for *known* order-insensitive fields
+      - convert numpy scalars to Python
+      - round floats (optional)
+    """
+    if isinstance(obj, dict):
+        for k, v in list(obj.items()):
+            # Known list fields that should be treated as sets
+            if k in {"names_renewables", "name_demand"} and isinstance(v, list):
+                obj[k] = sorted(map(str, v))
+            # Known nested list to treat as sets
+            if k == "soc_proxy" and isinstance(v, dict):
+                if "proxy_inputs_to_consider" in v and isinstance(v["proxy_inputs_to_consider"], list):
+                    v["proxy_inputs_to_consider"] = sorted(map(str, v["proxy_inputs_to_consider"]))
+            # Dicts whose *item order* shouldn't matter
+            if k in {"capacity_weights"} and isinstance(v, dict):
+                obj[k] = dict(sorted((str(kk), float(vv)) for kk, vv in v.items()))
+            # Recurse
+            _canonicalize_params(v)
+    elif isinstance(obj, list):
+        for i in range(len(obj)):
+            _canonicalize_params(obj[i])
+    elif isinstance(obj, (np.floating, np.integer)):
+        # Convert numpy scalars to builtin
+        return float(obj) if isinstance(obj, np.floating) else int(obj)
+    return obj
+
+def _to_jsonable(x):
+    """Convert numpy/pandas types to JSON-safe Python scalars/strings."""
+    if isinstance(x, dict):
+        return {str(k): _to_jsonable(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_to_jsonable(v) for v in x]
+    if isinstance(x, (np.integer,)):
+        return int(x)
+    if isinstance(x, (np.floating,)):
+        return float(x)
+    # If you have pd.Timestamp in params:
+    try:
+        import pandas as pd
+        if isinstance(x, pd.Timestamp):
+            return x.isoformat()
+    except Exception:
+        pass
+    return x
+
+def _hash_file(path: str | os.PathLike) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()

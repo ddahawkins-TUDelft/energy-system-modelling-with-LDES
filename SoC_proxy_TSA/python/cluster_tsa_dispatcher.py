@@ -1,5 +1,5 @@
 from utility_functions.class_tsa_model import tsa_model
-from utility_functions.helper_visualise import visualise_soc, visualise
+from utility_functions.helper_visualise import visualise
 import os
 import calliope
 
@@ -108,7 +108,7 @@ tsa_params = {
     'soft_prune': True
 }
 
-period_length = 1826
+period_length = (calliope_params['date_range'][-1]-calliope_params['date_range'][0]+1)*365
 
 options_compressions = [
     # round(period_length*0.01),
@@ -117,90 +117,136 @@ options_compressions = [
     # round(period_length*0.04),
     # round(period_length*0.05),
 ]
-options_use_proxy = [True]
 options_rep_method = ['distributionRepresentation']  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
 options_cluster_method = ['hierarchical'] #Options: k_medoids, k_means, hierarchical
 options_matrix_weights = [
-    # {
-    #         'renewables': 1,
-    #         'demand': 1,
-    #         'proxy': 1,
-    #     },
     {
             'renewables': 1,
             'demand': 1,
             'proxy': 10,
         }
 ]
-options_soc_features= [
-    {
-        'soc_discharge_MWh': 1,
-        'soc_charge_MWh': 1,
-        'soc_net_MWh': 1,
-    },
-    ]
 
-options_extreme_features = [
-    {
+options_soc_features = [
+    {   
+        'use_proxy': False,
+        'identifier': '',
+        'soc_features': {},
         'extremes_spec':    {},
         'soft_prune': False
     },
-    {
-        'extremes_spec':    {
-            'soc_discharge_MWh': {"how": "max", "n": 1},
-            "soc_charge_MWh": {"how": "max", "n": 1},
-            'soc_net_MWh': [
-                {"how": "max", "n": 1},
-                {"how": "min", "n": 1},
-            ],
-        },
+    {   
+        'use_proxy': True,
+        'identifier': '',
+        'soc_features': {},
+        'extremes_spec':    {},
         'soft_prune': False
     },
-    {
-        'extremes_spec':    {
-            'soc_discharge_MWh': {"how": "max", "n": 1},
-            "soc_charge_MWh": {"how": "max", "n": 1},
-            'soc_net_MWh': [
-                {"how": "max", "n": 1},
-                {"how": "min", "n": 1},
-            ],
+    {   
+        'use_proxy': True,
+        'identifier': 'soc_activity_MWh',
+        'soc_features': {
+            'soc_activity_MWh': 1,
         },
-        'soft_prune': True
+        'extremes_spec':    {},
+        'soft_prune': False
     },
-    ]
+    {   
+        'use_proxy': True,
+        'identifier': 'soc_charge_MWh',
+        'soc_features': {
+            'soc_charge_MWh': 1,
+        },
+        'extremes_spec':    {},
+        'soft_prune': False
+    },
+    {   
+        'use_proxy': True,
+        'identifier': 'soc_discharge_MWh',
+        'soc_features': {
+            'soc_discharge_MWh': 1,
+        },
+        'extremes_spec':    {},
+        'soft_prune': False
+    },
+    {   
+        'use_proxy': True,
+        'identifier': 'soc_net_MWh',
+        'soc_features': {
+            'soc_net_MWh': 1,
+        },
+        'extremes_spec':    {},
+        'soft_prune': False
+    },
+    {   
+        'use_proxy': True,
+        'identifier': 'soc_max_charge_rate',
+        'soc_features': {
+            'soc_max_charge_rate': 1,
+        },
+        'extremes_spec':    {},
+        'soft_prune': False
+    },
+    {   
+        'use_proxy': True,
+        'identifier': 'soc_max_discharge_rate',
+        'soc_features': {
+            'soc_max_discharge_rate': 1,
+        },
+        'extremes_spec':    {},
+        'soft_prune': False
+    },
+    
+    # {   
+    #     'use_proxy': True,
+    #     'identifier': 'Max Discharge, Max Charge, MinMax Net Flow | No Prune',
+    #     'soc_features': {
+    #         'soc_discharge_MWh': 1,
+    #         'soc_charge_MWh': 1,
+    #         'soc_net_MWh': 1,
+    #     },
+    #     'extremes_spec':    {
+    #         'soc_net_MWh': [
+    #             {"how": "max", "n": 1},
+    #             {"how": "min", "n": 1},
+    #         ],
+    #     },
+    #     'soft_prune': False
+    # },
+
+]
+
 
 list_model_dict = []
 
 for compression in options_compressions:
-    for use_proxy in options_use_proxy:
-        for rep_method in options_rep_method:
-            for cluster_method in options_cluster_method:
-                for weights in options_matrix_weights:
-                    for soc_features in options_soc_features:
-                        for extremes in options_extreme_features:
+    for rep_method in options_rep_method:
+        for cluster_method in options_cluster_method:
+            for weights in options_matrix_weights:
+                for features in options_soc_features:
 
-                            tsa_params['k_periods'] = compression
-                            tsa_params['cluster_method']=cluster_method
-                            tsa_params['representation_method']=rep_method
-                            tsa_params['soc_proxy']['use_soc_proxy']=use_proxy
-                            tsa_params['matrix_weights']=weights
-                            tsa_params['soc_features']=soc_features
-                            tsa_params['extremes_spec']=extremes['extremes_spec']
-                            tsa_params['soft_prune']=extremes['soft_prune']
+                    tsa_params['k_periods'] = compression
+                    tsa_params['cluster_method']=cluster_method
+                    tsa_params['representation_method']=rep_method
+                    tsa_params['soc_proxy']['use_soc_proxy']=features['use_proxy']
+                    tsa_params['matrix_weights']=weights
+                    tsa_params['soc_features']=features['soc_features']
+                    tsa_params['extremes_spec']=features['extremes_spec']
+                    tsa_params['soft_prune']=features['soft_prune']
 
-                            m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
-                            list_model_dict.append({
-                                'model': m.calliope_model.model,
-                                'type': m.calliope_model.params['type'],
-                                'name': f'id={m.id}, {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
-                                'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
-                            })
+                    m=run(calliope_params, soc_proxy_params, tsa_params, tsa_type='cluster')
+                    list_model_dict.append({
+                        'model': m.calliope_model.model,
+                        'type': m.calliope_model.params['type'],
+                        'name': f'id={m.id[:4]}... {'with proxy' if features['use_proxy'] else 'without proxy'}, k={m.tsa.params['k_periods']}, proxy_wt={m.tsa.params['matrix_weights']['proxy']}{', extremes=' if features['identifier'] else ''}{features['identifier']}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                        'cluster_params': {'path_cluster_map': m.paths['cluster_map']}
+                    })
 
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time',
     y_field='State of Charge',
-    path_reference_model='SoC_proxy_TSA/data/calliope_models/standard_2015_2019_reference.netcdf'
+    path_reference_model=f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'
 )
 
 

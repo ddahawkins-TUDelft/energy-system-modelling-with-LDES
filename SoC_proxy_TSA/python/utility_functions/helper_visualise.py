@@ -1,15 +1,12 @@
 import pandas as pd
 import calliope 
 import numpy as np
-from scipy.spatial.distance import cdist
-import pyomo.environ as pyo
-from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
-import utility_functions.helper_timeseries_tools as tt
 import matplotlib
 matplotlib.use('TkAgg') #avoids the annoying Qt errors on windows
 import matplotlib.pyplot as plt
 from cycler import cycler
-matplotlib.rcParams['axes.prop_cycle'] = cycler(color=plt.cm.plasma(np.linspace(0.0, 0.92, 6)))
+import mplcursors
+
 
 
 def visualise_soc(model, cluster_params: dict = None):
@@ -102,6 +99,8 @@ def visualise(
     path_reference_model: calliope.Model = None,
     ):
 
+    matplotlib.rcParams['axes.prop_cycle'] = cycler(color=plt.cm.plasma(np.linspace(0.0, 0.92, len(list_model_dict))))
+
     plt.figure(figsize=(12, 6))
 
     if path_reference_model:
@@ -134,10 +133,18 @@ def visualise(
             x_val = df.index
         else:
             raise Exception('Invalid variable type for plot')   
+        
         if model_type == 'reference':
-            plt.plot(x_val, y_val, label=model_name, color = 'grey', zorder=100)
+            line, = plt.plot(x_val, y_val, label=model_name, color = 'grey', zorder=100, picker=5)
         else:
-            plt.plot(x_val, y_val, label=model_name, zorder=1)
+            line, = plt.plot(x_val, y_val, label=model_name, zorder=1, picker=5)
+
+        line._hover_info = {
+        "Name": model_name,
+        "Type": model_type,
+        "Min": float(np.nanmin(y_val)),
+        "Max": float(np.nanmax(y_val)),
+        }
     
     plt.xlabel(x_field)
     plt.ylabel(y_field)
@@ -145,6 +152,21 @@ def visualise(
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+
+    #on hover highlight functions
+    ax = plt.gca()
+    cursor = mplcursors.cursor(ax.lines, hover=True)
+
+    @cursor.connect("add")
+    def on_add(sel):
+        info = getattr(sel.artist, "_hover_info", None)
+        if info:
+            sel.annotation.set_text("\n".join(f"{k}: {v}" for k, v in info.items()))
+        else:
+            sel.annotation.set_text(sel.artist.get_label())
+        sel.annotation.get_bbox_patch().set_alpha(0.9)
+
+    #show
     plt.show()         
 
 def get_df(model, cluster_params: dict = None):

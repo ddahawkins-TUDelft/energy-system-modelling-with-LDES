@@ -13,7 +13,7 @@ from utility_functions.helper_cluster_tsa_with_extremes import cluster_tsa_with_
 from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply_tsam_to_calliope_with_soc_proxy
 import time
 from utility_functions.helper_compare_models import compare_models
-
+from utility_functions.helper_post_cluster_opt import apply_optimisation_on_cluster
 
 
 class tsa_model:
@@ -209,7 +209,7 @@ class tsa_model:
     def generate_soc_proxy_expost(self):
     
         if self.tsa.params['soc_proxy']['use_soc_proxy']:
-            if self.tsa.type == 'cluster':
+            if self.calliope_model.params['type'] == 'cluster':
                 from utility_functions.helper_timeseries_tools import extrapolate_ts_from_cluster_map
 
                 df_timeseries,_ = extrapolate_ts_from_cluster_map(
@@ -392,7 +392,6 @@ class tsa_model:
 
             elif self.tsa.type == 'cluster':
 
-                
                 # Compute weights dictionary
                 weightDict = {}
                 for renewable in self.tsa.params['names_renewables']:
@@ -402,8 +401,6 @@ class tsa_model:
                 if self.tsa.params['soc_proxy']['use_soc_proxy']:
                     for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
                         weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
-
-
 
                 result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
@@ -418,9 +415,11 @@ class tsa_model:
                     weightDict=weightDict,
                     soc_features=self.tsa.params['soc_features'],
                     extremes_spec=self.tsa.params['extremes_spec'],
-                    soft_prune=self.tsa.params['soft_prune']  
+                    soft_prune=self.tsa.params['soft_prune'],
                 )
                 
+                if self.tsa.params.get('post_cluster_optimisation_params'):
+                    result = apply_optimisation_on_cluster(result, self)
             else:
                 raise Exception('No TSA type Configured.')
             print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')

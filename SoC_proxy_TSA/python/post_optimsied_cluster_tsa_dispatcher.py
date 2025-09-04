@@ -92,7 +92,9 @@ tsa_params = {
     'hours_per_period': 24,
     'soc_features': {},
     'extremes_spec': {},
-    'soft_prune': False
+    'soft_prune': False,
+    'post_cluster_optimisation_params': {}
+    
 }
 
 
@@ -102,7 +104,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['no_proxy', 'proxy_baseline','soc_feature_combinations'] #'proxy weights','soc_features', 'soc_feature_combinations'
+scenarios = ['no_proxy', 'proxy_baseline', 'cluster_with_optimisation_baseline'] #'proxy weights','soc_features', 'soc_feature_combinations'
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -130,7 +132,9 @@ for scenario_name, scenario_batch in batch_config.items():
                     if value:
                         tsa_p[key] = value
 
+
             m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type='cluster')
+
             list_model_dict.append({
                 'model': m,
                 'name': f'id={m.id[:4]}... {model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'

@@ -3,6 +3,14 @@ import pandas as pd
 import tsam.timeseriesaggregation as tsam
 from typing import Dict, List, Tuple, Iterable
 
+from dataclasses import dataclass, field
+
+@dataclass
+class ClusterResult:
+    representatives: pd.DatetimeIndex         # chosen rep days
+    assignment: pd.Series                     # index=all days, value=rep day
+    cluster_map_path: str                     # where it was saved
+
 
 # =========================
 # MAIN
@@ -22,7 +30,7 @@ def cluster_tsa_with_extremes(
     # --- NEW (soft extremes / option C) ---
     extremes_spec: Dict[str, dict | str] | None = None,
     soft_prune: bool = False,
-    tie_breaker_feature: str = "soc_energy_debt",  # used only if we need to prioritize in pruning ties
+    tie_breaker_feature: str = "soc_net_MWh",  # used only if we need to prioritize in pruning ties
 ):
     """
     If extremes_spec is provided and soft_prune=True, we perform a soft force-then-prune step:
@@ -238,13 +246,26 @@ def cluster_tsa_with_extremes(
     cluster_days.index = pd.to_datetime(cluster_days.index).normalize()
     cluster_days["PeriodNum"] = pd.to_datetime(cluster_days["PeriodNum"]).dt.normalize()
 
-    # Write files
+    # Write files (same as before)
     calliope_field_headings.to_csv(path_to_new_timeseries, index=False, header=False, mode="w")
     df_new_timeseries_values.to_csv(path_to_new_timeseries, index=True, header=False, mode="a")
     cluster_days.to_csv(path_to_cluster_csv)
 
-    print(f">>> TSA successfully applied{' with soft extremes' if soft_prune and extremes_spec else ''}. Results saved to {path_to_cluster_csv}.")
-    return cluster_days, df_new_timeseries_values
+    # -------- NEW: prepare ClusterResult return --------
+    representatives = pd.DatetimeIndex(
+        sorted(pd.unique(cluster_days["PeriodNum"])), name="timesteps"
+    )
+    assignment = cluster_days["PeriodNum"].copy()  # Series: index=all days, value=rep date
+
+    print(f">>> TSA successfully applied{' with soft extremes' if soft_prune and extremes_spec else ''}. "
+        f"Results saved to {path_to_cluster_csv}.")
+
+    # If you keep meta, you can fill a small summary; else drop 'meta=...'
+    return ClusterResult(
+        representatives=representatives,
+        assignment=assignment,
+        cluster_map_path=path_to_cluster_csv,
+    )
 
 
 # =========================

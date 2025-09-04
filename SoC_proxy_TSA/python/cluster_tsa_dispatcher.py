@@ -102,7 +102,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['no_proxy', 'proxy_baseline','soc_features'] #'proxy weights'
+scenarios = ['no_proxy', 'proxy_baseline','soc_feature_combinations'] #'proxy weights','soc_features', 'soc_feature_combinations'
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 

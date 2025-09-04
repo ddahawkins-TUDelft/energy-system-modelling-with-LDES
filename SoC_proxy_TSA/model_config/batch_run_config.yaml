@@ -152,7 +152,7 @@ soc_features:
       extremes_spec: {}
       soft_prune: False
 
-soc feature combinations:
+soc_feature_combinations:
   charge and discharge:
     calliope_params:
     soc_proxy_params:

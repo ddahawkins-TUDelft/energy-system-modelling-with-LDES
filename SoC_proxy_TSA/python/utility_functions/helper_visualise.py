@@ -26,7 +26,7 @@ DEFAULT_GOOD_IS_LOW = True       # lower error = better
 
 # Auto-scale colour range based on data (0 -> ceil(max to nearest step))
 AUTO_SCALE_ERROR_RANGE = True
-ERROR_COLOUR_ROUND_STEP = 0.10  # round max up to nearest 10%
+ERROR_COLOUR_ROUND_STEP = 0.2  # round max up to nearest 20%
 ERROR_COLOUR_MIN_SPAN   = 0.02  # ensure at least a 2% span for visibility
 
 def _is_tsa_model(obj) -> bool:

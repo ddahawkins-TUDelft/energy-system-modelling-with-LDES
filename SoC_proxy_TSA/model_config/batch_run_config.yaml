@@ -79,7 +79,7 @@ proxy_weights:
       extremes_spec: {}
       soft_prune: False
 
-soc features:
+soc_features:
   soc_discharge_MWh:
     calliope_params:
     soc_proxy_params:

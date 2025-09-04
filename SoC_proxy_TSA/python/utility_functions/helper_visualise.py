@@ -11,7 +11,7 @@ import math
 from calliope import Model as CalliopeModel
 from utility_functions.class_tsa_model import tsa_model
 from utility_functions.class_visual_adapter import ModelAdapter
-from utility_functions.class_visual_metric import METRICS, EvalContext
+from utility_functions.class_visual_metric import METRICS, EvalContext, _unwrap_metric_output
 
 _FIELD_MAP = {
     "Time": "time",
@@ -81,6 +81,11 @@ def build_adapters(list_model_dict: List[Dict[str, Any]]) -> Tuple[List[ModelAda
 def _resolve_field(name: Optional[str]) -> Optional[str]:
     return None if name is None else _FIELD_MAP.get(name, name)
 
+def _eval_metric(name: str, ctx: EvalContext):
+    fn = METRICS.get(name)
+    out = fn(ctx)
+    return _unwrap_metric_output(out)
+
 def visualise(
     list_model_dict: list,
     x_field: str,
@@ -101,7 +106,7 @@ def visualise(
         # pick the first non-reference adapter if possible for probing
         probe_adapter = next((a for a in adapters if a.kind != "reference"), adapters[0])
         tmp_ctx = EvalContext(model=probe_adapter, ref=ref_adapter, cache={}, user_params={})
-        test_val = METRICS.get(colour_field)(tmp_ctx)
+        test_val, _ = _eval_metric(colour_field, tmp_ctx)
         scalar_colour = not isinstance(test_val, (pd.Series, pd.DataFrame))
 
     # Only set a cycling palette if we are NOT error-coloring the lines
@@ -121,7 +126,8 @@ def visualise(
         vals = []
         for adapter in adapters:
             ctx = EvalContext(model=adapter, ref=ref_adapter, cache=cache, user_params={})
-            vals.append(float(METRICS.get(colour_field)(ctx)))
+            val, extras = _eval_metric(colour_field, ctx)
+            vals.append(float(val))
         colour_values = np.array(vals)        
 
         # 2) normalization + colormap (auto-scaled 0 → ceil(max to nearest step))
@@ -149,7 +155,6 @@ def visualise(
             cmap = cmap.reversed()
 
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
         sm.set_array([])   # required for colorbar
 
 
@@ -161,7 +166,7 @@ def visualise(
         y_metric = METRICS.get(y_field)
         if METRICS.needs_ref(y_field) and ref_adapter is None:
             raise ValueError(f"Metric '{y_field}' needs a reference but none was provided.")
-        y_val = y_metric(ctx)
+        y_val, y_extras = _eval_metric(y_field, ctx)
         if isinstance(y_val, pd.DataFrame):
             y_val = y_val.iloc[:, 0]
         y_val = y_val.sort_index()
@@ -170,7 +175,7 @@ def visualise(
         if x_field == "time":
             x_val = y_val.index
         else:
-            x_val = METRICS.get(x_field)(ctx)
+            x_val, x_extras = _eval_metric(x_field, ctx)
             if isinstance(x_val, pd.Series):
                 x_val, y_val = x_val.align(y_val, join='inner')
             else:
@@ -201,7 +206,7 @@ def visualise(
             "Peak": f"{float(np.nanmax(y_val)):.2e}",
             "Peak Date": f"{y_val.idxmax()}",
         }
-        if scalar_colour and colour_values is not None:
+        if scalar_colour and colour_values is not None and adapter.kind != 'reference':
             line._hover_info[f"{colour_field}"] = f"{val*100:.2f}%"
 
         lines.append(line)

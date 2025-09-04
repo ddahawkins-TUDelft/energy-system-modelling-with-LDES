@@ -1,13 +1,25 @@
 # utility_functions/visual_metrics.py
 from typing import Callable, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pandas as pd
 import numpy as np
 
 from utility_functions.class_visual_adapter import ModelAdapter
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 
+@dataclass
+class MetricResult:
+    value: Any
+    extras: Dict[str, Any] = field(default_factory=dict)
 
+def _unwrap_metric_output(obj: Any) -> Tuple[Any, Dict[str, Any]]:
+    """
+    Accept raw scalars/Series/DataFrames or MetricResult.
+    Always return (value, extras_dict).
+    """
+    if isinstance(obj, MetricResult):
+        return obj.value, obj.extras
+    return obj, {}
 
 @dataclass
 class EvalContext:
@@ -149,8 +161,12 @@ def _magme(ctx: EvalContext) -> float:
 
     # align tech sets and compute MAE across techs
     A, B = e_m.align(e_r, fill_value=0.0)
-    print(A-B)
-    return float(np.mean(np.abs(A - B)))
+    extras = {
+        "shares_model": A,          # model caps per tech
+        "shares_ref": B,            # reference caps per tech
+        "delta_shares": (A - B),    # error % per tech
+    }
+    return MetricResult(value=float(np.mean(np.abs(A - B))), extras=extras)
 METRICS.register("MAGMe", _magme, needs_reference=True)
 
 # ---------- MACMe
@@ -179,6 +195,10 @@ def _macme(ctx: EvalContext) -> float:
 
     # align tech sets and compute MAE across techs
     A, B = e_m.align(e_r, fill_value=0.0)
-    print(A-B)
-    return float(np.mean(np.abs(A - B)))
+    extras = {
+        "shares_model": A,          # model caps per tech
+        "shares_ref": B,            # reference caps per tech
+        "delta_shares": (A - B),    # error % per tech
+    }
+    return MetricResult(value=float(np.mean(np.abs(A - B))), extras=extras)
 METRICS.register("MACMe", _macme, needs_reference=True)

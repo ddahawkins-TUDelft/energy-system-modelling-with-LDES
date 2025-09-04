@@ -1,5 +1,5 @@
-reference:  
-  without proxy (reference):
+no_proxy:  
+  without proxy:
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -9,7 +9,8 @@ reference:
           proxy_inputs_to_consider: ['surplus_LDES'] 
           proxy_window: None
 
-  soc proxy (baseline):
+proxy_baseline:
+  soc proxy wt=1:
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -26,7 +27,7 @@ reference:
       extremes_spec: {}
       soft_prune: False
 
-proxy weights:
+proxy_weights:
   soc proxy wt=10:
     calliope_params:
     soc_proxy_params:

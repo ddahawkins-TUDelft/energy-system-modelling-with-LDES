@@ -102,7 +102,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['reference','proxy weights']
+scenarios = ['no_proxy', 'proxy_baseline','proxy_weights'] #'proxy weights'
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -153,7 +153,8 @@ list_model_dict.append({
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
-    y_field='SoC Proxy', #'State of Charge', 'SoC Proxy'
+    y_field='State of Charge', #'State of Charge', 'SoC Proxy'
+    colour_field='MAGMe'
 )
 
 

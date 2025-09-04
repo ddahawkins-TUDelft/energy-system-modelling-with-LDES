@@ -1,161 +1,211 @@
+# utility_functions/helper_visualise.py (new visualise)
+from typing import List, Dict, Any, Optional,Tuple
 import pandas as pd
-import calliope 
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg') #avoids the annoying Qt errors on windows
 import matplotlib.pyplot as plt
 from cycler import cycler
 import mplcursors
+import math
+
+from calliope import Model as CalliopeModel
 from utility_functions.class_tsa_model import tsa_model
+from utility_functions.class_visual_adapter import ModelAdapter
+from utility_functions.class_visual_metric import METRICS, EvalContext
+
+_FIELD_MAP = {
+    "Time": "time",
+    "State of Charge": "soc",
+    "SoC Proxy": "soc_proxy",
+    "MAGMe": "MAGMe",
+    "MACMe": "MACMe"
+}
+
+DEFAULT_ERROR_CMAP = "plasma"   # options: "cividis", "plasma", "viridis"
+DEFAULT_GOOD_IS_LOW = True       # lower error = better
+
+# Auto-scale colour range based on data (0 -> ceil(max to nearest step))
+AUTO_SCALE_ERROR_RANGE = True
+ERROR_COLOUR_ROUND_STEP = 0.10  # round max up to nearest 10%
+ERROR_COLOUR_MIN_SPAN   = 0.02  # ensure at least a 2% span for visibility
+
+def _is_tsa_model(obj) -> bool:
+    # primary: class check; fallback: duck-typed attributes
+    return isinstance(obj, tsa_model) or (hasattr(obj, "calliope_model") and hasattr(obj, "tsa"))
 
 
+def _is_calliope_model(obj) -> bool:
+    # primary: class check; fallback: duck-typed attributes used by calliope.Model
+    if isinstance(obj, CalliopeModel):
+        return True
+    return hasattr(obj, "results") and hasattr(obj, "inputs")
 
-def visualise_soc(model, cluster_params: dict = None):
 
-    df = pd.DataFrame
+def build_adapters(list_model_dict: List[Dict[str, Any]]) -> Tuple[List[ModelAdapter], Optional[ModelAdapter]]:
+    adapters: List[ModelAdapter] = []
+    ref_adapter: Optional[ModelAdapter] = None
 
-    if cluster_params:
-        # path_timeseries = cluster_params['path_timeseries'] #for later when i add soc proxy as an option to this function TODO:
+    for md in list_model_dict:
+        m = md["model"]
+        name = md.get("name", "model")
 
-        df_clustermap = pd.read_csv(cluster_params['path_cluster_map'])
+        if _is_tsa_model(m):
+            # Prefer m.tsa.type if available, else fall back to params['type']
+            kind = getattr(m.tsa, "type", None) or m.calliope_model.params.get("type", "unclustered")
+            params = {"name": name}
+            if kind == "cluster":
+                # your code used 'cluster' vs 'clustered' in places — normalize to 'clustered' for plotting
+                kind = "clustered"
+            if kind == "clustered":
+                params["path_cluster_map"] = m.paths["cluster_map"]
+            adapters.append(ModelAdapter(raw=m, kind=kind, params=params))
 
-        df_clustermap = df_clustermap.rename(columns={
-        'timesteps': 'datesteps',
-        'PeriodNum': 'mapped_datesteps'
-        })
-        df_clustermap['datesteps'] = pd.to_datetime(df_clustermap['datesteps'], format='%Y-%m-%d')
-        df_clustermap['mapped_datesteps'] = pd.to_datetime(df_clustermap['mapped_datesteps'], format='%Y-%m-%d')
+        elif _is_calliope_model(m):
+            # Treat any raw calliope.Model in the list as the reference unless specified otherwise
+            params = {"name": name} | md.get("params", {})
+            adapter = ModelAdapter(raw=m, kind="reference", params=params)
+            adapters.append(adapter)
+            # If you have multiple calliope.Models and only one is the ref, you could select by name here
+            if ref_adapter is None or name.lower() == "reference":
+                ref_adapter = adapter
 
-        #pull the intracluster soc
-        df_intracluster_soc = (   
-                (model.results['storage'].fillna(0))
-                .to_series()
-                # .where(lambda x: x != 0)
-                .dropna()
-                .to_frame('intra_soc')
-                .reset_index()
+        else:
+            # Print some debugging info to help if it happens again
+            raise TypeError(
+                f"Unknown model type in list_model_dict: {type(m)}; "
+                f"keys available: {list(md.keys())}"
             )
-        df_intracluster_soc=df_intracluster_soc[df_intracluster_soc['techs'] == 'h2_salt_cavern']
-        df_intracluster_soc['mapped_datesteps'] = pd.to_datetime(df_intracluster_soc['timesteps'], format='%Y-%m-%d')
 
+    return adapters, ref_adapter
 
-        #pull the intercluster soc
-        df_intercluster_soc = (   
-            (model.results['storage_inter_cluster'].fillna(0))
-            .to_series()
-            # .where(lambda x: x != 0)
-            .dropna()
-            .to_frame('inter_soc')
-            .reset_index()
-        )
-        df_intercluster_soc=df_intercluster_soc[df_intercluster_soc['techs'] == 'h2_salt_cavern']
-        df_intracluster_soc['mapped_datesteps'] = df_intracluster_soc['mapped_datesteps'].dt.normalize()
-        
-        #merge everything and filter
-        df = df_intercluster_soc.merge(df_clustermap, on='datesteps', how='left')
-        df  = df .merge(df_intracluster_soc, on='mapped_datesteps', how='left')
-        df  = df [['datesteps','timesteps','inter_soc','intra_soc']]
+def _resolve_field(name: Optional[str]) -> Optional[str]:
+    return None if name is None else _FIELD_MAP.get(name, name)
 
-        #create a proper measure of timestamps
-        time_only = df ['timesteps'].dt.time
-        df ['full_timestamp'] = df ['datesteps'].dt.normalize() + pd.to_timedelta(time_only.astype(str))
-        
-        
-        #compute a comprehensive SoC, combining intracluster variatinos and intercluster variations
-        df ['soc'] = df ['inter_soc']+df ['intra_soc']
-        df .drop(['datesteps','timesteps','inter_soc','intra_soc'], axis=1, inplace=True)
-        df .rename(columns={'full_timestamp': 'timesteps' }, inplace=True)
-        df  = df .set_index('timesteps')
-        
-    else:
-        #soc if full model
-        df = (   
-                (model.results['storage'].fillna(0))
-                .to_series()
-                # .where(lambda x: x != 0)
-                .dropna()
-                .to_frame('soc')
-                .reset_index()
-            )
-        df=df[df['techs'] == 'h2_salt_cavern']
-        df = df.set_index('timesteps')
-        df.drop(['nodes','techs'], axis=1, inplace=True)
-
-    plt.figure(figsize=(12, 6))
-    plt.plot(df.index, df['soc'], label='State of Charge')
-    plt.xlabel('Time')
-    plt.ylabel('SoC')
-    plt.title('Storage State of Charge Over Time')
-    plt.grid(True)
-    # plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-    return df
-    
 def visualise(
     list_model_dict: list,
-    x_field,
-    y_field,
-    ):
+    x_field: str,
+    y_field: str,
+    colour_field: Optional[str] = None,
+    user_params: Optional[Dict[str, Any]] = None
+):
+    x_field = _resolve_field(x_field)
+    y_field = _resolve_field(y_field)
+    colour_field = _resolve_field(colour_field)
+    user_params = user_params or {}
 
-    matplotlib.rcParams['axes.prop_cycle'] = cycler(color=plt.cm.plasma(np.linspace(0.0, 0.92, len(list_model_dict))))
+    adapters, ref_adapter = build_adapters(list_model_dict)
 
-    plt.figure(figsize=(12, 6))
-      
-    for model_dict in list_model_dict:
+    # Decide if colour_field is scalar (e.g., MAGMe); if so we'll color lines by it
+    scalar_colour = False
+    if colour_field:
+        # pick the first non-reference adapter if possible for probing
+        probe_adapter = next((a for a in adapters if a.kind != "reference"), adapters[0])
+        tmp_ctx = EvalContext(model=probe_adapter, ref=ref_adapter, cache={}, user_params={})
+        test_val = METRICS.get(colour_field)(tmp_ctx)
+        scalar_colour = not isinstance(test_val, (pd.Series, pd.DataFrame))
 
-        m = model_dict['model']
+    # Only set a cycling palette if we are NOT error-coloring the lines
+    if not scalar_colour:
+        matplotlib.rcParams['axes.prop_cycle'] = cycler(
+            color=plt.cm.plasma(np.linspace(0.0, 0.92, len(adapters)))
+        )
 
-        if isinstance(m, tsa_model):
-            model = m.calliope_model.model
-            model_name = model_dict['name']
-            model_type = m.calliope_model.params['type']
-            
-            if model_type == 'clustered':
-                cluster_params = {'path_cluster_map': m.paths['cluster_map']}
-            else:
-                cluster_params = None
+    fig, ax = plt.subplots(figsize=(12, 6))
+    cache = {}
 
-            
-        
-        elif isinstance(m, calliope.Model):
-            model = m
-            model_type='reference'
-            cluster_params = None
+    colour_values = None
+    sm = None     # ScalarMappable for the colorbar
 
+    if scalar_colour:
+        # 1) compute scalar error for each model
+        vals = []
+        for adapter in adapters:
+            ctx = EvalContext(model=adapter, ref=ref_adapter, cache=cache, user_params={})
+            vals.append(float(METRICS.get(colour_field)(ctx)))
+        colour_values = np.array(vals)        
+
+        # 2) normalization + colormap (auto-scaled 0 → ceil(max to nearest step))
+        finite_vals = colour_values[np.isfinite(colour_values)]
+        max_err = float(np.nanmax(finite_vals)) if finite_vals.size else 0.0
+
+        if AUTO_SCALE_ERROR_RANGE:
+            # round up to nearest ERROR_COLOUR_ROUND_STEP (e.g., 0.10 = 10%)
+            step = ERROR_COLOUR_ROUND_STEP
+            vmax = step if max_err == 0 else max(step, math.ceil(max_err / step) * step)
+            vmin = 0.0
+
+            # enforce a minimum span so colours don’t collapse when errors are tiny
+            if vmax - vmin < ERROR_COLOUR_MIN_SPAN:
+                vmax = vmin + ERROR_COLOUR_MIN_SPAN
         else:
-            raise Exception('Invalid model type')
+            # fallback fixed range
+            vmin = 0.0
+            vmax = 1.0
 
-        df = get_df(model, cluster_params=cluster_params)
-        
-        if y_field == 'State of Charge':
-            # y_list.append(df['soc'])
-            y_val = df['soc']
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
 
-        elif y_field == 'SoC Proxy':
-            y_val = generate_soc_proxy_expost(model_dict)
-        else:
-            raise Exception('Invalid variable type for plot')
+        cmap = plt.get_cmap(DEFAULT_ERROR_CMAP)
+        if not DEFAULT_GOOD_IS_LOW:
+            cmap = cmap.reversed()
 
-        if x_field == 'Time':
-            # x_list.append(df.index)
+        sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        sm.set_array([])   # required for colorbar
+
+
+    lines = []
+    for i, adapter in enumerate(adapters):
+        ctx = EvalContext(model=adapter, ref=ref_adapter, cache=cache, user_params=user_params)
+
+        # y
+        y_metric = METRICS.get(y_field)
+        if METRICS.needs_ref(y_field) and ref_adapter is None:
+            raise ValueError(f"Metric '{y_field}' needs a reference but none was provided.")
+        y_val = y_metric(ctx)
+        if isinstance(y_val, pd.DataFrame):
+            y_val = y_val.iloc[:, 0]
+        y_val = y_val.sort_index()
+
+        # x
+        if x_field == "time":
             x_val = y_val.index
         else:
-            raise Exception('Invalid variable type for plot')   
-        
-        if model_type == 'reference':
-            line, = plt.plot(x_val, y_val, label=model_name, color = 'grey', zorder=100, picker=5)
+            x_val = METRICS.get(x_field)(ctx)
+            if isinstance(x_val, pd.Series):
+                x_val, y_val = x_val.align(y_val, join='inner')
+            else:
+                raise ValueError(f"x metric '{x_field}' must be a series or 'time'.")
+
+        # label + color
+        base_label = adapter.params.get("name", f"model_{i}")
+
+        if adapter.kind == 'reference':
+            # Always grey for the reference, regardless of colour scheme
+            color = 'grey'
+            label = base_label
         else:
-            line, = plt.plot(x_val, y_val, label=model_name, zorder=1, picker=5)
+            if scalar_colour and colour_values is not None:
+                val = colour_values[i]
+                color = sm.to_rgba(val)
+                label = f"{base_label} | {colour_field}={val*100:.1f}%"
+            else:
+                color = None  # fall back to cycle
+                label = base_label
+
+        z = 100 if adapter.kind == 'reference' else 1
+        line, = plt.plot(x_val, y_val, label=label, zorder=z, color=color, picker=5)
 
         line._hover_info = {
-        "Name": model_name,
-        "Type": model_type,
-        "Peak": f'{float(np.nanmax(y_val)):.2e}',
-        "Peak Date": f'{y_val.idxmax()}',
+            "Name": base_label,
+            "Type": adapter.kind,
+            "Peak": f"{float(np.nanmax(y_val)):.2e}",
+            "Peak Date": f"{y_val.idxmax()}",
         }
-    
+        if scalar_colour and colour_values is not None:
+            line._hover_info[f"{colour_field}"] = f"{val*100:.2f}%"
+
+        lines.append(line)
+
     plt.xlabel(x_field)
     plt.ylabel(y_field)
     plt.title(f'{y_field} vs. {x_field}')
@@ -163,167 +213,24 @@ def visualise(
     plt.legend()
     plt.tight_layout()
 
-    #on hover highlight functions
+    # colorbar for scalar colour_field
+    if scalar_colour and (sm is not None):
+        # Use the *figure* to add the colorbar, and pass ax=<current axes>
+        cbar = fig.colorbar(sm, ax=ax, pad=0.01)
+        # ticks in %
+        ticks = np.linspace(sm.norm.vmin, sm.norm.vmax, 5)
+        cbar.set_ticks(ticks)
+        cbar.set_ticklabels([f"{t*100:.0f}%" for t in ticks])
+        cbar.set_label(f"{colour_field} (lower is better)" if DEFAULT_GOOD_IS_LOW
+                    else f"{colour_field} (higher is better)")
+
+    # hover
     ax = plt.gca()
     cursor = mplcursors.cursor(ax.lines, hover=True)
-
     @cursor.connect("add")
     def on_add(sel):
         info = getattr(sel.artist, "_hover_info", None)
-        if info:
-            sel.annotation.set_text("\n".join(f"{k}: {v}" for k, v in info.items()))
-        else:
-            sel.annotation.set_text(sel.artist.get_label())
+        sel.annotation.set_text("\n".join(f"{k}: {v}" for k, v in info.items()) if info else sel.artist.get_label())
         sel.annotation.get_bbox_patch().set_alpha(0.9)
 
-    #show
-    plt.show()         
-
-def get_df(model, cluster_params: dict = None):
-
-    df = pd.DataFrame
-
-    if cluster_params:
-        # path_timeseries = cluster_params['path_timeseries'] #for later when i add soc proxy as an option to this function TODO:
-
-        df_clustermap = pd.read_csv(cluster_params['path_cluster_map'])
-
-        df_clustermap = df_clustermap.rename(columns={
-        'timesteps': 'datesteps',
-        'PeriodNum': 'mapped_datesteps'
-        })
-        df_clustermap['datesteps'] = pd.to_datetime(df_clustermap['datesteps'], format='%Y-%m-%d')
-        df_clustermap['mapped_datesteps'] = pd.to_datetime(df_clustermap['mapped_datesteps'], format='%Y-%m-%d')
-
-        #pull the intracluster soc
-        df_intracluster_soc = (   
-                (model.results['storage'].fillna(0))
-                .to_series()
-                # .where(lambda x: x != 0)
-                .dropna()
-                .to_frame('intra_soc')
-                .reset_index()
-            )
-        df_intracluster_soc=df_intracluster_soc[df_intracluster_soc['techs'] == 'h2_salt_cavern']
-        df_intracluster_soc['mapped_datesteps'] = pd.to_datetime(df_intracluster_soc['timesteps'], format='%Y-%m-%d')
-
-
-        #pull the intercluster soc
-        df_intercluster_soc = (   
-            (model.results['storage_inter_cluster'].fillna(0))
-            .to_series()
-            # .where(lambda x: x != 0)
-            .dropna()
-            .to_frame('inter_soc')
-            .reset_index()
-        )
-        df_intercluster_soc=df_intercluster_soc[df_intercluster_soc['techs'] == 'h2_salt_cavern']
-        df_intracluster_soc['mapped_datesteps'] = df_intracluster_soc['mapped_datesteps'].dt.normalize()
-        
-        #merge everything and filter
-        df = df_intercluster_soc.merge(df_clustermap, on='datesteps', how='left')
-        df  = df .merge(df_intracluster_soc, on='mapped_datesteps', how='left')
-        df  = df [['datesteps','timesteps','inter_soc','intra_soc']]
-
-        #create a proper measure of timestamps
-        time_only = df ['timesteps'].dt.time
-        df ['full_timestamp'] = df ['datesteps'].dt.normalize() + pd.to_timedelta(time_only.astype(str))
-        
-        
-        #compute a comprehensive SoC, combining intracluster variatinos and intercluster variations
-        df ['soc'] = df ['inter_soc']+df ['intra_soc']
-        df .drop(['datesteps','timesteps','inter_soc','intra_soc'], axis=1, inplace=True)
-        df .rename(columns={'full_timestamp': 'timesteps' }, inplace=True)
-        df  = df .set_index('timesteps')
-        
-    else:
-        #soc if full model
-        df = (   
-                (model.results['storage'].fillna(0))
-                .to_series()
-                # .where(lambda x: x != 0)
-                .dropna()
-                .to_frame('soc')
-                .reset_index()
-            )
-        df=df[df['techs'] == 'h2_salt_cavern']
-        df = df.set_index('timesteps')
-        df.drop(['nodes','techs'], axis=1, inplace=True)
-    
-    return df
-
-
-def generate_soc_proxy_expost(model_dict):
-
-    from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
-    from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
-    from utility_functions.helper_timeseries_tools import extrapolate_ts_from_cluster_map
-
-    m = model_dict['model']
-
-    if isinstance(m, tsa_model) and m.tsa.type == 'cluster':
-
-        df_timeseries,_ = extrapolate_ts_from_cluster_map(
-                    m.paths['cluster_map'], 
-                    m.paths['timeseries'])
-        df_timeseries.set_index('timesteps', inplace=True)
-        df_timeseries.columns.name = None 
-
-        df_timeseries,_,_ = generate_soc_proxy(
-        df=df_timeseries,
-        demand_field=m.tsa.params['name_demand'][0],
-        renewables_fields_and_weights= m.soc_proxy.params['capacity_weights'], 
-        dispatchable_techs=m.soc_proxy.params['dispatchable_techs'],
-        storage_process_losses=m.soc_proxy.params['storage_process_losses'],
-        soc_decomposition = m.soc_proxy.params['soc_decomposition'],
-        timestamp_col=None
-        )
-
-    
-    elif isinstance(m,tsa_model) and m.tsa.type != 'cluster':
-
-        df_timeseries = calliope_ts_to_pandas(
-            source=m.paths['timeseries'],
-            date_range_lower_bound=f'{m.calliope_model.params['date_range'][0]}-01-01',
-            date_range_upper_bound=f'{m.calliope_model.params['date_range'][-1]}-12-31'
-        )
-        df_timeseries.set_index('timesteps', inplace=True)
-        df_timeseries.columns.name = None 
-
-        df_timeseries,_,_ = generate_soc_proxy(
-        df=df_timeseries,
-        demand_field=m.tsa.params['name_demand'][0],
-        renewables_fields_and_weights= m.soc_proxy.params['capacity_weights'], 
-        dispatchable_techs=m.soc_proxy.params['dispatchable_techs'],
-        storage_process_losses=m.soc_proxy.params['storage_process_losses'],
-        soc_decomposition = m.soc_proxy.params['soc_decomposition'],
-        timestamp_col=None
-        )
-    
-    else:  #if its a reference dataframe
-
-        df_timeseries = calliope_ts_to_pandas(
-            source=model_dict['params']['path_timeseries'],
-            date_range_lower_bound=f'{model_dict['params']['date_range'][0]}-01-01',
-            date_range_upper_bound=f'{model_dict['params']['date_range'][-1]}-12-31'
-        )
-        df_timeseries.set_index('timesteps', inplace=True)
-        df_timeseries.columns.name = None 
-
-        df_timeseries,_,_ = generate_soc_proxy(
-        df=df_timeseries,
-        demand_field='demand_power',
-        renewables_fields_and_weights= model_dict['params']['soc_proxy_params']['capacity_weights'], 
-        dispatchable_techs=model_dict['params']['soc_proxy_params']['dispatchable_techs'],
-        storage_process_losses=model_dict['params']['soc_proxy_params']['storage_process_losses'],
-        soc_decomposition = model_dict['params']['soc_proxy_params']['soc_decomposition'],
-        timestamp_col=None
-        )
-    
-    df_soc_proxy = df_timeseries['soc_proxy_LDES']
-
-    return df_soc_proxy
-
-    
-
-        
+    plt.show()

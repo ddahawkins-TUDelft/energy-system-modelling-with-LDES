@@ -27,23 +27,6 @@ reference:
       soft_prune: False
 
 proxy weights:
-  soc proxy wt=1 (baseline):
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 37
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-      extremes_spec: {}
-      soft_prune: False
-
   soc proxy wt=10:
     calliope_params:
     soc_proxy_params:
@@ -74,6 +57,23 @@ proxy weights:
             renewables: 1
             demand: 1
             proxy: 100
+      soc_features:
+      extremes_spec: {}
+      soft_prune: False
+
+  soc proxy wt=1000:
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1000
       soc_features:
       extremes_spec: {}
       soft_prune: False

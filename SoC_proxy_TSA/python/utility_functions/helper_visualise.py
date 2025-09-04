@@ -6,6 +6,7 @@ matplotlib.use('TkAgg') #avoids the annoying Qt errors on windows
 import matplotlib.pyplot as plt
 from cycler import cycler
 import mplcursors
+from utility_functions.class_tsa_model import tsa_model
 
 
 
@@ -96,29 +97,35 @@ def visualise(
     list_model_dict: list,
     x_field,
     y_field,
-    path_reference_model: calliope.Model = None,
     ):
 
     matplotlib.rcParams['axes.prop_cycle'] = cycler(color=plt.cm.plasma(np.linspace(0.0, 0.92, len(list_model_dict))))
 
     plt.figure(figsize=(12, 6))
-
-    if path_reference_model:
-        list_model_dict.append({
-            'model': calliope.read_netcdf(path_reference_model),
-            'type': 'reference',
-            'name': 'reference'
-        })
       
     for model_dict in list_model_dict:
-        model = model_dict['model']
-        model_type = model_dict['type']
-        model_name = model_dict['name']
 
-        if model_type == 'clustered':
-            cluster_params = model_dict['cluster_params']
-        else:
+        m = model_dict['model']
+
+        if isinstance(m, tsa_model):
+            model = m.calliope_model.model
+            model_name = model_dict['name']
+            model_type = m.calliope_model.params['type']
+            
+            if model_type == 'clustered':
+                cluster_params = {'path_cluster_map': m.paths['cluster_map']}
+            else:
+                cluster_params = None
+
+            
+        
+        elif isinstance(m, calliope.Model):
+            model = m
+            model_type='reference'
             cluster_params = None
+
+        else:
+            raise Exception('Invalid model type')
 
         df = get_df(model, cluster_params=cluster_params)
         
@@ -127,13 +134,13 @@ def visualise(
             y_val = df['soc']
 
         elif y_field == 'SoC Proxy':
-            y_val = generate_soc_proxy_expost(model_dict['_model']) TODO: this will break on reference model so allow this function to accept arguments directly
+            y_val = generate_soc_proxy_expost(model_dict)
         else:
             raise Exception('Invalid variable type for plot')
 
         if x_field == 'Time':
             # x_list.append(df.index)
-            x_val = df.index
+            x_val = y_val.index
         else:
             raise Exception('Invalid variable type for plot')   
         
@@ -246,33 +253,23 @@ def get_df(model, cluster_params: dict = None):
     return df
 
 
-def generate_soc_proxy_expost(m):
+def generate_soc_proxy_expost(model_dict):
 
     from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
+    from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
+    from utility_functions.helper_timeseries_tools import extrapolate_ts_from_cluster_map
 
-    if m.tsa.type == 'cluster':
+    m = model_dict['model']
 
-        from utility_functions.helper_timeseries_tools import extrapolate_ts_from_cluster_map
+    if isinstance(m, tsa_model) and m.tsa.type == 'cluster':
 
         df_timeseries,_ = extrapolate_ts_from_cluster_map(
                     m.paths['cluster_map'], 
                     m.paths['timeseries'])
+        df_timeseries.set_index('timesteps', inplace=True)
+        df_timeseries.columns.name = None 
 
-    
-    else:
-
-        from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
-
-        df_timeseries = calliope_ts_to_pandas(
-            source=m.paths['timeseries'],
-            date_range_lower_bound=f'{m.calliope_model.params['date_range'][0]}-01-01',
-            date_range_upper_bound=f'{m.calliope_model.params['date_range'][-1]}-12-31'
-        )
-
-    df_timeseries.set_index('timesteps', inplace=True)
-    df_timeseries.columns.name = None 
-
-    df_timeseries,_,_ = generate_soc_proxy(
+        df_timeseries,_,_ = generate_soc_proxy(
         df=df_timeseries,
         demand_field=m.tsa.params['name_demand'][0],
         renewables_fields_and_weights= m.soc_proxy.params['capacity_weights'], 
@@ -280,7 +277,49 @@ def generate_soc_proxy_expost(m):
         storage_process_losses=m.soc_proxy.params['storage_process_losses'],
         soc_decomposition = m.soc_proxy.params['soc_decomposition'],
         timestamp_col=None
-    )
+        )
+
+    
+    elif isinstance(m,tsa_model) and m.tsa.type != 'cluster':
+
+        df_timeseries = calliope_ts_to_pandas(
+            source=m.paths['timeseries'],
+            date_range_lower_bound=f'{m.calliope_model.params['date_range'][0]}-01-01',
+            date_range_upper_bound=f'{m.calliope_model.params['date_range'][-1]}-12-31'
+        )
+        df_timeseries.set_index('timesteps', inplace=True)
+        df_timeseries.columns.name = None 
+
+        df_timeseries,_,_ = generate_soc_proxy(
+        df=df_timeseries,
+        demand_field=m.tsa.params['name_demand'][0],
+        renewables_fields_and_weights= m.soc_proxy.params['capacity_weights'], 
+        dispatchable_techs=m.soc_proxy.params['dispatchable_techs'],
+        storage_process_losses=m.soc_proxy.params['storage_process_losses'],
+        soc_decomposition = m.soc_proxy.params['soc_decomposition'],
+        timestamp_col=None
+        )
+    
+    else:  #if its a reference dataframe
+
+        df_timeseries = calliope_ts_to_pandas(
+            source=model_dict['params']['path_timeseries'],
+            date_range_lower_bound=f'{model_dict['params']['date_range'][0]}-01-01',
+            date_range_upper_bound=f'{model_dict['params']['date_range'][-1]}-12-31'
+        )
+        df_timeseries.set_index('timesteps', inplace=True)
+        df_timeseries.columns.name = None 
+
+        df_timeseries,_,_ = generate_soc_proxy(
+        df=df_timeseries,
+        demand_field='demand_power',
+        renewables_fields_and_weights= model_dict['params']['soc_proxy_params']['capacity_weights'], 
+        dispatchable_techs=model_dict['params']['soc_proxy_params']['dispatchable_techs'],
+        storage_process_losses=model_dict['params']['soc_proxy_params']['storage_process_losses'],
+        soc_decomposition = model_dict['params']['soc_proxy_params']['soc_decomposition'],
+        timestamp_col=None
+        )
+    
     df_soc_proxy = df_timeseries['soc_proxy_LDES']
 
     return df_soc_proxy

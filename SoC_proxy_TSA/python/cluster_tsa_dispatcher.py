@@ -102,7 +102,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['soc features']
+scenarios = ['reference','proxy weights']
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -121,12 +121,10 @@ for scenario_name, scenario_batch in batch_config.items():
                 for key, value in config['calliope_params'].items():
                     if value:
                         calliope_p[key] = value
-
             if config['soc_proxy_params']:
                 for key, value in config['soc_proxy_params'].items():
                     if value:
                         soc_proxy_p[key] = value
-            
             if config['tsa_params']:
                 for key, value in config['tsa_params'].items():
                     if value:
@@ -134,20 +132,28 @@ for scenario_name, scenario_batch in batch_config.items():
 
             m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type='cluster')
             list_model_dict.append({
-                'model': m.calliope_model.model,
-                'type': m.calliope_model.params['type'],
+                'model': m,
                 'name': f'id={m.id[:4]}... {model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
-                'cluster_params': {'path_cluster_map': m.paths['cluster_map']},
-                '_model': m
+                'params': {},
             })
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 
+#add the reference case
+list_model_dict.append({
+    'model': calliope.read_netcdf(f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'),
+    'name': 'reference',
+    'params': {
+        'date_range': calliope_params['date_range'],
+        'path_timeseries': 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
+        'soc_proxy_params': soc_proxy_params
+    },
+})
+
 visualise(
     list_model_dict=list_model_dict,
-    x_field='Time',
-    y_field='SoC Proxy', #'State of Charge'
-    # path_reference_model=f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'
+    x_field='Time', #'Time'
+    y_field='SoC Proxy', #'State of Charge', 'SoC Proxy'
 )
 
 

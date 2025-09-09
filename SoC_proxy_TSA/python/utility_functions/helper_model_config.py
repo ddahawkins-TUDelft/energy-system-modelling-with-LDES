@@ -90,9 +90,10 @@ def clustered_model_config(params):
         add_math_config.append('storage_inter_cluster')
         calliope_override_dictionary['config.build.add_math'] = add_math_config
 
+
     #auto-config calliope model
-        model = calliope.Model(
-            path_model_config_yaml,
+        model = calliope.read_yaml(
+            file=path_model_config_yaml,
             scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
             time_cluster = f"../../{params['path_cluster_map']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
             override_dict=calliope_override_dictionary

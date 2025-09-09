@@ -13,7 +13,7 @@ variables:
       The number of cycles for which a storage component is permitted to discharge its capacity across the time horizon of the model. Expressed as a multiple of the installed capacity (i.e. unitless factor)
     default: 10000.0 # by default, permits ten thousand storage cycles
     foreach: [nodes, techs, carriers]
-    where: base_tech=storage AND carrier=hydrogen
+    where: base_tech==storage AND carrier==hydrogen
     domain: real
     bounds:
       min: 0 
@@ -26,7 +26,7 @@ variables:
       The number of years for which the allowable number of cycles occurs over
     default: 1.0 # by default, permits one storage cycle
     foreach: [nodes, techs, carriers]
-    where: base_tech=storage AND carrier=hydrogen
+    where: base_tech==storage AND carrier==hydrogen
     domain: real
     bounds:
       min: 0 

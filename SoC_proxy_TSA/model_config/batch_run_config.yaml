@@ -45,6 +45,8 @@ cluster_with_optimisation_baseline:
       extremes_spec: {}
       soft_prune: False
       post_cluster_optimisation_params:
+        debug_shuffle: true
+        shuffle_seed: 123
         objective:
             - polarity: minimise
               target: soc_proxy_ldes

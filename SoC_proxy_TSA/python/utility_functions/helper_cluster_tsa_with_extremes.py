@@ -31,6 +31,7 @@ def cluster_tsa_with_extremes(
     extremes_spec: Dict[str, dict | str] | None = None,
     soft_prune: bool = False,
     tie_breaker_feature: str = "soc_net_MWh",  # used only if we need to prioritize in pruning ties
+    save_cluster_map: bool = True
 ):
     """
     If extremes_spec is provided and soft_prune=True, we perform a soft force-then-prune step:
@@ -249,7 +250,8 @@ def cluster_tsa_with_extremes(
     # Write files (same as before)
     calliope_field_headings.to_csv(path_to_new_timeseries, index=False, header=False, mode="w")
     df_new_timeseries_values.to_csv(path_to_new_timeseries, index=True, header=False, mode="a")
-    cluster_days.to_csv(path_to_cluster_csv)
+    if save_cluster_map:
+        cluster_days.to_csv(path_to_cluster_csv)
 
     # -------- NEW: prepare ClusterResult return --------
     representatives = pd.DatetimeIndex(

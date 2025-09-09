@@ -15,6 +15,10 @@ import time
 from utility_functions.helper_compare_models import compare_models
 from utility_functions.helper_post_cluster_opt import apply_optimisation_on_cluster
 
+import sys
+
+
+
 
 class tsa_model:
     def __init__(self, path_timeseries: str, description: str = '', tsa_type= Literal["cluster", "optimisation", "none"]):
@@ -23,6 +27,7 @@ class tsa_model:
         if tsa_type not in ("cluster", "optimisation","none"):
             raise ValueError(f"Invalid type: {type}")
         
+      
 
         #create the id and description for this model run
         self.id = ''
@@ -46,7 +51,8 @@ class tsa_model:
             'calliope_model': '',
             'cluster_map': '',
             'timeseries': path_timeseries,
-            'parameters': ''
+            'parameters': '',
+            'original_timeseries': path_timeseries,
         }
 
     def set_directory(self, directory: str):
@@ -401,7 +407,7 @@ class tsa_model:
                 if self.tsa.params['soc_proxy']['use_soc_proxy']:
                     for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
                         weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
-
+                
                 result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
                     number_typical_periods=self.tsa.params['k_periods'],
@@ -471,7 +477,7 @@ class calliope_model:
             'df': pd.DataFrame,
             'paths': [],
         } 
-        self.model = None #calliope model
+        self.model = calliope.Model #calliope model
         self.path = ''
         self.status = ''
 

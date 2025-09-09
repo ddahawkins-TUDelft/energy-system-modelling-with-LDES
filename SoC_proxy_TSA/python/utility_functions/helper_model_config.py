@@ -73,7 +73,7 @@ def clustered_model_config(params):
     
     #define horizons
         if 'horizon_start' in params and 'horizon_start' in params:
-            calliope_override_dictionary['config.init.time_subset'] = [params['horizon_start'],params['horizon_end']]
+            calliope_override_dictionary['config.init.subset.timesteps'] = [params['horizon_start'],params['horizon_end']]
     
     #define tvp source
         if 'path_timeseries' in params and params['path_timeseries']:
@@ -86,19 +86,21 @@ def clustered_model_config(params):
             calliope_override_dictionary.update(params['dict_additional_overrides'])
 
     #add inter-storage-cluster-math functions because clustering has been applied and we need to preserve SoC values
-        add_math_config = ["../custom_mathematics/add_maths_cycle_constraints.yaml"]
-        add_math_config.append('storage_inter_cluster')
-        calliope_override_dictionary['config.build.add_math'] = add_math_config
+        add_math_paths_config = {'maths_cyclic_constraints': "../custom_mathematics/add_maths_cycle_constraints.yaml"}
+        extra_math_config = ['maths_cyclic_constraints','storage_inter_cluster']
+        calliope_override_dictionary['config.init.math_paths'] = add_math_paths_config
+        calliope_override_dictionary['config.init.extra_math'] = extra_math_config
 
 
     #auto-config calliope model
         model = calliope.read_yaml(
             file=path_model_config_yaml,
             scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
-            time_cluster = f"../../{params['path_cluster_map']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
+            # time_cluster = f"../../{params['path_cluster_map']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
             override_dict=calliope_override_dictionary
-
         )
+
+        #can add maths instantaneously via calliope.from_yaml(..., math_dict={"my_new_math_1": {...}, ...})
     
    #export configured calliope model
         return model

@@ -8,5 +8,6 @@
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python-envs.pythonProjects": [],
-    "git.autofetch": true
+    "git.autofetch": true,
+    "git.detectSubmodules": true
 }

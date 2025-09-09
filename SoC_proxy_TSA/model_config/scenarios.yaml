@@ -13,7 +13,7 @@ overrides:
   weather_year:
     config:
       init:
-        time_subset: ["2015-01-01", "2015-12-31"] # Subset of timesteps for given weather year
+        subset.timesteps: ["2015-01-01", "2015-12-31"] # Subset of timesteps for given weather year
     techs:
       h2_salt_cavern:
         number_year_cycles: 1
@@ -28,65 +28,3 @@ overrides:
       offshore_wind:
         flow_cap_min: 2.5e03 #current levels, see source below
         flow_cap_max: 108e03 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
-
-  operation_run: #override for when running model in operate mode with enmet demand allowance
-    config:
-      build:
-        ensure_feasibility: true # Switches on the "unmet demand" constraint #TODO: review what this means, is this Lost Load?
-        mode: operate # Choices: plan, operate #TODO: this requires optimising for each model run
-        # operate_use_cap_results: true
-        operate_horizon: 30d
-        operate_window: 30d
-    techs:
-      battery:
-        cyclic_storage: false
-      h2_salt_cavern:
-        cyclic_storage: false
-
-  multidim_flow_caps:
-    techs:
-      onshore_wind:
-        flow_cap_min: 15999.
-        flow_cap_max: 16000.
-      offshore_wind:
-        flow_cap_min: 27696
-        flow_cap_max: 27696.395085
-      solar:
-        flow_cap_min: 53391
-        flow_cap_max: 53391.604215
-      nuclear:
-        flow_cap_min: 1649.
-        flow_cap_max: 1650.
-
-        #storage techs
-      battery:
-        flow_cap_min: 82659
-        flow_cap_max: 82659.547667
-        storage_cap_max: 2.755318e+04
-        storage_cap_min: 2.755e+04
-      # hydrogen_storage_system:
-      h2_salt_cavern:
-        flow_cap_min: 18891
-        flow_cap_max: 18891.324544
-        storage_cap_max: 2.045220e+07
-        storage_cap_min: 2.045e+07
-
-        #hydrogen conversion techs
-      electrolyser:
-        flow_cap_max:
-          data: [6636.550051, 4313.757533]
-          index: [power,hydrogen]
-          dims: carriers
-        flow_cap_min:
-          data: [6636, 4313]
-          index: [power,hydrogen]
-          dims: carriers
-      h2_elec_conversion:
-        flow_cap_max:
-          data: [10579.141745, 18891.324544]
-          index: [power,hydrogen]
-          dims: carriers
-        flow_cap_min:
-          data: [10579, 18891]
-          index: [power,hydrogen]
-          dims: carriers 

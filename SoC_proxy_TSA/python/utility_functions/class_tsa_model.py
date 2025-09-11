@@ -14,7 +14,6 @@ from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply
 import time
 from utility_functions.helper_compare_models import compare_models
 from utility_functions.helper_post_cluster_opt import apply_optimisation_on_cluster
-from utility_functions.helper_optimisation_dispatch import optimisation_dispatch
 
 import sys
 
@@ -269,23 +268,7 @@ class tsa_model:
         #assign the output
         self.tsa.df_features = df_timeseries
 
-    def compute_distance_matrix(self):
-
-        if os.path.exists(self.paths['cluster_map']):
-            print(f'> TSA: Warning, {self.paths['cluster_map']} already exists.')
-
-        print(f'> TSA: Creating distance matrix for {self.id}')
-
-        self.tsa.distance_matrix = distance_matrix(
-            feature_df= self.tsa.df_features,
-            matrix_weights=self.tsa.params['matrix_weights'],
-            metric=self.tsa.params['distance_matrix_metric'],
-            column_prefixes_renewables=self.tsa.params['names_renewables'],
-            column_prefixes_demand=self.tsa.params['name_demand'],
-            column_prefixes_proxy=self.tsa.params['soc_proxy']['proxy_inputs_to_consider'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else [],
-            proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
-        )        
-        
+            
     def apply_tsa_pipeline(self):
 
         if os.path.exists(self.paths['cluster_map']):
@@ -300,14 +283,7 @@ class tsa_model:
         if self.tsa.type in ['cluster','cluster_with_optimisation']:
 
             # Compute weights dictionary
-            weightDict = {}
-            for renewable in self.tsa.params['names_renewables']:
-                weightDict[renewable] = self.tsa.params['matrix_weights']['renewables']
-            for demand in self.tsa.params['name_demand']:
-                weightDict[demand] = self.tsa.params['matrix_weights']['demand']
-            if self.tsa.params['soc_proxy']['use_soc_proxy']:
-                for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
-                    weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
+            weightDict = self._compute_weights_dictionary()
                 
             result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
@@ -327,20 +303,24 @@ class tsa_model:
             
         if self.tsa.type in ['optimisation','cluster_with_optimisation']:
 
-            optimisation_dispatch()
+            from utility_functions.helper_optimisation_dispatch import optimisation_dispatch
 
-            self.compute_distance_matrix()
-                
+            result = optimisation_dispatch(self)
+
+            self.tsa.distance_matrix = distance_matrix(
+                feature_df= self.tsa.df_features,
+                matrix_weights=self.tsa.params['matrix_weights'],
+                metric=self.tsa.params['distance_matrix_metric'],
+                column_prefixes_renewables=self.tsa.params['names_renewables'],
+                column_prefixes_demand=self.tsa.params['name_demand'],
+                column_prefixes_proxy=self.tsa.params['soc_proxy']['proxy_inputs_to_consider'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else [],
+                proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
+            ) 
+            
             #get index for saving
-            df_timeseries = calliope_ts_to_pandas(
-                self.paths['timeseries'],
-                date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
-                date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
-            )
-            df_timeseries.set_index('timesteps', inplace=True)
-            df_timeseries = df_timeseries.resample("D").agg('mean')
-            dates_index = df_timeseries.index
-
+            df_timeseries,_ = self._build_timeseries()
+            dates_index = df_timeseries.resample("D").agg('mean').index
+            
             print(f'> TSA: Solving MILP {self.id}')
             result = milp_tsa(
                 distance_matrix=self.tsa.distance_matrix,
@@ -362,6 +342,18 @@ class tsa_model:
 
         return
     
+    def _compute_weights_dictionary(self):
+        weightDict = {}
+        for renewable in self.tsa.params['names_renewables']:
+            weightDict[renewable] = self.tsa.params['matrix_weights']['renewables']
+        for demand in self.tsa.params['name_demand']:
+            weightDict[demand] = self.tsa.params['matrix_weights']['demand']
+        if self.tsa.params['soc_proxy']['use_soc_proxy']:
+            for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
+                weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
+
+        return weightDict
+
     def _build_timeseries(self):
 
         #load the timeseries

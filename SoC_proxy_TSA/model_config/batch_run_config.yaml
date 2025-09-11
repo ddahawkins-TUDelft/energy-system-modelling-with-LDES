@@ -37,6 +37,7 @@ cluster_with_optimisation_baseline:
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
           proxy_window: None
+          optimisation_proxy_mode: 'endogenous'
       matrix_weights: 
             renewables: 1
             demand: 1

@@ -86,7 +86,7 @@ tsa_params = {
         'use_soc_proxy': False,
         'proxy_inputs_to_consider': ['surplus_LDES'], #Options: surplus_LDES, soc_proxy_LDES
         'proxy_window': None,
-        'optimisation_proxy_mode': 'exogenous'
+        'optimisation_proxy_mode': '' #options: endogenous, exogenous
     },
     'cluster_method': 'hierarchical', #Options: k_medoids, k_means, hierarchical
     'representation_method': 'distributionRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation

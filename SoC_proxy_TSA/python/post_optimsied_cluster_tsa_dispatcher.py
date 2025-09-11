@@ -4,6 +4,54 @@ import os
 import calliope
 import yaml
 from copy import deepcopy
+from utility_functions.helper_calliope import read_clustered_netcdf, hotfix_unify_clusters_universe, hotfix_normalize_timestep_selectors
+
+def temp_function(m):
+    ds = m.calliope_model.model.inputs  # or m.model.backend.inputs depending on your handle
+
+    print("coords:", list(ds.coords))
+    print("data vars (subset):", [k for k in ds.data_vars if "cluster" in k])
+
+    # 1) The clusters coordinate (the valid labels)
+    clusters = ds.coords.get("clusters", None)
+    print("clusters coord dtype:", clusters.dtype if clusters is not None else None)
+    print("clusters (first 20):", clusters.values if clusters is not None else None)
+
+    # 2) The mapping arrays
+    tc = ds.get("timestep_cluster", None)
+    ldc = ds.get("lookup_datestep_cluster", None)
+    print("timestep_cluster:", None if tc is None else (tc.dims, tc.dtype, tc.shape))
+    print("lookup_datestep_cluster:", None if ldc is None else (ldc.dims, ldc.dtype, ldc.shape))
+
+    # 3) Sanity checks: must be scalar INT labels, no NaNs
+    import numpy as np, pandas as pd
+    if tc is not None:
+        print("timestep_cluster NaNs:", pd.isna(tc).sum().item())
+        # show a few labels paired with timesteps
+        print(pd.DataFrame({
+            "timestep": tc.timesteps.values[:10],
+            "cluster":  tc.values[:10],
+        }))
+
+    if ldc is not None:
+        print("lookup_datestep_cluster NaNs:", pd.isna(ldc).sum().item())
+        print(pd.DataFrame({
+            "datestep": ldc.datesteps.values[:10],
+            "cluster":  ldc.values[:10],
+        }))
+
+    # 4) Label compatibility: every requested label must exist in the clusters coord
+    if clusters is not None and tc is not None:
+        want = np.unique(tc.values[~pd.isna(tc.values)])
+        have = set(clusters.values.tolist())
+        missing = [x for x in want.tolist() if x not in have]
+        print("MISSING (timestep_cluster -> clusters):", missing[:20])
+
+    if clusters is not None and ldc is not None:
+        want = np.unique(ldc.values[~pd.isna(ldc.values)])
+        have = set(clusters.values.tolist())
+        missing = [x for x in want.tolist() if x not in have]
+        print("MISSING (lookup_datestep_cluster -> clusters):", missing[:20])
 
 
 
@@ -23,8 +71,9 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 
     if os.path.exists(m.paths['calliope_model']):
         
-        print(f'> Model: {m.paths['calliope_model']} already exists. Skipping...')
-        m.calliope_model.model = calliope.read_netcdf(m.paths['calliope_model'])
+        print(f'> Model: {m.paths['calliope_model']} already exists. Reading file...')
+        # m.calliope_model.model = calliope.read_netcdf(m.paths['calliope_model'])
+        m.calliope_model.model = read_clustered_netcdf(m.paths['calliope_model'])
 
     else:
         #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -35,6 +84,8 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
         #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
 
         m.configure_calliope()
+        # hotfix_unify_clusters_universe(m)
+        # hotfix_normalize_timestep_selectors(m)
         m.build_calliope()
         m.solve_and_save_calliope()
 
@@ -105,7 +156,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['no_proxy', 'proxy_baseline', 'cluster_with_optimisation_baseline'] #'proxy weights','soc_features', 'soc_feature_combinations'
+scenarios = ['no_proxy','proxy_baseline','soc_features'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' , 'cluster_with_optimisation_baseline'
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -143,7 +194,7 @@ for scenario_name, scenario_batch in batch_config.items():
             })
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
-
+print(f'> Dispatch: Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf')
 #add the reference case
 list_model_dict.append({
     'model': calliope.read_netcdf(f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'),
@@ -154,13 +205,11 @@ list_model_dict.append({
         'soc_proxy_params': soc_proxy_params
     },
 })
-
+print('> Dispatch: Visualising results')
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
     y_field='State of Charge', #'State of Charge', 'SoC Proxy'
     colour_field='MAGMe'
 )
-
-
 

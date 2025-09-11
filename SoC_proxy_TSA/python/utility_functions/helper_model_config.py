@@ -25,7 +25,7 @@ def standardised_model_config(params):
     
     #define horizons
         if 'horizon_start' in params and 'horizon_start' in params:
-            calliope_override_dictionary['config.init.time_subset'] = [params['horizon_start'],params['horizon_end']]
+            calliope_override_dictionary['config.init.subset.timesteps'] = [params['horizon_start'],params['horizon_end']]
     
     #define tvp source
         if 'filename_time_varying_parameters' in params:
@@ -36,7 +36,7 @@ def standardised_model_config(params):
             calliope_override_dictionary.update(params['dict_additional_overrides'])
 
     #auto-config calliope model
-        model = calliope.Model(
+        model = calliope.read_yaml(
             path_model_config_yaml,
             scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
             override_dict=calliope_override_dictionary
@@ -44,7 +44,7 @@ def standardised_model_config(params):
         )
 
         #determine filename based on scenario
-        filename = filenamer(params, 'standard','netcdf')
+        filename = f'standard_{params['horizon_start'][:4]}_{params['horizon_end'][:4]}_reference.netcdf'
     
    #export configured calliope model
         return model, filename
@@ -91,12 +91,21 @@ def clustered_model_config(params):
         calliope_override_dictionary['config.init.math_paths'] = add_math_paths_config
         calliope_override_dictionary['config.init.extra_math'] = extra_math_config
 
+    #add time clustering data table
+        CLUSTER_PARAM = 'PeriodNum'
+        path_cluster_map = f"../../{params['path_cluster_map']}"
+        calliope_override_dictionary['data_tables.cluster_days'] = {
+             'data': path_cluster_map,
+             'rows': 'timesteps',
+             "add_dims": {"parameters": CLUSTER_PARAM}
+        }
+
 
     #auto-config calliope model
         model = calliope.read_yaml(
             file=path_model_config_yaml,
             scenario=params['scenario_name'] if 'scenario_name' in params else 'standard',
-            # time_cluster = f"../../{params['path_cluster_map']}", #have to jump up a couple of directories because model.yaml is located differently to the calling function
+            time_cluster=CLUSTER_PARAM,
             override_dict=calliope_override_dictionary
         )
 

@@ -12,6 +12,7 @@ from calliope import Model as CalliopeModel
 from utility_functions.class_tsa_model import tsa_model
 from utility_functions.class_visual_adapter import ModelAdapter
 from utility_functions.class_visual_metric import METRICS, EvalContext, _unwrap_metric_output
+matplotlib.use("TkAgg")
 
 _FIELD_MAP = {
     "Time": "time",

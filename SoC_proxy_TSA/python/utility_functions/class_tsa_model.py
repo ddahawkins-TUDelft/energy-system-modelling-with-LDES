@@ -14,7 +14,7 @@ from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply
 import time
 from utility_functions.helper_compare_models import compare_models
 from utility_functions.helper_post_cluster_opt import apply_optimisation_on_cluster
-from utility_functions.helper_ordo_rr import OrdoRRConfig, SocProxyMode, ordo_rr_optimize
+from utility_functions.helper_optimisation_dispatch import optimisation_dispatch
 
 import sys
 
@@ -25,10 +25,8 @@ class tsa_model:
     def __init__(self, path_timeseries: str, description: str = '', tsa_type= Literal["cluster", "optimisation", "none"]):
 
         # establishing the type
-        if tsa_type not in ("cluster", "optimisation","none"):
+        if tsa_type not in ("cluster", "optimisation","cluster_with_optimisation","none"):
             raise ValueError(f"Invalid type: {type}")
-        
-      
 
         #create the id and description for this model run
         self.id = ''
@@ -343,73 +341,31 @@ class tsa_model:
             column_prefixes_demand=self.tsa.params['name_demand'],
             column_prefixes_proxy=self.tsa.params['soc_proxy']['proxy_inputs_to_consider'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else [],
             proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
-        )
-
-    def configure_tsa(self):
-        if self.tsa.type == 'optimisation':
-            if os.path.exists(self.paths['cluster_map']):
-                print(f'> TSA: cluster map exists → skipping features/matrix for {self.id}')
-                return
-            self.compute_features_dataframe()
-            self.compute_distance_matrix()
-        elif self.tsa.type == 'cluster':
-            if os.path.exists(self.paths['cluster_map']):
-                print(f'> TSA: cluster map exists → skipping features for {self.id}')
-                return
-            self.compute_features_dataframe()
-        else:
-            raise Exception('No TSA type Configured.')
+        )        
         
-    def apply_tsa(self):
+    def apply_tsa_pipeline(self):
 
-        #check if file already exists
         if os.path.exists(self.paths['cluster_map']):
             print(f'> TSA: Skipping TSA as cluster map already exists at {self.paths['cluster_map']}')
-        else:
-            print(f'> TSA: Applying TSA for {self.id}')
-            start_time = time.time()
+            return
+        
+        start_time = time.time()
 
-            if self.tsa.type == 'optimisation':
+        self.compute_features_dataframe()
+
+        if self.tsa.type in ['cluster','cluster_with_optimisation']:
+
+            # Compute weights dictionary
+            weightDict = {}
+            for renewable in self.tsa.params['names_renewables']:
+                weightDict[renewable] = self.tsa.params['matrix_weights']['renewables']
+            for demand in self.tsa.params['name_demand']:
+                weightDict[demand] = self.tsa.params['matrix_weights']['demand']
+            if self.tsa.params['soc_proxy']['use_soc_proxy']:
+                for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
+                    weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
                 
-                #get index for saving
-                df_timeseries = calliope_ts_to_pandas(
-                    self.paths['timeseries'],
-                    date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
-                    date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
-                )
-                df_timeseries.set_index('timesteps', inplace=True)
-                df_timeseries = df_timeseries.resample("D").agg('mean')
-                dates_index = df_timeseries.index
-
-                print(f'> TSA: Solving MILP {self.id}')
-                result = milp_tsa(
-                    distance_matrix=self.tsa.distance_matrix,
-                    k=self.tsa.params['k_periods'],
-                    solver='gurobi',
-                    mipgap=0.01,
-                    verbose=True
-                )
-                print(f'> TSA: Solution found. MILP took {time.time()-start_time:.2f}')
-
-                save_milp_result_to_cluster_map(
-                    result=result, 
-                    dates_index=dates_index,
-                    output_path=self.paths['cluster_map']
-                )
-
-            elif self.tsa.type == 'cluster':
-
-                # Compute weights dictionary
-                weightDict = {}
-                for renewable in self.tsa.params['names_renewables']:
-                    weightDict[renewable] = self.tsa.params['matrix_weights']['renewables']
-                for demand in self.tsa.params['name_demand']:
-                    weightDict[demand] = self.tsa.params['matrix_weights']['demand']
-                if self.tsa.params['soc_proxy']['use_soc_proxy']:
-                    for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
-                        weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
-                
-                result = cluster_tsa_with_extremes(
+            result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
                     number_typical_periods=self.tsa.params['k_periods'],
                     hours_per_period=self.tsa.params['hours_per_period'],
@@ -424,12 +380,44 @@ class tsa_model:
                     extremes_spec=self.tsa.params['extremes_spec'],
                     soft_prune=self.tsa.params['soft_prune'],
                 )
+            
+        if self.tsa.type in ['optimisation','cluster_with_optimisation']:
+
+            optimisation_dispatch()
+            
+            self.compute_distance_matrix()
                 
-                if self.tsa.params.get('post_cluster_optimisation_params'):
-                    result = apply_optimisation_on_cluster(result, self)
-            else:
-                raise Exception('No TSA type Configured.')
-            print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')
+            #get index for saving
+            df_timeseries = calliope_ts_to_pandas(
+                self.paths['timeseries'],
+                date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
+                date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
+            )
+            df_timeseries.set_index('timesteps', inplace=True)
+            df_timeseries = df_timeseries.resample("D").agg('mean')
+            dates_index = df_timeseries.index
+
+            print(f'> TSA: Solving MILP {self.id}')
+            result = milp_tsa(
+                distance_matrix=self.tsa.distance_matrix,
+                k=self.tsa.params['k_periods'],
+                solver='gurobi',
+                mipgap=0.01,
+                verbose=True
+            )
+            print(f'> TSA: Solution found. MILP took {time.time()-start_time:.2f}')
+
+            save_milp_result_to_cluster_map(
+                result=result, 
+                dates_index=dates_index,
+                output_path=self.paths['cluster_map']
+            )
+
+            
+        print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')
+
+        return
+
         
     #Save/Load FUNCTIONS -------------------------------------------------------------------------------------------------
 

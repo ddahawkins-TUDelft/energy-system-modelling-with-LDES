@@ -1,4 +1,4 @@
 [submodule "calliope-src"]
 	path = calliope-src
 	url = https://github.com/ddahawkins-TUDelft/calliope.git
-	branch = main
+	branch = fix/cluster-key-mapping

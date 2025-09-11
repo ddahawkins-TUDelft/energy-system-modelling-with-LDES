@@ -263,68 +263,11 @@ class tsa_model:
             print(f'> TSA: Warning, {self.paths['cluster_map']} already exists.')
         print(f'> TSA: Extracting features dataframe for {self.id}') #TODO:
 
-        #load the timeseries
-        df_timeseries = calliope_ts_to_pandas(
-            self.paths['timeseries'],
-            date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
-            date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
-        )
-        df_timeseries.set_index('timesteps', inplace=True)
-        df_timeseries.columns.name = None 
-
-        original_columns = df_timeseries.columns.values.tolist()
-
-        #if soc proxy is to be used, append the requested column.
-        if self.tsa.params['soc_proxy']['use_soc_proxy']:
-
-            original_columns.extend(self.tsa.params['soc_proxy']['proxy_inputs_to_consider'])
-
-            df_timeseries,_,_ = generate_soc_proxy(
-                df=df_timeseries,
-                demand_field=self.tsa.params['name_demand'][0],
-                renewables_fields_and_weights= self.soc_proxy.params['capacity_weights'], 
-                dispatchable_techs=self.soc_proxy.params['dispatchable_techs'],
-                storage_process_losses=self.soc_proxy.params['storage_process_losses'],
-                soc_decomposition = self.soc_proxy.params['soc_decomposition'],
-                timestamp_col=None
-            )
-            df_timeseries = df_timeseries[original_columns]
-
-        #if aggregating daily bool is True, then aggregate otherwise transpose the hourly data into daily profiles to reduce MILP load
-        if self.tsa.type == 'optimisation':
-            if self.tsa.params['resample_to_daily_resolution']:
-                # Select only numeric columns (e.g., drop metadata if present)
-                df_timeseries = df_timeseries.select_dtypes(include=[np.number])
-                # Group by day and apply aggregation
-                df_timeseries = df_timeseries.resample("D").agg('mean')
-            else:
-                # Create containers
-                daily_rows = []
-                days = []
-
-                # Group by day (normalize keeps midnight timestamps)
-                for day, group in df_timeseries.groupby(pd.Grouper(freq="D")):
-                    if len(group) != 24:
-                        # Skip incomplete days (DST or edges)
-                        continue
-                    # Build a 24h vector per variable and concatenate
-                    row = np.concatenate([group[var].to_numpy() for var in original_columns])
-                    daily_rows.append(row)
-                    days.append(day.normalize())
-
-                # Build column names once
-                col_names = [f"{var}_h{h:02d}" for var in original_columns for h in range(24)]
-
-                # Build daily dataframe with a proper Date index
-                df_timeseries = pd.DataFrame(
-                    daily_rows,
-                    columns=col_names,
-                    index=pd.DatetimeIndex(days, name="timesteps")
-                )
+        df_timeseries, original_columns = self._build_timeseries()
+        df_timeseries = self._resample_timeseries(df_timeseries, original_columns)
 
         #assign the output
         self.tsa.df_features = df_timeseries
-
 
     def compute_distance_matrix(self):
 
@@ -353,6 +296,7 @@ class tsa_model:
 
         self.compute_features_dataframe()
 
+        #CLUSTERING: Runs if mode is set to cluster or cluster with optimisation
         if self.tsa.type in ['cluster','cluster_with_optimisation']:
 
             # Compute weights dictionary
@@ -384,7 +328,7 @@ class tsa_model:
         if self.tsa.type in ['optimisation','cluster_with_optimisation']:
 
             optimisation_dispatch()
-            
+
             self.compute_distance_matrix()
                 
             #get index for saving
@@ -417,6 +361,69 @@ class tsa_model:
         print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')
 
         return
+    
+    def _build_timeseries(self):
+
+        #load the timeseries
+        df_timeseries = calliope_ts_to_pandas(
+            self.paths['timeseries'],
+            date_range_lower_bound=f"{self.calliope_model.params['date_range'][0]}-01-01",
+            date_range_upper_bound=f"{self.calliope_model.params['date_range'][-1]}-12-31"
+        )
+        df_timeseries.set_index('timesteps', inplace=True)
+        df_timeseries.columns.name = None 
+        original_columns = df_timeseries.columns.values.tolist()
+
+        #if soc proxy is to be used, append the requested column.
+        if self.tsa.params['soc_proxy']['use_soc_proxy']:
+            original_columns.extend(self.tsa.params['soc_proxy']['proxy_inputs_to_consider'])
+            df_timeseries,_,_ = generate_soc_proxy(
+                df=df_timeseries,
+                demand_field=self.tsa.params['name_demand'][0],
+                renewables_fields_and_weights= self.soc_proxy.params['capacity_weights'], 
+                dispatchable_techs=self.soc_proxy.params['dispatchable_techs'],
+                storage_process_losses=self.soc_proxy.params['storage_process_losses'],
+                soc_decomposition = self.soc_proxy.params['soc_decomposition'],
+                timestamp_col=None
+            )
+
+        return df_timeseries[original_columns], original_columns
+    
+    def _resample_timeseries(self, df_timeseries, original_columns):
+        #if aggregating daily bool is True, then aggregate otherwise transpose the hourly data into daily profiles to reduce MILP load
+        if self.tsa.type == 'optimisation':
+            if self.tsa.params['resample_to_daily_resolution']:
+                # Select only numeric columns (e.g., drop metadata if present)
+                df_timeseries = df_timeseries.select_dtypes(include=[np.number])
+                # Group by day and apply aggregation
+                df_timeseries = df_timeseries.resample("D").agg('mean')
+            else:
+                # Create containers
+                daily_rows = []
+                days = []
+
+                # Group by day (normalize keeps midnight timestamps)
+                for day, group in df_timeseries.groupby(pd.Grouper(freq="D")):
+                    if len(group) != 24:
+                        # Skip incomplete days (DST or edges)
+                        continue
+                    # Build a 24h vector per variable and concatenate
+                    row = np.concatenate([group[var].to_numpy() for var in original_columns])
+                    daily_rows.append(row)
+                    days.append(day.normalize())
+
+                # Build column names once
+                col_names = [f"{var}_h{h:02d}" for var in original_columns for h in range(24)]
+
+                # Build daily dataframe with a proper Date index
+                df_timeseries = pd.DataFrame(
+                    daily_rows,
+                    columns=col_names,
+                    index=pd.DatetimeIndex(days, name="timesteps")
+                )
+
+        return df_timeseries[original_columns]
+        
 
         
     #Save/Load FUNCTIONS -------------------------------------------------------------------------------------------------

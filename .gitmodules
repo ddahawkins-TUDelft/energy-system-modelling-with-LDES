@@ -1,3 +1,4 @@
 [submodule "calliope-src"]
 	path = calliope-src
-	url = https://github.com/calliope-project/calliope.git
+	url = https://github.com/ddahawkins-TUDelft/calliope.git
+	branch = main

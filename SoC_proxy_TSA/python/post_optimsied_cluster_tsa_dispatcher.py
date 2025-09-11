@@ -4,7 +4,7 @@ import os
 import calliope
 import yaml
 from copy import deepcopy
-from utility_functions.helper_calliope import read_clustered_netcdf, hotfix_unify_clusters_universe, hotfix_normalize_timestep_selectors
+from utility_functions.helper_calliope import read_clustered_netcdf
 
 def temp_function(m):
     ds = m.calliope_model.model.inputs  # or m.model.backend.inputs depending on your handle
@@ -209,7 +209,7 @@ print('> Dispatch: Visualising results')
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
-    y_field='State of Charge', #'State of Charge', 'SoC Proxy'
+    y_field='SoC Proxy', #'State of Charge', 'SoC Proxy'
     colour_field='MAGMe'
 )
 

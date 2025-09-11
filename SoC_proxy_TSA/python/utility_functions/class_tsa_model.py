@@ -14,6 +14,7 @@ from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply
 import time
 from utility_functions.helper_compare_models import compare_models
 from utility_functions.helper_post_cluster_opt import apply_optimisation_on_cluster
+from utility_functions.helper_ordo_rr import OrdoRRConfig, SocProxyMode, ordo_rr_optimize
 
 import sys
 

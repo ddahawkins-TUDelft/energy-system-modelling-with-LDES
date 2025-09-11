@@ -254,5 +254,18 @@ def save_milp_result_to_cluster_map(
     mapping_df.to_csv(output_path, index=False)
 
 
-def ORDO_with_soc_proxy():
+def ORDO(
+    path_timeseries: pd.DataFrame,
+    k: int,
+    path_cluster_map: str | None = None, #if none, perform milp on all days, if clustermap provided (path) then only use the pre-clustered days as candidates
+    soc_proxy_mode: str | None = None, #options: none, exogeneous, endogeneous
+    solver: str = "gurobi",
+    mipgap: float = 0.01,
+    verbose: bool = True
+    ):
+    
+    
+    
+
+
     print('optimising')

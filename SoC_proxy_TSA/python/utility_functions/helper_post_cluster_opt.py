@@ -122,8 +122,6 @@ def _write_cluster_map(df_original_strings: pd.DataFrame,
     out.to_csv(out_path, index=False, encoding="utf-8", lineterminator="\n")
 
 
-
-
 # ------------------------------- Main routine --------------------------------
 
 

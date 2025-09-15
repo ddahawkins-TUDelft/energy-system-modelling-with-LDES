@@ -103,7 +103,16 @@ def optimisation_dispatch(tsa_config: tsa, path_clustermap: str, pre_cluster_res
         
         # ------------------------------ Main -------------------------------------
         
-        tsa_config.distance_matrix = opt.distance_matrix(
+               
+        
+        if pre_cluster_result: 
+            print(f'[TSA] Reading cluster_map')
+            
+            Go from here
+            result = opt.ORDO()
+        else:
+
+            tsa_config.distance_matrix = opt.distance_matrix(
                 feature_df= tsa_config.df_features,
                 matrix_weights=tsa_config.params['matrix_weights'],
                 metric=tsa_config.params['distance_matrix_metric'],
@@ -112,14 +121,7 @@ def optimisation_dispatch(tsa_config: tsa, path_clustermap: str, pre_cluster_res
                 column_prefixes_proxy=tsa_config.params['soc_proxy']['proxy_inputs_to_consider'] if tsa_config.params['soc_proxy']['use_soc_proxy'] else [],
                 proxy_window = tsa_config.params['soc_proxy']['proxy_window'] if tsa_config.params['soc_proxy']['use_soc_proxy'] else None
             )
-        
-        
-        if pre_cluster_result: 
-            print(f'[TSA] Reading cluster_map')
-            df_clustermap = pd.read_csv(path_clustermap)
 
-            result = opt.ORDO()
-        else:
             print('[TSA] Solving MILP')
             result = opt.milp_tsa(
                 distance_matrix=tsa_config.distance_matrix,

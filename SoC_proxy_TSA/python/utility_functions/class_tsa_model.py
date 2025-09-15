@@ -317,13 +317,14 @@ class tsa_model:
 
             else:
 
+                #When debugging, we delete this file because its annoying to manually delete this when re-running code.
                 if DEBUG_MODE:
                     os.remove(self.paths['cluster_map'])
 
                 result = optimisation_dispatch(
                     tsa_config=self.tsa, 
                     path_clustermap=self.paths['cluster_map'], 
-                    is_pre_clustered=result
+                    pre_cluster_result=result
                 )
         
         print(f'[TSA] {self.tsa.type} completed in {time.time() - start_time:.2f}')

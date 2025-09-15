@@ -33,6 +33,8 @@ cluster_with_optimisation_baseline:
     soc_proxy_params:
     tsa_params:
       k_periods: 37
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 

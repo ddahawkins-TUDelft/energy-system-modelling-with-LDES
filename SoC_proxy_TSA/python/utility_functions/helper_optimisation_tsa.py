@@ -64,7 +64,7 @@ def distance_matrix(
     if wP == 0.0:
         M = 0.0
     else:
-        if proxy_window is None:
+        if proxy_window is None or proxy_window == 'None':
             # proxy applies everywhere
             M = 1.0
         else:

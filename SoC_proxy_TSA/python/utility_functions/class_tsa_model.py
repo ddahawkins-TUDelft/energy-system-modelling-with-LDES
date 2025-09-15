@@ -305,42 +305,42 @@ class tsa_model:
 
             from utility_functions.helper_optimisation_dispatch import optimisation_dispatch
 
-            result = optimisation_dispatch(self)
+            result = optimisation_dispatch(self.tsa, self.paths['cluster_map'])
 
-            self.tsa.distance_matrix = distance_matrix(
-                feature_df= self.tsa.df_features,
-                matrix_weights=self.tsa.params['matrix_weights'],
-                metric=self.tsa.params['distance_matrix_metric'],
-                column_prefixes_renewables=self.tsa.params['names_renewables'],
-                column_prefixes_demand=self.tsa.params['name_demand'],
-                column_prefixes_proxy=self.tsa.params['soc_proxy']['proxy_inputs_to_consider'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else [],
-                proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
-            ) 
+            # self.tsa.distance_matrix = distance_matrix(
+            #     feature_df= self.tsa.df_features,
+            #     matrix_weights=self.tsa.params['matrix_weights'],
+            #     metric=self.tsa.params['distance_matrix_metric'],
+            #     column_prefixes_renewables=self.tsa.params['names_renewables'],
+            #     column_prefixes_demand=self.tsa.params['name_demand'],
+            #     column_prefixes_proxy=self.tsa.params['soc_proxy']['proxy_inputs_to_consider'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else [],
+            #     proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
+            # ) 
             
-            #get index for saving
-            df_timeseries,_ = self._build_timeseries()
-            dates_index = df_timeseries.resample("D").agg('mean').index
+            # #get index for saving
+            # df_timeseries,_ = self._build_timeseries()
+            # dates_index = df_timeseries.resample("D").agg('mean').index
             
-            print(f'> TSA: Solving MILP {self.id}')
-            result = milp_tsa(
-                distance_matrix=self.tsa.distance_matrix,
-                k=self.tsa.params['k_periods'],
-                solver='gurobi',
-                mipgap=0.01,
-                verbose=True
-            )
-            print(f'> TSA: Solution found. MILP took {time.time()-start_time:.2f}')
+            # print(f'[TSA]: Solving MILP {self.id}')
+            # result = milp_tsa(
+            #     distance_matrix=self.tsa.distance_matrix,
+            #     k=self.tsa.params['k_periods'],
+            #     solver='gurobi',
+            #     mipgap=0.01,
+            #     verbose=True
+            # )
+            
 
-            save_milp_result_to_cluster_map(
-                result=result, 
-                dates_index=dates_index,
-                output_path=self.paths['cluster_map']
-            )
+            # save_milp_result_to_cluster_map(
+            #     result=result, 
+            #     dates_index=dates_index,
+            #     output_path=self.paths['cluster_map']
+            # )
 
             
-        print(f'> TSA: Saving cluster map to {self.paths['cluster_map']}')
+        print(f'[TSA] {self.tsa.type} completed in {time.time() - start_time:.2f}')
 
-        return
+        return result
     
     def _compute_weights_dictionary(self):
         weightDict = {}
@@ -414,7 +414,7 @@ class tsa_model:
                     index=pd.DatetimeIndex(days, name="timesteps")
                 )
 
-        return df_timeseries[original_columns]
+        return df_timeseries
         
 
         
@@ -474,7 +474,7 @@ class calliope_model:
         self.params = params
 
     def update_param(self, param: str, value):
-        self.params['param'] = value
+        self.params[param] = value
 
     def set_timeseries(self, timeseries: pd.DataFrame, path):
         self.timeseries['df'] = timeseries
@@ -494,10 +494,10 @@ class soc_proxy:
         self.params = params
 
 class tsa:
-    def __init__(self, type: Literal["cluster", "optimisation", "none"]):
+    def __init__(self, type: Literal["cluster", "optimisation", 'cluster_with_optimisation', "none"]):
 
         # establishing the type
-        if type not in ("cluster", "optimisation","none"):
+        if type not in ("cluster", "optimisation",'cluster_with_optimisation',"none"):
             raise ValueError(f"Invalid type: {type}")
         self.type = type
         self.status = False

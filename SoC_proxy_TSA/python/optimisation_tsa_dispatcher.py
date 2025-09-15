@@ -1,5 +1,5 @@
 from utility_functions.class_tsa_model import tsa_model
-from utility_functions.helper_visualise import visualise_soc, visualise
+from utility_functions.helper_visualise import visualise
 
 
 def run(calliope_params, soc_proxy_params, tsa_params):

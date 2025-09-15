@@ -105,7 +105,9 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['no_proxy','proxy_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' , 'cluster_with_optimisation_baseline'
+mode = 'optimisation'
+scenarios = ['cluster_with_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' , 'cluster_with_optimisation_baseline'
+
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -134,7 +136,7 @@ for scenario_name, scenario_batch in batch_config.items():
                         tsa_p[key] = value
 
 
-            m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type='cluster')
+            m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type=mode)
 
             list_model_dict.append({
                 'model': m,

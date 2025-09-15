@@ -54,7 +54,7 @@ def build_adapters(list_model_dict: List[Dict[str, Any]]) -> Tuple[List[ModelAda
             # Prefer m.tsa.type if available, else fall back to params['type']
             kind = getattr(m.tsa, "type", None) or m.calliope_model.params.get("type", "unclustered")
             params = {"name": name}
-            if kind == "cluster":
+            if kind in ['cluster','optimisation','cluster_with_optimisation']:
                 # your code used 'cluster' vs 'clustered' in places — normalize to 'clustered' for plotting
                 kind = "clustered"
             if kind == "clustered":
@@ -210,6 +210,10 @@ def visualise(
         if scalar_colour and colour_values is not None and adapter.kind != 'reference':
             line._hover_info[f"{colour_field}"] = f"{val*100:.2f}%"
 
+        # if y_field == 'soc' and adapter.kind == 'reference':
+        #     plt.axhline(y=0.9*float(np.nanmax(y_val)), color='lightgrey', linestyle='--') 
+
+
         lines.append(line)
 
     plt.xlabel(x_field)
@@ -218,6 +222,8 @@ def visualise(
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+
+    
 
     # colorbar for scalar colour_field
     if scalar_colour and (sm is not None):

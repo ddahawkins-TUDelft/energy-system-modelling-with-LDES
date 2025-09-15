@@ -1,9 +1,9 @@
 from utility_functions.class_tsa_model import tsa
 import pandas as pd
 import utility_functions.helper_optimisation_tsa as opt
+from utility_functions.helper_cluster_tsa_with_extremes import ClusterResult
 
-
-def optimisation_dispatch(tsa_config: tsa, path_clustermap: str):
+def optimisation_dispatch(tsa_config: tsa, path_clustermap: str, pre_cluster_result: ClusterResult = None):
 
     result = {
         'cluster_map': pd.DataFrame
@@ -20,21 +20,7 @@ def optimisation_dispatch(tsa_config: tsa, path_clustermap: str):
     use_soc_proxy = tsa_config.params['soc_proxy']['use_soc_proxy']
     proxy_inputs = tsa_config.params['soc_proxy']['proxy_inputs_to_consider']
 
-
-    
-
-
-
-    #if endogenous without proxy, or exogenous, make sure to remove any additional fields
-    if  (mode=='exogenous'):
-
-        target_columns = tsa_config.params['name_demand']+tsa_config.params['names_renewables']
-
-        extra = []
-        for feature in features:
-            extra.append(feature) if feature not in target_columns else None
-        if extra:
-            print(f'[TSA]: The fields {extra} were removed from features dataframe prior to optimisaiton.')
+    print('[TSA] Configuring MILP')
 
     # ======================== ENDOGENOUS MODE ======================== 
     if mode == 'endogenous':
@@ -56,10 +42,10 @@ def optimisation_dispatch(tsa_config: tsa, path_clustermap: str):
             for feature in features:
                 extra.append(feature) if feature not in target_columns else None
             if extra:
-                print(f'[TSA]: The fields {extra} were removed from features dataframe prior to optimisaiton.')
+                print(f'[TSA] use_soc_proxy was set to False. The following fields were removed from features dataframe prior to optimisaiton: {extra}')
         
         # ------------------------------ Main -------------------------------------
-
+        
         tsa_config.distance_matrix = opt.distance_matrix(
                 feature_df= tsa_config.df_features,
                 matrix_weights=tsa_config.params['matrix_weights'],
@@ -70,15 +56,21 @@ def optimisation_dispatch(tsa_config: tsa, path_clustermap: str):
                 proxy_window = tsa_config.params['soc_proxy']['proxy_window'] if tsa_config.params['soc_proxy']['use_soc_proxy'] else None
             )
         
+        
+        if pre_cluster_result: 
+            print(f'[TSA] Importing cluster_map from {path_clustermap}')
+            df_clustermap = pd.read_csv(path_clustermap)
 
-        print('[TSA] Solving MILP')
-        result = opt.milp_tsa(
-            distance_matrix=tsa_config.distance_matrix,
-            k=tsa_config.params['k_periods'],
-            solver='gurobi',
-            mipgap=0.01,
-            verbose=True
-        )
+            result = opt.ORDO()
+        else:
+            print('[TSA] Solving MILP')
+            result = opt.milp_tsa(
+                distance_matrix=tsa_config.distance_matrix,
+                k=tsa_config.params['k_periods'],
+                solver='gurobi',
+                mipgap=0.01,
+                verbose=True
+            )
         print('[TSA] Solution Found')
 
         #get index for saving
@@ -110,6 +102,47 @@ def optimisation_dispatch(tsa_config: tsa, path_clustermap: str):
             print(f'[TSA]: The fields {extra} were removed from features dataframe prior to optimisaiton.')
         
         # ------------------------------ Main -------------------------------------
+        
+        tsa_config.distance_matrix = opt.distance_matrix(
+                feature_df= tsa_config.df_features,
+                matrix_weights=tsa_config.params['matrix_weights'],
+                metric=tsa_config.params['distance_matrix_metric'],
+                column_prefixes_renewables=tsa_config.params['names_renewables'],
+                column_prefixes_demand=tsa_config.params['name_demand'],
+                column_prefixes_proxy=tsa_config.params['soc_proxy']['proxy_inputs_to_consider'] if tsa_config.params['soc_proxy']['use_soc_proxy'] else [],
+                proxy_window = tsa_config.params['soc_proxy']['proxy_window'] if tsa_config.params['soc_proxy']['use_soc_proxy'] else None
+            )
+        
+        
+        if pre_cluster_result: 
+            print(f'[TSA] Reading cluster_map')
+            df_clustermap = pd.read_csv(path_clustermap)
+
+            result = opt.ORDO()
+        else:
+            print('[TSA] Solving MILP')
+            result = opt.milp_tsa(
+                distance_matrix=tsa_config.distance_matrix,
+                k=tsa_config.params['k_periods'],
+                solver='gurobi',
+                mipgap=0.01,
+                verbose=True
+            )
+        print('[TSA] Solution Found')
+
+        #get index for saving
+        dates_index = df_features.resample("D").agg('mean').index
+
+        opt.save_milp_result_to_cluster_map(
+                result=result, 
+                dates_index=dates_index,
+                output_path=path_clustermap
+            )
+        
+        print(f'[TSA] Saving cluster map to {path_clustermap}')
+        
+        return result
+    
 
         
 

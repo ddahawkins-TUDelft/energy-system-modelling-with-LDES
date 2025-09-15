@@ -255,17 +255,64 @@ def save_milp_result_to_cluster_map(
 
 
 def ORDO(
-    path_timeseries: pd.DataFrame,
-    k: int,
-    path_cluster_map: str | None = None, #if none, perform milp on all days, if clustermap provided (path) then only use the pre-clustered days as candidates
-    soc_proxy_mode: str | None = None, #options: none, exogeneous, endogeneous
+    df_features: pd.DataFrame,
+    k: int, #can be different to k of pre_cluster if the MILP is intended to further shrink the number of rep days
+    path_cluster_map: str, #if none, perform milp on all days, if clustermap provided (path) then only use the pre-clustered days as candidates
+    use_endogenous_soc_proxy: bool = False,
+    is_pre_clustered: bool = False,
     solver: str = "gurobi",
     mipgap: float = 0.01,
     verbose: bool = True
     ):
-    
-    
+
+    if verbose:
+        print("[TSA] Building Pyomo model")
+
     
 
+    pyomo_model = pyo.ConcreteModel()
 
-    print('optimising')
+    #TODO: if is_pre_clustered then one of thesse becomes len(np.unique(df_clustermap))
+    n_days = distance_matrix.shape[0]
+    I = range(n_days)
+    J = range(n_days)
+
+    # Sets
+    pyomo_model.I = pyo.Set(initialize=I)
+    pyomo_model.J = pyo.Set(initialize=J)
+
+    # Parameters #TODO: implement a threshold here to encourage sparsity e.g. all values <0.01*Matrix Range are set to 0. We can explore the impact of this on model run times vs. outcome accuracy.
+    D_dict = {
+        (i, j): float(distance_matrix[i, j])
+        for i in I for j in J
+    }
+
+    
+
+    pyomo_model.D = pyo.Param(pyomo_model.I, pyomo_model.J, initialize=D_dict, within=pyo.NonNegativeReals)
+
+    # Decision variables
+    pyomo_model.y = pyo.Var(pyomo_model.I, domain=pyo.Binary)
+    pyomo_model.x = pyo.Var(pyomo_model.I, pyomo_model.J, domain=pyo.Binary)
+
+    # Objective: Minimize total assignment cost
+    def obj_rule(m):
+        return sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J)
+    if use_endogenous_soc_proxy:
+        pyomo_model.obj = pyo.Objective(rule=_endogenous_objective_function, sense=pyo.minimize)
+    else:
+        pyomo_model.obj = pyo.Objective(rule=_exogenous_objective_function, sense=pyo.minimize) #TODO: sense and objective function itself should be built from config.yaml
+
+    raise NotImplementedError('ORDO has not been implemented')
+
+
+
+def _exogenous_objective_function(m):
+    return sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J)
+
+def _endogenous_objective_function(m):
+    raise NotImplementedError('ORDO with endogenous SoC proxy not yet implemented.')
+
+        
+
+    

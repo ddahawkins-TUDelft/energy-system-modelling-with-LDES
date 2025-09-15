@@ -18,7 +18,7 @@ from utility_functions.helper_post_cluster_opt import apply_optimisation_on_clus
 import sys
 
 
-
+DEBUG_MODE = True
 
 class tsa_model:
     def __init__(self, path_timeseries: str, description: str = '', tsa_type= Literal["cluster", "optimisation", "none"]):
@@ -279,6 +279,8 @@ class tsa_model:
 
         self.compute_features_dataframe()
 
+        result = None
+
         #CLUSTERING: Runs if mode is set to cluster or cluster with optimisation
         if self.tsa.type in ['cluster','cluster_with_optimisation']:
 
@@ -305,39 +307,25 @@ class tsa_model:
 
             from utility_functions.helper_optimisation_dispatch import optimisation_dispatch
 
-            result = optimisation_dispatch(self.tsa, self.paths['cluster_map'])
+            if self.tsa.type == 'optimisation':
 
-            # self.tsa.distance_matrix = distance_matrix(
-            #     feature_df= self.tsa.df_features,
-            #     matrix_weights=self.tsa.params['matrix_weights'],
-            #     metric=self.tsa.params['distance_matrix_metric'],
-            #     column_prefixes_renewables=self.tsa.params['names_renewables'],
-            #     column_prefixes_demand=self.tsa.params['name_demand'],
-            #     column_prefixes_proxy=self.tsa.params['soc_proxy']['proxy_inputs_to_consider'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else [],
-            #     proxy_window = self.tsa.params['soc_proxy']['proxy_window'] if self.tsa.params['soc_proxy']['use_soc_proxy'] else None
-            # ) 
-            
-            # #get index for saving
-            # df_timeseries,_ = self._build_timeseries()
-            # dates_index = df_timeseries.resample("D").agg('mean').index
-            
-            # print(f'[TSA]: Solving MILP {self.id}')
-            # result = milp_tsa(
-            #     distance_matrix=self.tsa.distance_matrix,
-            #     k=self.tsa.params['k_periods'],
-            #     solver='gurobi',
-            #     mipgap=0.01,
-            #     verbose=True
-            # )
-            
+                result = optimisation_dispatch(
+                    tsa_config=self.tsa, 
+                    path_clustermap=self.paths['cluster_map'], 
+                    pre_cluster_result=None
+                )
 
-            # save_milp_result_to_cluster_map(
-            #     result=result, 
-            #     dates_index=dates_index,
-            #     output_path=self.paths['cluster_map']
-            # )
+            else:
 
-            
+                if DEBUG_MODE:
+                    os.remove(self.paths['cluster_map'])
+
+                result = optimisation_dispatch(
+                    tsa_config=self.tsa, 
+                    path_clustermap=self.paths['cluster_map'], 
+                    is_pre_clustered=result
+                )
+        
         print(f'[TSA] {self.tsa.type} completed in {time.time() - start_time:.2f}')
 
         return result

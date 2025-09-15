@@ -1,5 +1,6 @@
 no_proxy:  
   without proxy:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -11,6 +12,7 @@ no_proxy:
 
 proxy_baseline:
   soc proxy wt=1:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -27,8 +29,35 @@ proxy_baseline:
       extremes_spec: {}
       soft_prune: False
 
-cluster_with_optimisation_baseline:
-  cluster_with_optimisation_baseline:
+optimisation_baseline:
+  optimisation_without_proxy:
+    dispatch_mode: 'optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      soc_proxy: 
+          use_soc_proxy: False
+          proxy_inputs_to_consider: [''] 
+          proxy_window: None
+          optimisation_proxy_mode: 'endogenous'
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+      extremes_spec: {}
+      soft_prune: False
+      post_cluster_optimisation_params:
+        objective:
+            - polarity: minimise
+              target: soc_proxy_ldes
+              weight: 1.0
+              mode: match
+  optimisation_baseline:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -54,10 +83,37 @@ cluster_with_optimisation_baseline:
               weight: 1.0
               mode: match
             
-
+cluster_with_optimisation:
+  cluster_with_optimisation_exogenous_baseline:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 37
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: 'exogenous'
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+      extremes_spec: {}
+      soft_prune: False
+      post_cluster_optimisation_params:
+        objective:
+            - polarity: minimise
+              target: soc_proxy_ldes
+              weight: 1.0
+              mode: match
 
 proxy_weights:
   soc proxy wt=10:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -75,6 +131,7 @@ proxy_weights:
       soft_prune: False
 
   soc proxy wt=100:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -92,6 +149,7 @@ proxy_weights:
       soft_prune: False
 
   soc proxy wt=1000:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -110,6 +168,7 @@ proxy_weights:
 
 soc_features:
   soc_discharge_MWh:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -128,6 +187,7 @@ soc_features:
       soft_prune: False
 
   soc_charge_MWh:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -146,6 +206,7 @@ soc_features:
       soft_prune: False
 
   soc_activity_MWh:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -164,6 +225,7 @@ soc_features:
       soft_prune: False
 
   soc_net_MWh:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -183,6 +245,7 @@ soc_features:
 
 soc_feature_combinations:
   charge and discharge:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -202,6 +265,7 @@ soc_feature_combinations:
       soft_prune: False
 
   charge and activity:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -221,6 +285,7 @@ soc_feature_combinations:
       soft_prune: False
 
 discharge activity and k:
+  dispatch_mode: 'optimisation'
   discharge/activity k=18:
     calliope_params:
     soc_proxy_params:
@@ -241,6 +306,7 @@ discharge activity and k:
       soft_prune: False
 
   discharge/activity k=37:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -260,6 +326,7 @@ discharge activity and k:
       soft_prune: False
 
   discharge/activity k=54:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -279,6 +346,7 @@ discharge activity and k:
       soft_prune: False
 
   discharge/activity k=73:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -299,6 +367,7 @@ discharge activity and k:
 
 discharge activity weights:
   discharge/activity w=1:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -318,6 +387,7 @@ discharge activity weights:
       soft_prune: False
 
   discharge/activity w=10:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -337,6 +407,7 @@ discharge activity weights:
       soft_prune: False
 
   discharge/activity w=100:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -356,6 +427,7 @@ discharge activity weights:
       soft_prune: False
 
 charge discharge and k:      
+  dispatch_mode: 'optimisation'
   charge and discharge k=18:
     calliope_params:
     soc_proxy_params:
@@ -376,6 +448,7 @@ charge discharge and k:
       soft_prune: False
 
   charge and discharge k=37:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -395,6 +468,7 @@ charge discharge and k:
       soft_prune: False
 
   charge and discharge k=55:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -414,6 +488,7 @@ charge discharge and k:
       soft_prune: False
 
   charge and discharge k=73:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:
@@ -433,6 +508,7 @@ charge discharge and k:
       soft_prune: False
 
   charge and discharge k=91:
+    dispatch_mode: 'optimisation'
     calliope_params:
     soc_proxy_params:
     tsa_params:

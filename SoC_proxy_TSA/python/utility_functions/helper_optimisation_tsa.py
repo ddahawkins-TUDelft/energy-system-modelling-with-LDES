@@ -3,9 +3,11 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 from scipy.spatial.distance import cdist
 import multiprocessing
-max_threads = multiprocessing.cpu_count()
 import pyomo.environ as pyo
 import json
+import re
+
+max_threads = multiprocessing.cpu_count()
 
 def distance_matrix(
     feature_df: pd.DataFrame,
@@ -306,13 +308,126 @@ def ORDO(
     raise NotImplementedError('ORDO has not been implemented')
 
 
-
 def _exogenous_objective_function(m):
     return sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J)
 
 def _endogenous_objective_function(m):
     raise NotImplementedError('ORDO with endogenous SoC proxy not yet implemented.')
 
-        
+_HPAT = re.compile(r"^(?P<base>.+)_h(?P<hour>\d{2})$")
 
+def group_feature_columns(df_features: pd.DataFrame, preferred_features: list[str] | None = None):
+    """
+    Return:
+      mode: 'daily' or 'hourly24'
+      groups: dict[str, list[str]] mapping base feature -> columns (1 for daily, 24 for hourly)
+    """
+    cols = list(df_features.columns)
+    # If preferred_features provided, filter to those + their hourly expansions
+    if preferred_features:
+        def keep(c):
+            m = _HPAT.match(c)
+            base = m.group("base") if m else c
+            return base in preferred_features
+        cols = [c for c in cols if keep(c)]
+
+    # Try to detect hourly groups
+    groups = {}
+    for c in cols:
+        m = _HPAT.match(c)
+        if m:
+            base = m.group("base")
+            groups.setdefault(base, []).append(c)
+
+    if groups and all(len(sorted(v)) >= 24 for v in groups.values()):
+        # keep exactly the 24 hour columns per base
+        groups = {k: sorted([c for c in v if _HPAT.match(c)])[:24] for k, v in groups.items()}
+        return "hourly24", groups
+
+    # Else: daily mode — each selected column is its own feature
+    if preferred_features:
+        groups = {f: [f] for f in preferred_features if f in df_features.columns}
+    else:
+        groups = {c: [c] for c in df_features.columns}
+
+    return "daily", groups
+ 
+
+def _minmax_signed(col: np.ndarray) -> np.ndarray:
+    cmin = np.nanmin(col)
+    cmax = np.nanmax(col)
+    if not np.isfinite(cmin) or not np.isfinite(cmax) or cmax == cmin:
+        return np.zeros_like(col, dtype=float)
+    z = (col - cmin) / (cmax - cmin)
+    return 2.0 * z - 1.0
+
+def _ordo_cost_matrix_from_features(
+    df_features: pd.DataFrame,
+    feature_weights: dict[str, float] | None = None,
+    preferred_features: list[str] | None = None,
+    normalize: str = "minmax_signed",
+) -> np.ndarray:
+    """
+    Build D_{ij} = sum_features w_f * ||X_f[i,:] - X_f[j,:]||^2
+    - Works with 'daily' (1 col/feature) or 'hourly24' (24 cols/feature) formats.
+    - Normalization applied per column.
+    """
+    mode, groups = group_feature_columns(df_features, preferred_features)
+    N = len(df_features)
+    if feature_weights is None:
+        feature_weights = {}
     
+    # Build a single big design matrix X: shape (N, sum_k d_k), where d_k is 1 (daily) or 24 (hourly)
+    X_blocks = []
+    W_blocks = []
+    for base, cols in groups.items():
+        block = df_features[cols].to_numpy(dtype=float, copy=False)
+        # Normalize per column if requested
+        if normalize == "minmax_signed":
+            block = np.column_stack([_minmax_signed(block[:, j]) for j in range(block.shape[1])])
+        elif normalize != "none":
+            raise ValueError(f"Unknown normalize='{normalize}'")
+        X_blocks.append(block)
+        w = float(feature_weights.get(base, 1.0))
+        # Weight is applied per block; implement as column scaling by sqrt(w)
+        if w < 0:
+            w = 0.0
+        if w == 0:
+            W_blocks.append(np.zeros(block.shape[1], dtype=float))
+        else:
+            W_blocks.append(np.sqrt(w) * np.ones(block.shape[1], dtype=float))
+    
+    if not X_blocks:
+        raise ValueError("No features selected for cost matrix.")
+    
+    X = np.concatenate(X_blocks, axis=1)          # (N, Dtot)
+    wcol = np.concatenate(W_blocks, axis=0)       # (Dtot,)
+    # Apply weights by column scaling
+    Xw = X * wcol[None, :]
+
+    # Squared Euclidean distance matrix via (x - y)^2 = ||x||^2 + ||y||^2 - 2 x·y
+    norms = np.sum(Xw * Xw, axis=1)               # (N,)
+    G = Xw @ Xw.T                                 # Gram matrix
+    D = norms[:, None] + norms[None, :] - 2.0 * G
+    # numerical cleanup
+    D[D < 0] = 0.0
+    np.fill_diagonal(D, 0.0)
+    return D
+
+def solve_ordo_from_features(
+    df_features: pd.DataFrame,
+    k: int,
+    feature_weights: dict[str, float] | None = None,
+    preferred_features: list[str] | None = None,
+    normalize: str = "minmax_signed",
+    solver: str = "gurobi",
+    mipgap: float = 0.01,
+    verbose: bool = True,
+):
+    D = _ordo_cost_matrix_from_features(
+        df_features=df_features,
+        feature_weights=feature_weights,
+        preferred_features=preferred_features,
+        normalize=normalize,
+    )
+    return milp_tsa(D, k, solver=solver, mipgap=mipgap, verbose=verbose)

@@ -997,7 +997,7 @@ def milp_tsa_endogenous_with_dynamic_operators(
     lambda_soc: float = 0.5,
     hours_per_day: int = 24,
     enforce_cyclical: bool = True,
-    L_neighbors: int = 100,           # try 50–120
+    L_neighbors: int = 100,           # try 50–150
     solver: str = "gurobi",
     MIPGap: float = 0.01,
     threads: int | None = 12,
@@ -1007,16 +1007,14 @@ def milp_tsa_endogenous_with_dynamic_operators(
     import numpy as np
     import pyomo.environ as pyo
 
-    print('[TSA] Checking shape guards')
+    print('[TSA] Checking shapes')
     N = D.shape[0]
     assert D.shape == (N, N)
-    assert S_by_day.shape[0] == N and S_by_day.shape[1] == hours_per_day
+    assert S_by_day.shape == (N, hours_per_day)
     T = N * hours_per_day
     assert soc_ref.shape[0] == T and a.shape[0] == T
 
-    print('[TSA] Constructing neighbours, maps, and constants')
-
-    # --- neighbors (top-L by column) ---
+    # ---------- neighbour graph ----------
     L_neighbors = int(min(max(1, L_neighbors), N))
     neighbors = {j: np.argsort(D[:, j])[:L_neighbors].astype(int).tolist() for j in range(N)}
     pairs = [(int(i), int(j)) for j in range(N) for i in neighbors[j]]
@@ -1024,28 +1022,27 @@ def milp_tsa_endogenous_with_dynamic_operators(
     if len(I_cand) < k:
         raise RuntimeError(f"Not enough candidate reps ({len(I_cand)}) for k={k}. Increase L_neighbors.")
 
-    # inverse adjacency for fast coverage accounting
+    # reverse adjacency for quick coverage
     js_for_i = {i: [] for i in I_cand}
     for j in range(N):
         for i in neighbors[j]:
             js_for_i[i].append(j)
-    for i in I_cand:
-        js_for_i[i] = np.array(js_for_i[i], dtype=int)
+    js_for_i = {i: np.array(v, dtype=int) for i, v in js_for_i.items()}
 
-    # --- time mapping ---
+    # ---------- time mapping ----------
     day_of_t  = [t // hours_per_day for t in range(T)]
     hour_of_t = [t %  hours_per_day for t in range(T)]
     r = np.linspace(0.0, 1.0, T) if enforce_cyclical else np.zeros(T)
 
-    # --- constants ---
+    # ---------- constants ----------
     S_dict = {(i, h): float(S_by_day[i, h]) for i in range(N) for h in range(hours_per_day)}
     D_pairs = {(i, j): float(D[i, j]) for (i, j) in pairs}
     a_vec   = [float(x) for x in a]
     soc_ref_vec = [float(x) for x in soc_ref]
     r_vec   = [float(x) for x in r]
 
-    # ---------- Greedy k-medoids (neighbor-aware) for MIP start ----------
-    print('[TSA] Building greedy k-medoids MIP start over neighbor graph')
+    # ---------- greedy k-medoids (neighbour aware) ----------
+    print('[TSA] Building greedy k-medoids start')
     BASE = float(np.max(D)) if np.max(D) > 0 else 1.0
     current_cost = np.full(N, BASE, dtype=float)
     selected = []
@@ -1069,46 +1066,24 @@ def milp_tsa_endogenous_with_dynamic_operators(
         if js.size:
             np.minimum(current_cost[js], D[best_i, js], out=current_cost[js])
 
-    # Greedy neighbor-consistent assignment
+    selected = list(map(int, selected))
+    sel_set = set(selected)
+
+    # partial neighbor-consistent assignment (only if a selected neighbor exists)
     assign = {}
     for j in range(N):
-        njs = neighbors[j]
-        best_i, best_val = None, np.inf
-        for i in njs:
-            if i in selected:
-                vij = D[i, j]
-                if vij < best_val:
-                    best_val, best_i = vij, i
-        if best_i is None:
-            # if no selected neighbor, attach to nearest neighbor (will force y later)
-            i_fallback = min(njs, key=lambda ii: D[ii, j])
-            best_i = i_fallback
-            if i_fallback not in selected:
-                selected.append(i_fallback)
-        assign[j] = best_i
-
-    # Trim if we exceeded k (rare). Keep k most-used facilities and reassign.
-    if len(selected) > k:
-        freq = {i: 0 for i in selected}
-        for j in range(N):
-            freq[assign[j]] = freq.get(assign[j], 0) + 1
-        selected = sorted(selected, key=lambda i: -freq.get(i, 0))[:k]
-        for j in range(N):
-            njs = neighbors[j]
-            best_i, best_val = None, np.inf
-            for i in njs:
-                if i in selected:
-                    vij = D[i, j]
-                    if vij < best_val:
-                        best_val, best_i = vij, i
-            if best_i is None:
-                best_i = min(njs, key=lambda ii: D[ii, j])
+        sel_nei = [i for i in neighbors[j] if i in sel_set]
+        if sel_nei:
+            # choose nearest selected neighbour
+            best_i = min(sel_nei, key=lambda ii: D[ii, j])
             assign[j] = best_i
+        else:
+            assign[j] = None  # leave x[j] unspecified in MIP start (safe/partial)
 
-    print(f'[TSA] Greedy start picked {len(selected)} reps (target k={k})')
+    print(f'[TSA] Greedy start selected {len(selected)} reps (k={k}); '
+          f'covered columns: {sum(v is not None for v in assign.values())}/{N}')
 
-    # ---------- Model ----------
-    print('[TSA] Creating Pyomo model')
+    # ---------- model ----------
     m = pyo.ConcreteModel()
     m.I = pyo.Set(initialize=I_cand, ordered=True)
     m.J = pyo.RangeSet(0, N - 1)
@@ -1118,23 +1093,23 @@ def milp_tsa_endogenous_with_dynamic_operators(
     m.D = pyo.Param(m.PAIRS, initialize=D_pairs, within=pyo.NonNegativeReals)
 
     m.y = pyo.Var(m.I, domain=pyo.Binary)
-    m.x = pyo.Var(m.PAIRS, domain=pyo.Binary)  # <-- back to binaries
+    m.x = pyo.Var(m.PAIRS, domain=pyo.Binary)  # back to binaries
 
-    # assignment over neighbors
+    # assignment (restricted to neighbours)
     def assign_once_rule(_m, j):
         return sum(_m.x[i, j] for i in neighbors[j]) == 1
     m.assign_once = pyo.Constraint(m.J, rule=assign_once_rule)
 
-    # link and used_rep
+    # link, used_rep, exactly k reps
     m.link     = pyo.Constraint(m.PAIRS, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
     m.used_rep = pyo.Constraint(m.I, rule=lambda _m, i: sum(_m.x[i, j] for j in _m.J if (i, j) in _m.PAIRS) >= _m.y[i])
     m.num_reps = pyo.Constraint(expr=sum(m.y[i] for i in m.I) == k)
 
-    # surplus_hat[t] over neighbor set
+    # surplus_hat[t] over neighbour set
     m.surplus_hat = pyo.Expression(m.T, rule=lambda _m, t:
         sum(S_dict[(i, hour_of_t[t])] * _m.x[i, day_of_t[t]] for i in neighbors[day_of_t[t]]))
 
-    # finite bounds for SoC
+    # SoC bounds
     a_max = float(np.max(a)); Smax = float(np.max(np.abs(S_by_day)))
     UB_soc_raw = max(1.0, a_max * Smax * T); UB_z = 2.0 * UB_soc_raw
 
@@ -1168,100 +1143,69 @@ def milp_tsa_endogenous_with_dynamic_operators(
         sense=pyo.minimize
     )
 
-    # ---------- MIP start (robust) ----------
-    print('[TSA] Injecting MIP start (persistent interface where possible)')
-    sel_set = set(int(i) for i in selected)
+    # ---------- solve w/ robust MIP start ----------
+    print('[TSA] Solving with Gurobi (persistent) + partial MIP start')
+    opt = pyo.SolverFactory('gurobi_persistent')
+    opt.set_instance(m)
 
-    # Prefer the persistent interface – it reliably passes starts to Gurobi
-    try:
-        opt = pyo.SolverFactory('gurobi_persistent')
-        opt.set_instance(m)
+    # push starts directly to gurobipy vars
+    # (Pyomo versions differ; this is the reliable way)
+    gvmap = opt._pyomo_var_to_solver_var_map
 
-        # set starts explicitly
-        for i in m.I:
-            opt.set_start(m.y[i], 1.0 if int(i) in sel_set else 0.0)
+    # y starts: the k selected
+    for i in m.I:
+        gvar = gvmap[m.y[i]]
+        gvar.Start = 1.0 if int(i) in sel_set else 0.0
 
-        for j in range(N):
-            ij = assign[j]
+    # x starts: only where selected neighbour exists for j
+    for j in range(N):
+        ij = assign[j]
+        if ij is None:
+            continue  # leave unspecified
+        if (ij, j) in m.PAIRS:
+            # set chosen pair to 1, all other neighbour pairs to 0
+            gvar = gvmap[m.x[ij, j]]
+            gvar.Start = 1.0
             for i in neighbors[j]:
-                if (i, j) in m.PAIRS:
-                    opt.set_start(m.x[i, j], 1.0 if i == ij else 0.0)
+                if i != ij and (i, j) in m.PAIRS:
+                    gvmap[m.x[i, j]].Start = 0.0
 
-        # parameters
-        common = {
-            'MIPGap': MIPGap,
-            'Threads': int(threads) if threads else 12,
-            'LogToConsole': int(verbose),
-            'Presolve': 2, 'Aggregate': 2, 'ScaleFlag': 2,
-            'TimeLimit': 3600,
-            'MIPFocus': 1,           # incumbent search
-            'Heuristics': 0.2,
-            'RINS': 2,
-            'PumpPasses': 20,
-            'NodeMethod': 1,         # dual simplex in nodes
-            # make Gurobi really try the start:
-            'MIPStart': 2,           # 0=ignore,1=try,2=repair aggressively
-            'StartNodeLimit': 20000, # nodes devoted to the start
-            'ImproveStartTime': 60,  # seconds improving the start
-        }
-        if lp_method == "barrier":
-            opt.set_gurobi_param('Method', 2)         # barrier at root
-            opt.set_gurobi_param('Crossover', 0)
-            opt.set_gurobi_param('BarHomogeneous', 1)
-            opt.set_gurobi_param('BarOrder', -1)
-        else:
-            opt.set_gurobi_param('Method', 1)         # dual simplex root
+    # parameters
+    opt.set_gurobi_param('MIPGap', MIPGap)
+    opt.set_gurobi_param('Threads', int(threads) if threads else 12)
+    opt.set_gurobi_param('LogToConsole', int(verbose))
+    opt.set_gurobi_param('Presolve', 2)
+    opt.set_gurobi_param('Aggregate', 2)
+    opt.set_gurobi_param('ScaleFlag', 2)
+    opt.set_gurobi_param('TimeLimit', 3600)
 
-        for kpar, vpar in common.items():
-            opt.set_gurobi_param(kpar, vpar)
+    # encourage finding/incumbents early and repairing starts
+    opt.set_gurobi_param('MIPFocus', 1)
 
-        res = opt.solve(tee=verbose)
+    if lp_method == "barrier":
+        opt.set_gurobi_param('Method', 2)        # barrier at root
+        opt.set_gurobi_param('Crossover', 0)
+        opt.set_gurobi_param('BarHomogeneous', 1)
+        opt.set_gurobi_param('BarOrder', -1)
+    else:
+        opt.set_gurobi_param('Method', 1)        # dual simplex root
 
-    except Exception:
-        # Fallback to non-persistent; use Var.start so the writer exports the start.
-        opt = pyo.SolverFactory(solver)
-        for i in m.I:
-            m.y[i].start = 1.0 if int(i) in sel_set else 0.0
-        for j in range(N):
-            ij = assign[j]
-            for i in neighbors[j]:
-                if (i, j) in m.PAIRS:
-                    m.x[i, j].start = 1.0 if i == ij else 0.0
+    res = opt.solve(tee=verbose)
 
-        common_opts = {
-            'MIPGap': MIPGap,
-            'Threads': int(threads) if threads else 12,
-            'LogToConsole': int(verbose),
-            'Presolve': 2, 'Aggregate': 2, 'ScaleFlag': 2,
-            'TimeLimit': 2000,
-            'MIPFocus': 1,
-            'Heuristics': 0.2,
-            'RINS': 2,
-            'PumpPasses': 20,
-            'NodeMethod': 1,
-            'MIPStart': 2,
-            'StartNodeLimit': 20000,
-            'ImproveStartTime': 60,
-        }
-        if lp_method == "barrier":
-            common_opts.update({'Method': 2, 'Crossover': 0, 'BarHomogeneous': 1, 'BarOrder': -1})
-        else:
-            common_opts.update({'Method': 1})
-
-        res = opt.solve(m, tee=verbose, options=common_opts)
-
-    # ---------- Extract ----------
+    # ---------- extract ----------
     selected_days = [i for i in I_cand if pyo.value(m.y[i]) > 0.5]
     assignments = {}
     for j in range(N):
+        # pick i with the largest x[i,j] (should be 1)
         best_i, best_val = None, -1.0
         for i in neighbors[j]:
-            val = pyo.value(m.x[i, j])
-            if val is not None and val > best_val:
-                best_val, best_i = val, i
+            if (i, j) in m.PAIRS:
+                val = pyo.value(m.x[i, j])
+                if val is not None and val > best_val:
+                    best_val, best_i = val, i
         assignments[j] = best_i
-
     return {"selected_days": selected_days, "assignments": assignments, "model": m, "results": res}
+
 
 
 

@@ -78,8 +78,9 @@ tsa_params = {
             'demand': 1,
             'proxy': 1,
         },
-    # 'resample_to_daily_resolution': True,
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
+    # 'resample_to_daily_resolution': True, #optimisation options that should be enabled when running in optimisation mode
+    # 'rr_mode': 'soft',
     # 'distance_matrix_metric': 'euclidean',
     'name_demand': ['demand_power'],
     'soc_proxy': {
@@ -105,7 +106,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['cluster_with_optimisation'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
+scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
 
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------

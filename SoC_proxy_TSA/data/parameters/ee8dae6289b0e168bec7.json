@@ -45,12 +45,12 @@
             "demand_power"
         ],
         "soc_proxy": {
-            "use_soc_proxy": true,
+            "use_soc_proxy": false,
             "proxy_inputs_to_consider": [
-                "surplus_LDES"
+                ""
             ],
             "proxy_window": "None",
-            "optimisation_proxy_mode": "endogenous"
+            "optimisation_proxy_mode": "exogenous"
         },
         "cluster_method": "hierarchical",
         "representation_method": "distributionRepresentation",
@@ -67,6 +67,9 @@
                     "mode": "match"
                 }
             ]
-        }
+        },
+        "rr_mode": "soft",
+        "resample_to_daily_resolution": true,
+        "distance_matrix_metric": "euclidean"
     }
 }

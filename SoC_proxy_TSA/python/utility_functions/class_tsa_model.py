@@ -135,7 +135,7 @@ class tsa_model:
         #check id exists
         if not self.id:
             raise Exception('A unique ID has not been assigned, please fully configure the model with appropriate parameters and then call tsa_model.compute_id().')
-        print(f'> Calliope: Validating and Configuring Calliope model: {self.id}')
+        print(f'[Calliope] Validating and Configuring Calliope model: {self.id}')
 
         # if os.path.exists(self.paths['calliope_model']):
         #     print(f'> Calliope: Results already exist for: {self.id}, loading model instead.')
@@ -179,13 +179,13 @@ class tsa_model:
         if not self.paths['calliope_model']:
             raise Exception('A valid save path has not been configured.')
         if os.path.exists(self.paths['calliope_model']):
-            print(f'> Calliope: Results already exist for: {self.id}, loading model instead.')
+            print(f'[Calliope] Results already exist for: {self.id}, loading model instead.')
             self.calliope_model.model = calliope.read_netcdf(self.paths['calliope_model'])
             self.calliope_model.status = 'solved'
         else:
             if self.calliope_model.status != 'configured':
                 raise Exception('Calliope model has not been configured.')
-            print(f'> Calliope: Building Calliope model: {self.id}')
+            print(f'[Calliope] Building Calliope model: {self.id}')
             self.calliope_model.model.build()
             self.calliope_model.status = 'built'
         
@@ -193,17 +193,17 @@ class tsa_model:
         if not self.paths['calliope_model']:
             raise Exception('A valid save path has not been configured.')
         if os.path.exists(self.paths['calliope_model']):
-            print('> Calliope: skipping...')
+            print('[Calliope] skipping...')
             self.calliope_model.model = calliope.read_netcdf(self.paths['calliope_model'])
             self.calliope_model.status = 'solved'
         else:
             if self.calliope_model.status != 'built':
                 raise Exception('Calliope model has not been built.')
-            print(f'> Calliope: Solving Calliope model: {self.id}')
+            print(f'[Calliope] Solving Calliope model: {self.id}')
             self.calliope_model.model.solve()
             self.calliope_model.status = 'solved'
             self.calliope_model.model.to_netcdf(self.paths['calliope_model'])
-            print(f'> Calliope: Solution saved to: {self.paths['calliope_model']}')
+            print(f'[Calliope] Solution saved to: {self.paths['calliope_model']}')
 
 
     #SOC Proxy FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -259,8 +259,8 @@ class tsa_model:
     def compute_features_dataframe(self):
 
         if os.path.exists(self.paths['cluster_map']):
-            print(f'> TSA: Warning, {self.paths['cluster_map']} already exists.')
-        print(f'> TSA: Extracting features dataframe for {self.id}') #TODO:
+            print(f'[TSA] Warning, {self.paths['cluster_map']} already exists.')
+        print(f'[TSA] Extracting features dataframe for {self.id}') #TODO:
 
         df_timeseries, original_columns = self._build_timeseries()
         df_timeseries = self._resample_timeseries(df_timeseries, original_columns)
@@ -272,7 +272,7 @@ class tsa_model:
     def apply_tsa_pipeline(self):
 
         if os.path.exists(self.paths['cluster_map']):
-            print(f'> TSA: Skipping TSA as cluster map already exists at {self.paths['cluster_map']}')
+            print(f'[TSA] Skipping TSA as cluster map already exists at {self.paths['cluster_map']}')
             return
         
         start_time = time.time()
@@ -281,11 +281,18 @@ class tsa_model:
 
         result = None
 
+        weightDict = self._compute_weights_dictionary()
+
+        if self.tsa.params['soc_proxy']['use_soc_proxy']:
+            _soc_proxy_params = self.soc_proxy.params
+        else:
+            _soc_proxy_params = {}
+
         #CLUSTERING: Runs if mode is set to cluster or cluster with optimisation
         if self.tsa.type in ['cluster','cluster_with_optimisation']:
 
             # Compute weights dictionary
-            weightDict = self._compute_weights_dictionary()
+            
                 
             result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
@@ -312,7 +319,10 @@ class tsa_model:
                 result = optimisation_dispatch(
                     tsa_config=self.tsa, 
                     path_clustermap=self.paths['cluster_map'], 
-                    pre_cluster_result=None
+                    path_timeseries=self.paths['timeseries'],
+                    pre_cluster_result=None,
+                    feature_weights=weightDict,
+                    soc_proxy_params=_soc_proxy_params
                 )
 
             else:
@@ -324,7 +334,10 @@ class tsa_model:
                 result = optimisation_dispatch(
                     tsa_config=self.tsa, 
                     path_clustermap=self.paths['cluster_map'], 
-                    pre_cluster_result=result
+                    path_timeseries=self.paths['timeseries'],
+                    pre_cluster_result=result,
+                    feature_weights=weightDict,
+                    soc_proxy_params=_soc_proxy_params
                 )
         
         print(f'[TSA] {self.tsa.type} completed in {time.time() - start_time:.2f}')
@@ -368,6 +381,19 @@ class tsa_model:
                 timestamp_col=None
             )
 
+            if (self.tsa.type in ['optimisation','cluster_with_optimisation']
+                and self.tsa.params['soc_proxy']['optimisation_proxy_mode'] == 'endogenous'
+                ):
+
+                days, rows = [], []
+                for day, g in df_timeseries.groupby(pd.Grouper(freq="D")):
+                    if len(g) != 24:
+                        continue  # skip incomplete days
+                    rows.append(g['surplus_LDES'].to_numpy(dtype=float))
+                    days.append(day.normalize())
+                self.tsa._surplus_hourly_by_day = np.vstack(rows) if rows else np.empty((0, 24))
+                self.tsa._surplus_hourly_index = pd.DatetimeIndex(days, name="timesteps")
+
         return df_timeseries[original_columns], original_columns
     
     def _resample_timeseries(self, df_timeseries, original_columns):
@@ -403,6 +429,23 @@ class tsa_model:
                     index=pd.DatetimeIndex(days, name="timesteps")
                 )
 
+        #  realign cached hourly-surplus templates to the resampled/transposed daily index ---
+        if (
+            hasattr(self.tsa, "_surplus_hourly_by_day")
+            and hasattr(self.tsa, "_surplus_hourly_index")
+            and len(self.tsa._surplus_hourly_by_day) > 0
+        ):
+            # Reindex to the current df_timeseries index (which is daily in both branches)
+            S = pd.DataFrame(
+                self.tsa._surplus_hourly_by_day,
+                index=self.tsa._surplus_hourly_index,
+                columns=[f"h{h:02d}" for h in range(24)]
+            )
+            S = S.reindex(df_timeseries.index)  # align to whatever resampling produced
+            # Store back as a tight ndarray for fast use later
+            self.tsa._surplus_hourly_by_day = S.to_numpy(dtype=float)
+            self.tsa._surplus_hourly_index = S.index
+
         return df_timeseries
         
 
@@ -420,7 +463,7 @@ class tsa_model:
         with open(self.paths['parameters'], "w") as f:
             json.dump(params, f, indent=4)  # indent=4 makes it readable   
         
-        print(f'> Model: Parameter json saved to {self.paths['parameters']}')
+        print(f'[Model] Parameter json saved to {self.paths['parameters']}')
 
     def load_params(self, assign: bool = False):
 
@@ -438,9 +481,9 @@ class tsa_model:
             self.calliope_model.params = calliope_params
             self.soc_proxy.params = soc_proxy_params
             self.tsa.params = tsa_params
-            print(f'> Model: Parameter json loaded from {self.paths['parameters']} and assigned to model')
+            print(f'[Model]  Parameter json loaded from {self.paths['parameters']} and assigned to model')
         else:
-            print(f'> Model: Parameter json loaded from {self.paths['parameters']}')
+            print(f'[Model]  Parameter json loaded from {self.paths['parameters']}')
 
         return calliope_params, soc_proxy_params, tsa_params
 

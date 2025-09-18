@@ -48,7 +48,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 calliope_params = {
         'type': 'cluster',
         'config_yaml_name': 'model',
-        'date_range': [2015,2019],
+        'date_range': [2016,2017],
         'calliope_full_log': [False, False],
 }
 
@@ -106,7 +106,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
+scenarios = ['soc_features'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
 # exogenous_optimisation_baseline   endogenous_optimisation_baseline
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -145,10 +145,13 @@ for scenario_name, scenario_batch in batch_config.items():
             })
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
-print(f'> Dispatch: Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf')
+print(f'> Dispatch: Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc')
 #add the reference case
+
+ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc'
+
 list_model_dict.append({
-    'model': calliope.read_netcdf(f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.netcdf'),
+    'model': calliope.read_netcdf(ref_path),
     'name': 'reference',
     'params': {
         'date_range': calliope_params['date_range'],
@@ -156,6 +159,7 @@ list_model_dict.append({
         'soc_proxy_params': soc_proxy_params
     },
 })
+
 print('> Dispatch: Visualising results')
 visualise(
     list_model_dict=list_model_dict,

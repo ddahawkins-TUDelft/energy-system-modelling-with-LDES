@@ -8,6 +8,8 @@ import utility_functions.class_tsa_model
 def read_clustered_netcdf(path):
 
     p = Path(path).resolve()
+    if not p.is_file():
+        raise Exception('File does not exist at: {path}')
     with Dataset(p, "a") as nc:  # append mode
         g = nc.groups["attrs"]
         cfg = yaml.safe_load(g.getncattr("config"))

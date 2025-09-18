@@ -107,7 +107,7 @@ class tsa_model:
         #assign and create the relevant directories
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}"):
             os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}")
-        self.paths['calliope_model'] = f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}/{self.id}.netcdf"
+        self.paths['calliope_model'] = f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}/{self.id}.nc"
         
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}"):
             os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}")

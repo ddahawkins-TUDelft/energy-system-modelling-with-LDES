@@ -340,24 +340,24 @@ soc_features:
       extremes_spec: {}
       soft_prune: False
 
-  soc_net_MWh:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 37
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 10
-      soc_features:
-        soc_net_MWh: 10
-      extremes_spec: {}
-      soft_prune: False
+  # soc_net_MWh:
+  #   dispatch_mode: 'cluster'
+  #   calliope_params:
+  #   soc_proxy_params:
+  #   tsa_params:
+  #     k_periods: 37
+  #     soc_proxy: 
+  #         use_soc_proxy: True
+  #         proxy_inputs_to_consider: ['surplus_LDES'] 
+  #         proxy_window: None
+  #     matrix_weights: 
+  #           renewables: 1
+  #           demand: 1
+  #           proxy: 10
+  #     soc_features:
+  #       soc_net_MWh: 10
+  #     extremes_spec: {}
+  #     soft_prune: False
 
 soc_feature_combinations:
   charge and discharge:

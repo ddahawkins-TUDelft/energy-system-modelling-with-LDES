@@ -44,7 +44,7 @@ def standardised_model_config(params):
         )
 
         #determine filename based on scenario
-        filename = f'standard_{params['horizon_start'][:4]}_{params['horizon_end'][:4]}_reference.netcdf'
+        filename = f'standard_{params['horizon_start'][:4]}_{params['horizon_end'][:4]}_reference.nc'
     
    #export configured calliope model
         return model, filename

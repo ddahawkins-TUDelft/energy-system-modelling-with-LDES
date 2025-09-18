@@ -107,7 +107,7 @@ with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
 scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
-
+# exogenous_optimisation_baseline   endogenous_optimisation_baseline
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 

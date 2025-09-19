@@ -516,7 +516,6 @@ def build_feature_design_matrices_for_rr(
 
     return X_fit, A_fit, A_norm, X_norm, scale_params, colnames, group_slices, group_names
 
-
 def build_duration_curve_quadratic_terms(
     *,
     X_norm: np.ndarray,            # (N, D) normalized (no weights)
@@ -564,7 +563,6 @@ def build_duration_curve_quadratic_terms(
         R += w_g * (H.T @ H)                                # (C x C)
         s += w_g * (H.T @ y_counts)                         # (C,)
     return R, s
-
 
 def rr_soft_fit_weights_batched(
     *,
@@ -647,8 +645,6 @@ def rr_soft_fit_weights_batched(
     w = np.array([pyo.value(m.w[i]) for i in range(C)], dtype=float)
     return V, w
 
-
-
 def rr_soft_fit_weights(
     X_fit: np.ndarray,   # (N, D)  normalized + weighted
     A_fit: np.ndarray,   # (C, D)  normalized + weighted
@@ -707,7 +703,6 @@ def rr_soft_fit_weights(
 
     return V
 
-
 def rr_soft_reconstruct(
     V: np.ndarray,           # (C, N)
     A_norm: np.ndarray,      # (C, D)  normalized (no weights)
@@ -732,7 +727,6 @@ def rr_soft_reconstruct(
 
     df_hat = pd.DataFrame(Xhat, columns=column_order, index=None)
     return df_hat
-
 
 def rr_hard_assign(
     D: np.ndarray,            # full (N x N) cost matrix in ORDO metric
@@ -788,7 +782,6 @@ def rr_hard_assign(
         rep_for_day[j] = chosen if chosen is not None else cand_idx[0]
     return rep_for_day
 
-
 def rebuild_from_assignments(df_features: pd.DataFrame, rep_for_day: np.ndarray) -> pd.DataFrame:
     """
     Build a synthetic df by copying the representative row chosen for each day.
@@ -796,7 +789,6 @@ def rebuild_from_assignments(df_features: pd.DataFrame, rep_for_day: np.ndarray)
     assert len(rep_for_day) == len(df_features)
     df_hat = df_features.iloc[rep_for_day].reset_index(drop=True)
     return df_hat
-
 
 def solve_ordo_from_features(
     df_features: pd.DataFrame,

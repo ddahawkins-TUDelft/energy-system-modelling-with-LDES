@@ -171,8 +171,8 @@ exogenous_optimisation_baseline:
                   weight: 1.0
                   mode: match
 
-cluster_with_optimisation_rr_tests:
-  exogenous_soft_rr:
+cluster_with_optimisation:
+  cluster_with_exogenous_optimisation_correction:
     dispatch_mode: 'cluster_with_optimisation'
     calliope_params:
     soc_proxy_params:

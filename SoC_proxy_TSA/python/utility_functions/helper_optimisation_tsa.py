@@ -987,322 +987,152 @@ def milp_tsa_endogenous(
     assignments = {j: next(i for i in range(N) if pyo.value(m.x[i,j]) > 0.5) for j in range(N)}
     return {"selected_days": selected_days, "assignments": assignments, "model": m, "results": res}
 
-def milp_tsa_endogenous_with_dynamic_operators(
+def milp_tsa_endogenous_basic(
     *,
-    D: np.ndarray,                    # (N x N)
+    D: np.ndarray,                    # (N x N) ORDO cost matrix
     k: int,
-    soc_ref: np.ndarray,              # (T,)
-    S_by_day: np.ndarray,             # (N x 24)
-    a: np.ndarray,                    # (T,)
+    soc_ref: np.ndarray,              # (T,) reference SoC
+    S_by_day: np.ndarray,             # (N x 24) hourly surplus per candidate day
+    a: np.ndarray,                    # (T,) frozen gains: eta_ch or 1/eta_dis
     lambda_soc: float = 0.5,
     hours_per_day: int = 24,
     enforce_cyclical: bool = True,
-    L_neighbors: int = 100,           # try 50–150
     solver: str = "gurobi",
     MIPGap: float = 0.01,
     threads: int | None = 12,
+    timelimit: int = 1800,
     verbose: bool = True,
-    lp_method: str = "barrier",       # "dual" or "barrier"
+    root_lp: str = "auto",            # "auto" | "dual" | "barrier"
 ):
+    """
+    Minimize: (1-λ)*sum_{i,j} D[i,j] x[i,j] + λ * sum_t |soc_hat[t] - soc_ref[t]|
+    with endogenous SoC built from chosen representative-day sequence.
+    """
     import numpy as np
     import pyomo.environ as pyo
 
-    print('[TSA] Checking shapes')
+    print('[TSA] Constructing and testing inputs for endogenous MILP')
+    # ---------- Shapes & guards ----------
     N = D.shape[0]
-    assert D.shape == (N, N)
-    assert S_by_day.shape == (N, hours_per_day)
+    assert D.shape == (N, N), "D must be (N,N)"
+    assert S_by_day.shape == (N, hours_per_day), f"S_by_day must be (N,{hours_per_day})"
     T = N * hours_per_day
-    assert soc_ref.shape[0] == T and a.shape[0] == T
+    assert soc_ref.shape[0] == T, f"soc_ref length {soc_ref.shape[0]} != {T}"
+    assert a.shape[0] == T, f"a length {a.shape[0]} != {T}"
 
-    # ---------- neighbour graph ----------
-    L_neighbors = int(min(max(1, L_neighbors), N))
-    neighbors = {j: np.argsort(D[:, j])[:L_neighbors].astype(int).tolist() for j in range(N)}
-    pairs = [(int(i), int(j)) for j in range(N) for i in neighbors[j]]
-    I_cand = sorted({i for (i, _) in pairs})
-    if len(I_cand) < k:
-        raise RuntimeError(f"Not enough candidate reps ({len(I_cand)}) for k={k}. Increase L_neighbors.")
-
-    # reverse adjacency: j's that each i can cover
-    js_for_i = {i: [] for i in I_cand}
-    for j in range(N):
-        for i in neighbors[j]:
-            js_for_i[i].append(j)
-    js_for_i = {i: np.array(v, dtype=int) for i, v in js_for_i.items()}
-
-    # ---------- time mapping ----------
+    # mapping t -> (day, hour) and cyc ramp r[t]
     day_of_t  = [t // hours_per_day for t in range(T)]
     hour_of_t = [t %  hours_per_day for t in range(T)]
     r = np.linspace(0.0, 1.0, T) if enforce_cyclical else np.zeros(T)
 
-    # ---------- constants ----------
+    # pack constants
     S_dict = {(i, h): float(S_by_day[i, h]) for i in range(N) for h in range(hours_per_day)}
-    D_pairs = {(i, j): float(D[i, j]) for (i, j) in pairs}
-    a_vec   = [float(x) for x in a]
+    D_dict = {(i, j): float(D[i, j]) for i in range(N) for j in range(N)}
+    a_vec  = [float(x) for x in a]
     soc_ref_vec = [float(x) for x in soc_ref]
-    r_vec   = [float(x) for x in r]
+    r_vec  = [float(x) for x in r]
 
-    # ---------- greedy k-medoids seed ----------
-    print('[TSA] Greedy k-medoids seed')
-    BASE = float(np.max(D)) if np.max(D) > 0 else 1.0
-    current_cost = np.full(N, BASE, dtype=float)
-    selected = []
-    unused = set(I_cand)
+    print('[TSA] Constructing pyomo model')
 
-    for _ in range(k):
-        best_i, best_gain = None, -1.0
-        for i in list(unused):
-            js = js_for_i[i]
-            if js.size == 0:
-                continue
-            di = D[i, js]
-            gain = np.maximum(0.0, current_cost[js] - di).sum()
-            if gain > best_gain:
-                best_gain, best_i = gain, i
-        if best_i is None:
-            best_i = next(iter(unused))
-        selected.append(best_i)
-        unused.remove(best_i)
-        js = js_for_i[best_i]
-        if js.size:
-            np.minimum(current_cost[js], D[best_i, js], out=current_cost[js])
-
-    sel_set = set(map(int, selected))
-
-    # ---------- coverage repair (ensure every j has a selected neighbour) ----------
-    print('[TSA] Coverage repair for MIP start')
-    cover_count = np.zeros(N, dtype=int)
-    for i in sel_set:
-        js = js_for_i[i]
-        if js.size:
-            cover_count[js] += 1
-
-    def gain_if_add(i_add):
-        js = js_for_i[i_add]
-        return int(np.count_nonzero(cover_count[js] == 0)) if js.size else 0
-    def loss_if_drop(i_drop):
-        js = js_for_i[i_drop]
-        return int(np.count_nonzero(cover_count[js] == 1)) if js.size else 0
-
-    safety = 5 * max(1, k)
-    while True:
-        uncovered_js = np.where(cover_count == 0)[0]
-        if uncovered_js.size == 0 or safety <= 0:
-            break
-        safety -= 1
-        j_star = int(uncovered_js[0])
-        cand_add = [i for i in neighbors[j_star] if i not in sel_set]
-        if not cand_add:
-            continue
-        i_add = max(cand_add, key=gain_if_add)
-        i_drop = min(sel_set, key=loss_if_drop)
-        # apply swap
-        sel_set.remove(i_drop); js = js_for_i[i_drop]
-        if js.size: cover_count[js] -= 1
-        sel_set.add(i_add); js = js_for_i[i_add]
-        if js.size: cover_count[js] += 1
-
-    assign = {}
-    for j in range(N):
-        sel_nei = [i for i in neighbors[j] if i in sel_set]
-        assign[j] = min(sel_nei, key=lambda ii: D[ii, j]) if sel_nei else None
-
-    print(f'[TSA] Start reps: {len(sel_set)} (k={k}); assigned columns: '
-          f'{sum(v is not None for v in assign.values())}/{N}')
-
-    # ---------- MILP model ----------
+    # ---------- Model ----------
     m = pyo.ConcreteModel()
-    m.I = pyo.Set(initialize=I_cand, ordered=True)
+    m.I = pyo.RangeSet(0, N - 1)
     m.J = pyo.RangeSet(0, N - 1)
     m.T = pyo.RangeSet(0, T - 1)
-    m.PAIRS = pyo.Set(dimen=2, initialize=pairs, ordered=True)
-    m.D = pyo.Param(m.PAIRS, initialize=D_pairs, within=pyo.NonNegativeReals)
+
+    m.D = pyo.Param(m.I, m.J, initialize=D_dict, within=pyo.NonNegativeReals)
 
     m.y = pyo.Var(m.I, domain=pyo.Binary)
-    m.x = pyo.Var(m.PAIRS, domain=pyo.Binary)
+    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)
 
-    def assign_once_rule(_m, j):
-        return sum(_m.x[i, j] for i in neighbors[j]) == 1
-    m.assign_once = pyo.Constraint(m.J, rule=assign_once_rule)
+    #branching prioritisation to help solutions converge
+    m.branchpri = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+    for i in m.I:
+        m.branchpri[m.y[i]] = 100  # prioritize committing to representatives early
 
-    m.link     = pyo.Constraint(m.PAIRS, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
-    m.used_rep = pyo.Constraint(m.I, rule=lambda _m, i: sum(_m.x[i, j] for j in _m.J if (i, j) in _m.PAIRS) >= _m.y[i])
-    m.num_reps = pyo.Constraint(expr=sum(m.y[i] for i in m.I) == k)
+    # ORDO constraints
+    m.assign_once = pyo.Constraint(m.J, rule=lambda _m, j: sum(_m.x[i, j] for i in _m.I) == 1)
+    m.link        = pyo.Constraint(m.I, m.J, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
+    m.num_reps    = pyo.Constraint(rule=lambda _m: sum(_m.y[i] for i in _m.I) == k)
+    m.used_rep    = pyo.Constraint(m.I, rule=lambda _m, i: sum(_m.x[i, j] for j in _m.J) >= _m.y[i])
 
-    m.surplus_hat = pyo.Expression(
-        m.T,
-        rule=lambda _m, t: sum(S_dict[(i, hour_of_t[t])] * _m.x[i, day_of_t[t]] for i in neighbors[day_of_t[t]])
-    )
+    # surplus_hat[t]
+    def surplus_hat_rule(_m, t):
+        j = day_of_t[t]
+        h = hour_of_t[t]
+        return sum(S_dict[(i, h)] * _m.x[i, j] for i in _m.I)
+    m.surplus_hat = pyo.Expression(m.T, rule=surplus_hat_rule)
 
-    # SoC bounds
-    a_max = float(np.max(a)); Smax = float(np.max(np.abs(S_by_day)))
-    UB_soc_raw = max(1.0, a_max * Smax * T); UB_z = 2.0 * UB_soc_raw
+    # SoC bounds (crude but finite)
+    Smax = float(np.max(np.abs(S_by_day)))
+    sum_abs_a = float(np.sum(np.abs(a)))
+    UB_soc_raw = max(1.0, Smax * sum_abs_a)   # much tighter than a_max * Smax * T
+    UB_z = 2.0 * UB_soc_raw
 
     # SoC dynamics
     m.soc_raw = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
     m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == a_vec[0] * m.surplus_hat[0])
     def soc_raw_dyn_rule(_m, t):
         if t == 0: return pyo.Constraint.Skip
-        return _m.soc_raw[t] == _m.soc_raw[t-1] + a_vec[t] * _m.surplus_hat[t]
+        return _m.soc_raw[t] == _m.soc_raw[t - 1] + a_vec[t] * _m.surplus_hat[t]
     m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn_rule)
 
     m.soc_end = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
-    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T-1])
+    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T - 1])
 
     m.soc = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
     m.soc_def = pyo.Constraint(m.T, rule=lambda _m, t: _m.soc[t] == _m.soc_raw[t] - r_vec[t] * _m.soc_end)
 
     # L1 residuals
-    m.socdiff = pyo.Var(m.T)
+    m.socdiff = pyo.Var(m.T)  # free
     m.z       = pyo.Var(m.T, domain=pyo.NonNegativeReals, bounds=(0.0, UB_z))
     m.soc_def2 = pyo.Constraint(m.T, rule=lambda _m, t: _m.socdiff[t] == _m.soc[t] - soc_ref_vec[t])
     m.z_pos    = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
     m.z_neg    = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
 
-    # objective scaling
-    dist_scale = max(1e-12, float(np.mean(list(D_pairs.values()))))
+    # Objective (scaled to O(1))
+    dist_scale = max(1e-12, float(np.mean(D)))
     prox_scale = max(1e-12, float(np.mean(np.abs(soc_ref))))
-    m.obj = pyo.Objective(
-        expr=(1 - lambda_soc) * (sum(m.x[i, j] * m.D[i, j] for (i, j) in m.PAIRS) / dist_scale)
-           +      lambda_soc  * (sum(m.z[t]                  for t in m.T)         / prox_scale),
-        sense=pyo.minimize
-    )
+    def obj(_m):
+        dist = (1 - lambda_soc) * (sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale)
+        prox =      lambda_soc  * (sum(_m.z[t]               for t in _m.T)               / prox_scale)
+        return dist + prox
+    m.obj = pyo.Objective(rule=obj, sense=pyo.minimize)
 
-    # ---------- persistent solve + MIP starts ----------
-    print('[TSA] Solving with Gurobi (persistent) + feasible MIP starts')
-    opt = pyo.SolverFactory('gurobi_persistent')
-    opt.set_instance(m)
+    
+    # ---------- Solve ----------
+    opt = pyo.SolverFactory(solver)
+    solve_opts = {
+        'MIPGap': MIPGap,
+        'LogToConsole': int(verbose),
+        'TimeLimit': int(timelimit),
+        'Presolve': 2,
+        'Method': 3,
+        'MIPFocus': 3,
+        'Cuts': 2,
+        'CutPasses': 2
+    }
+    if threads is not None:
+        solve_opts['Threads'] = int(threads)
 
-    # map to gurobi vars (to set .Start)
-    gvmap = opt._pyomo_var_to_solver_var_map
+    # optional root LP strategy
+    root_lp = (root_lp or "auto").lower()
+    if root_lp == "dual":
+        solve_opts['Method'] = 1                    # dual simplex at root
+    elif root_lp == "barrier":
+        solve_opts['Method'] = 2                    # barrier at root
+        solve_opts['Crossover'] = 0                 # only when Method=2
+        solve_opts['BarHomogeneous'] = 1            # mild stabilization
 
-    # Greedy start
-    for i in m.I:
-        gvmap[m.y[i]].Start = 1.0 if int(i) in sel_set else 0.0
-    for j in range(N):
-        ij = assign[j]
-        if ij is None:  # leave unspecified; Gurobi may repair
-            continue
-        if (ij, j) in m.PAIRS:
-            gvmap[m.x[ij, j]].Start = 1.0
-        for i in neighbors[j]:
-            if (i, j) in m.PAIRS and i != ij:
-                gvmap[m.x[i, j]].Start = 0.0
+    print('[TSA] Solving with parameters {solve_opts}')
 
-    # ------- SoC-aware LP relax-and-round warm start (fresh model, no reuse of components) -------
-    m_relax = pyo.ConcreteModel()
-    m_relax.I = pyo.Set(initialize=list(m.I), ordered=True)
-    m_relax.J = pyo.RangeSet(0, N - 1)
-    m_relax.T = pyo.RangeSet(0, T - 1)
-    m_relax.PAIRS = pyo.Set(dimen=2, initialize=pairs, ordered=True)
-    m_relax.D = pyo.Param(m_relax.PAIRS, initialize=D_pairs, within=pyo.NonNegativeReals)
+    res = opt.solve(m, tee=verbose, options=solve_opts)
 
-    m_relax.y = pyo.Var(m_relax.I, bounds=(0,1))
-    m_relax.x = pyo.Var(m_relax.PAIRS, bounds=(0,1))
-
-    def assign_once_rel(_m, j):
-        return sum(_m.x[i, j] for i in neighbors[j]) == 1
-    m_relax.assign_once = pyo.Constraint(m_relax.J, rule=assign_once_rel)
-    m_relax.link = pyo.Constraint(m_relax.PAIRS, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
-    m_relax.num_reps = pyo.Constraint(expr=sum(m_relax.y[i] for i in m_relax.I) == k)
-
-    m_relax.surplus_hat = pyo.Expression(
-        m_relax.T,
-        rule=lambda _m, t: sum(S_dict[(i, hour_of_t[t])] * _m.x[i, day_of_t[t]] for i in neighbors[day_of_t[t]])
-    )
-
-    # SoC block duplicated for relax model
-    m_relax.soc_raw = pyo.Var(m_relax.T, bounds=(-UB_soc_raw, UB_soc_raw))
-    m_relax.soc_raw_0 = pyo.Constraint(expr=m_relax.soc_raw[0] == a_vec[0] * m_relax.surplus_hat[0])
-    def soc_raw_dyn_rel(_m, t):
-        if t == 0: return pyo.Constraint.Skip
-        return _m.soc_raw[t] == _m.soc_raw[t-1] + a_vec[t] * _m.surplus_hat[t]
-    m_relax.soc_raw_dyn = pyo.Constraint(m_relax.T, rule=soc_raw_dyn_rel)
-
-    m_relax.soc_end = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
-    m_relax.soc_end_def = pyo.Constraint(expr=m_relax.soc_end == m_relax.soc_raw[T-1])
-
-    m_relax.soc = pyo.Var(m_relax.T, bounds=(-UB_soc_raw, UB_soc_raw))
-    m_relax.soc_def = pyo.Constraint(m_relax.T, rule=lambda _m, t: _m.soc[t] == _m.soc_raw[t] - r_vec[t] * _m.soc_end)
-
-    m_relax.socdiff = pyo.Var(m_relax.T)
-    m_relax.z       = pyo.Var(m_relax.T, domain=pyo.NonNegativeReals, bounds=(0.0, UB_z))
-    m_relax.soc_def2 = pyo.Constraint(m_relax.T, rule=lambda _m, t: _m.socdiff[t] == _m.soc[t] - soc_ref_vec[t])
-    m_relax.z_pos    = pyo.Constraint(m_relax.T, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
-    m_relax.z_neg    = pyo.Constraint(m_relax.T, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
-
-    m_relax.obj = pyo.Objective(
-        expr=(1 - lambda_soc) * (sum(m_relax.x[i,j] * m_relax.D[i,j] for (i,j) in m_relax.PAIRS) / dist_scale)
-           +      lambda_soc  * (sum(m_relax.z[t]                       for t in m_relax.T)       / prox_scale),
-        sense=pyo.minimize
-    )
-
-    opt_rel = pyo.SolverFactory('gurobi')
-    opt_rel.solve(m_relax, tee=verbose, options={
-        'Method': 2, 'Crossover': 0, 'Presolve': 2, 'Aggregate': 2,
-        'Threads': int(threads or 12), 'TimeLimit': 2000, 'LogToConsole': int(verbose)
-    })
-
-    # Round LP solution to a second start
-    y_vals = {int(i): pyo.value(m_relax.y[i]) for i in m_relax.I}
-    topk = set(sorted(y_vals, key=y_vals.get, reverse=True)[:k])
-
-    # set y starts (keep the better of the two starts: 1 if in greedy OR in rounded topk)
-    for i in m.I:
-        prev = getattr(gvmap[m.y[i]], 'Start', 0.0)
-        gvmap[m.y[i]].Start = max(prev, 1.0 if int(i) in topk else 0.0)
-
-    # x starts from rounded LP, but only if (i,j) in PAIRS
-    for j in range(N):
-        cand = [i for i in neighbors[j] if i in topk]
-        if not cand:
-            continue  # leave unspecified; Gurobi can repair
-        # pick i with max fractional x
-        best_i = max(cand, key=lambda ii: pyo.value(m_relax.x[ii, j]) or 0.0)
-        if (best_i, j) in m.PAIRS:
-            gvmap[m.x[best_i, j]].Start = 1.0
-            for i in neighbors[j]:
-                if (i, j) in m.PAIRS and i != best_i:
-                    gvmap[m.x[i, j]].Start = 0.0
-
-    # ---------- Gurobi params ----------
-    opt.set_gurobi_param('MIPGap', MIPGap)
-    opt.set_gurobi_param('Threads', int(threads) if threads else 12)
-    opt.set_gurobi_param('LogToConsole', int(verbose))
-    opt.set_gurobi_param('Presolve', 2)
-    opt.set_gurobi_param('Aggregate', 2)
-    opt.set_gurobi_param('ScaleFlag', 2)
-    opt.set_gurobi_param('TimeLimit', 3600)
-    opt.set_gurobi_param('MIPFocus', 1)        # focus on improving incumbent
-    opt.set_gurobi_param('Heuristics', 0.6)
-    opt.set_gurobi_param('RINS', 10)
-    opt.set_gurobi_param('PumpPasses', 3)
-    opt.set_gurobi_param('ImproveStartTime', 30)
-    opt.set_gurobi_param('StartNodeLimit', 2000)
-
-    if lp_method == "barrier":
-        opt.set_gurobi_param('Method', 2)
-        opt.set_gurobi_param('Crossover', 0)
-        opt.set_gurobi_param('BarHomogeneous', 1)
-        # leave BarOrder at default (-1); don't set invalid values
-    else:
-        opt.set_gurobi_param('Method', 1)  # dual simplex
-
-    res = opt.solve(tee=verbose)
-
-    # ---------- extract ----------
-    selected_days = [i for i in I_cand if pyo.value(m.y[i]) > 0.5]
-    assignments = {}
-    for j in range(N):
-        best_i, best_val = None, -1.0
-        for i in neighbors[j]:
-            if (i, j) in m.PAIRS:
-                val = pyo.value(m.x[i, j])
-                if val is not None and val > best_val:
-                    best_val, best_i = val, i
-        assignments[j] = best_i
+    # ---------- Extract ----------
+    selected_days = [i for i in range(N) if pyo.value(m.y[i]) > 0.5]
+    assignments = {j: max(range(N), key=lambda i: pyo.value(m.x[i, j])) for j in range(N)}
 
     return {"selected_days": selected_days, "assignments": assignments, "model": m, "results": res}
-
 
 def apply_linear_soc(s_hat: np.ndarray, a: np.ndarray, cyc: bool = True) -> np.ndarray:
     """Apply the linearised SoC operator in O(T) without building L."""
@@ -1374,7 +1204,7 @@ def solve_ordo_with_endogenous_soc(
     assert reference_surplus.shape[0] == T, \
         f"reference_surplus length {reference_surplus.shape[0]} != {T}"
 
-    CYCLICAL_CONDITION = True
+    CYCLICAL_CONDITION = True 
 
     # Scale surplus to per-unit of a robust peak (e.g., 99.5th percentile)
     s_scale = float(np.percentile(np.abs(surplus_hourly_by_day), 99.5))
@@ -1388,7 +1218,7 @@ def solve_ordo_with_endogenous_soc(
 
 
 
-    return milp_tsa_endogenous_with_dynamic_operators(
+    return milp_tsa_endogenous_basic(
         D=D,
         k=k,
         soc_ref=soc_ref,
@@ -1399,7 +1229,7 @@ def solve_ordo_with_endogenous_soc(
         enforce_cyclical=CYCLICAL_CONDITION,
         solver=solver,           # <- pass through
         MIPGap=MIPGap,           # <- pass through
-        threads=min(max_threads-4 if max_threads>8 else 1, 16),
+        threads=min(max_threads-6 if max_threads>8 else 1, 16),
         verbose=verbose,
     )
 

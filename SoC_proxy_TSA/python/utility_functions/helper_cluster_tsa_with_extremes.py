@@ -182,7 +182,7 @@ def cluster_tsa_with_extremes(
             df_index=df_timeseries.index, assign_idx=assign_idx, days=day_index, hours_per_period=hours_per_period
         )
 
-        print(f">>> TSA: Using k + E representatives = {len(chosen_dates)} "
+        print(f"[TSA] Using k + E representatives = {len(chosen_dates)} "
               f"(k={number_typical_periods}, E={len(chosen_dates) - number_typical_periods}).")
     # else: either no extremes, or pool didn't grow → leave TSAM output as-is
 
@@ -259,7 +259,7 @@ def cluster_tsa_with_extremes(
     )
     assignment = cluster_days["PeriodNum"].copy()  # Series: index=all days, value=rep date
 
-    print(f">>> TSA successfully applied{' with soft extremes' if soft_prune and extremes_spec else ''}. "
+    print(f"[TSA] successfully applied{' with soft extremes' if soft_prune and extremes_spec else ''}. "
         f"Results saved to {path_to_cluster_csv}.")
 
     # If you keep meta, you can fill a small summary; else drop 'meta=...'

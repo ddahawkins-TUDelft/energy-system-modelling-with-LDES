@@ -3,14 +3,7 @@ import pandas as pd
 import numpy as np
 import utility_functions.helper_optimisation_tsa as opt
 from utility_functions.helper_cluster_tsa_with_extremes import ClusterResult
-from utility_functions.helper_optimisation_tsa import (
-                build_feature_design_matrices,
-                rr_soft_fit_weights,
-                rr_soft_reconstruct,
-                rr_hard_assign,
-                _ordo_cost_matrix_from_features,
-                rebuild_from_assignments  # optional if you want hard RR export now
-            )
+
 
 def optimisation_dispatch(
     tsa_config: tsa, 
@@ -77,9 +70,46 @@ def optimisation_dispatch(
                 
         
         if pre_cluster_result: 
-            print(f'[TSA] Importing cluster_map from {path_clustermap}')
             
-            raise NotImplementedError('Pre clsutered path not yet implemented')
+            # 1) Extract indices
+            C, rep_for_day, dates_index, rep_dates_kept, missing = precluster_to_row_indices(
+                df_features=tsa_config.df_features,                 # df features
+                representatives=pre_cluster_result.representatives, # DatetimeIndex
+                assignment=pre_cluster_result.assignment,           # Series (optional)
+            )
+
+            fix_reps_flag = (len(C) == tsa_config.params['k_periods'])
+
+
+            # pull hourly surplus (N x 24) from cache, same day order as df_features (daily)
+            S_by_day = tsa_config._surplus_hourly_by_day
+            if S_by_day is None or S_by_day.shape[0] != len(tsa_config.df_features):
+                raise RuntimeError("Endogenous-restricted path needs cached hourly surplus (N x 24) aligned with df_features.")
+
+            eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
+            eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])
+            lambda_soc = float(tsa_config.params['soc_proxy'].get('lambda_soc', 0.5))
+
+            result = opt.solve_ordo_with_endogenous_soc_restricted(
+                df_features=tsa_config.df_features,        # DAILY
+                k=tsa_config.params['k_periods'],
+                feature_weights=feature_weights,
+                preferred_features=target_columns,         # same set as exogenous ORDO
+                candidates=C,                              # GLOBAL ids from precluster
+                fix_reps=fix_reps_flag,                    # True if |C|==k → pure reassignment
+                warm_start_rep_for_day=rep_for_day,        # GLOBAL per-day rep, feasible start
+                eta_ch=eta_ch,
+                eta_dis=eta_dis,
+                lambda_soc=lambda_soc,
+                surplus_hourly_by_day=S_by_day,            # (N, 24)
+                normalize="minmax_signed",
+                solver="gurobi",
+                MIPGap=tsa_config.params.get('mipgap', 0.01),
+                threads=10,
+                timelimit=tsa_config.params.get('timelimit', 3600),
+                verbose=True,
+                lp_method="barrier",
+            )
 
 
         else:
@@ -157,72 +187,27 @@ def optimisation_dispatch(
         
         if pre_cluster_result: 
 
-            rr_mode = tsa_config.params.get("rr_mode", "soft")  # "soft" (default) or "hard"
-
             # 1) Extract indices
-            C, rep_for_day0, dates_index, rep_dates_kept, missing = precluster_to_row_indices(
+            C, rep_for_day, dates_index, rep_dates_kept, missing = precluster_to_row_indices(
                 df_features=tsa_config.df_features,                 # df features
                 representatives=pre_cluster_result.representatives, # DatetimeIndex
                 assignment=pre_cluster_result.assignment,           # Series (optional)
             )
 
-            if missing:
-                raise Exception("RR: %d representatives not found in df_features index: %s", len(missing), [d.strftime("%Y-%m-%d") for d in missing])
+            fix_reps_flag = (len(C) == tsa_config.params['k_periods'])
+
+            result = opt.solve_ordo_from_features_restricted(
+                df_features=tsa_config.df_features,
+                k=tsa_config.params['k_periods'],
+                feature_weights=feature_weights,
+                preferred_features=target_columns,     # as you already use for ORDO
+                normalize="minmax_signed",
+                candidates=C,
+                fix_reps=fix_reps_flag,
+                warm_start_rep_for_day=rep_for_day,    # <- feasible MIP start from clustering
+                lp_method="barrier",
+            )
             
-            # 2) Then proceed with your chosen RR mode:
-            if rr_mode == "soft":
-                target_columns
-
-                # matrices + slices for DC
-                X_fit, A_fit, A_norm, X_norm, scale, col_order, group_slices, group_names = opt.build_feature_design_matrices_for_rr(
-                    df_features=tsa_config.df_features,
-                    candidates=C,
-                    preferred_features=target_columns,
-                    normalize="minmax_signed",
-                    feature_weights=feature_weights,
-                )
-
-                # DC terms (bins & per-feature weights can be tuned; defaults are sane)
-                nbins      = tsa_config.params.get("rr_nbins", 16)
-                dc_weights = {g: feature_weights.get(g, 1.0) for g in group_names}
-                R, s = opt.build_duration_curve_quadratic_terms(
-                    X_norm=X_norm, A_norm=A_norm, group_slices=group_slices,
-                    group_weights=dc_weights, nbins=nbins
-                )
-
-                ts_w = float(tsa_config.params.get("rr_ts_weight", 1.0))
-                dc_w = float(tsa_config.params.get("rr_dc_weight", 1.0))
-
-                V, w = opt.rr_soft_fit_weights_batched(
-                    X_fit=X_fit, A_fit=A_fit, R_dc=R, s_dc=s,
-                    ts_weight=ts_w, dc_weight=dc_w,
-                    solver="gurobi", verbose=False
-                )
-
-                df_hat = opt.rr_soft_reconstruct(V, A_norm, scale, col_order)
-
-            elif rr_mode == "hard":  # "hard"
-                D = _ordo_cost_matrix_from_features(
-                    df_features=tsa_config.df_features,
-                    feature_weights=feature_weights,
-                    preferred_features=target_columns,
-                    normalize="minmax_signed",
-                )
-                rep_for_day = rr_hard_assign(D, candidates=C, solver="gurobi", verbose=False)
-                df_hat = rebuild_from_assignments(tsa_config.df_features[target_columns], rep_for_day)
-
-
-            else:
-                raise ValueError(f"Unknown rr_mode={rr_mode}")
-            
-            calliope_field_headings = pd.read_csv(path_timeseries, header=None, nrows=5)
-            calliope_field_headings.to_csv(path_timeseries, index=False, header=False, mode="w")
-            #inspect that df_hat is the correct format
-            df_hat.to_csv(path_timeseries, index=True, header=False, mode="a")
-
-            
-            
-            raise NotImplementedError('Pre clsutered path not yet fully implemented')
         else:
 
             print('[TSA] Solving MILP using exogenous features only')
@@ -247,10 +232,6 @@ def optimisation_dispatch(
         print(f'[TSA] Saving cluster map to {path_clustermap}')
         
         return result
-    
-
-        
-
 
 
     else:

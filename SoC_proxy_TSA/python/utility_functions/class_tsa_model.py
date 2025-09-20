@@ -326,10 +326,12 @@ class tsa_model:
                 )
 
             else:
-
                 #When debugging, we delete this file because its annoying to manually delete this when re-running code.
                 if DEBUG_MODE:
                     os.remove(self.paths['cluster_map'])
+
+                #ensure that df_features is in a daily format where pre-clustering may have permitted hourly clustering.
+                self.tsa.df_features = self._resample_timeseries(self.tsa.df_features, original_columns=[], force=True)
 
                 result = optimisation_dispatch(
                     tsa_config=self.tsa, 
@@ -339,6 +341,8 @@ class tsa_model:
                     feature_weights=weightDict,
                     soc_proxy_params=_soc_proxy_params
                 )
+
+
         
         print(f'[TSA] {self.tsa.type} completed in {time.time() - start_time:.2f}')
 
@@ -396,9 +400,9 @@ class tsa_model:
 
         return df_timeseries[original_columns], original_columns
     
-    def _resample_timeseries(self, df_timeseries, original_columns):
+    def _resample_timeseries(self, df_timeseries, original_columns, force: bool = False):
         #if aggregating daily bool is True, then aggregate otherwise transpose the hourly data into daily profiles to reduce MILP load
-        if self.tsa.type == 'optimisation':
+        if self.tsa.type == 'optimisation' or force:
             if self.tsa.params['resample_to_daily_resolution']:
                 # Select only numeric columns (e.g., drop metadata if present)
                 df_timeseries = df_timeseries.select_dtypes(include=[np.number])

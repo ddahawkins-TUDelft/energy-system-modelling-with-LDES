@@ -210,6 +210,133 @@ def milp_tsa(
         "results": results
     }
 
+def milp_ordo_restricted_candidates(
+    *,
+    Dsub: np.ndarray,          # shape (|C|, N)  cost from candidate i (row aligned to C_ids) to day j (0..N-1)
+    C_ids: list[int],          # GLOBAL day indices of candidates, len = |C|
+    k: int,
+    fix_reps: bool = False,    # if True: use all candidates as fixed reps (|C| must equal k)
+    warm_start_rep_for_day: np.ndarray | None = None,  # length N, GLOBAL rep index per day
+    solver: str = "gurobi",
+    MIPGap: float = 0.01,
+    threads: int | None = 12,
+    timelimit: int = 3600,
+    verbose: bool = True,
+    lp_method: str = "barrier",    # "barrier" or "dual"
+):
+    import numpy as np
+    import pyomo.environ as pyo
+
+    Ic_size, N = Dsub.shape
+    assert Ic_size == len(C_ids), "Dsub rows and C_ids length mismatch"
+    if fix_reps:
+        assert k == Ic_size, "fix_reps=True requires k == len(C_ids)"
+
+    # ---------------- Model indexed by GLOBAL candidate IDs ----------------
+    m = pyo.ConcreteModel()
+    # representatives (GLOBAL ids)
+    m.I = pyo.Set(initialize=list(C_ids), ordered=True)
+    # days (0..N-1)
+    m.J = pyo.RangeSet(0, N - 1)
+
+    # Build D as a param keyed by (GLOBAL_i, j) pulling from Dsub rows
+    row_of_global = {g: r for r, g in enumerate(C_ids)}
+    D_map = {(i, j): float(Dsub[row_of_global[int(i)], int(j)]) for i in m.I for j in m.J}
+    m.D = pyo.Param(m.I, m.J, initialize=D_map, within=pyo.NonNegativeReals)
+
+    # Variables
+    m.y = pyo.Var(m.I, domain=pyo.Binary)                 # rep selection (GLOBAL keyed)
+    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)            # assignment (GLOBAL keyed)
+
+    # Constraints
+    def assign_once(_m, j):
+        return sum(_m.x[i, j] for i in _m.I) == 1
+    m.assign_once = pyo.Constraint(m.J, rule=assign_once)
+
+    m.link = pyo.Constraint(m.I, m.J, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
+
+    if fix_reps:
+        for i in m.I:
+            m.y[i].fix(1)
+    else:
+        m.num_reps = pyo.Constraint(expr=sum(m.y[i] for i in m.I) == k)
+
+    # Objective (pure ORDO)
+    m.obj = pyo.Objective(
+        expr=sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J),
+        sense=pyo.minimize
+    )
+
+    # ---------------- Solve (with optional warm start) ----------------
+    if solver == "gurobi":
+        opt = pyo.SolverFactory("gurobi_persistent")
+        opt.set_instance(m)
+
+        # Warm start from precluster assignment (GLOBAL ids)
+        if warm_start_rep_for_day is not None:
+            gvmap = opt._pyomo_var_to_solver_var_map
+            C_set = set(C_ids)
+            used = set()
+            for j in range(N):
+                g_rep = int(warm_start_rep_for_day[j])
+                if g_rep in C_set:
+                    # set chosen pair to 1 (and optionally 0 for others)
+                    gvmap[m.x[g_rep, j]].Start = 1.0
+                    used.add(g_rep)
+            if not fix_reps:
+                for i in m.I:
+                    gvmap[m.y[i]].Start = 1.0 if int(i) in used else 0.0
+
+        # Gurobi params
+        opt.set_gurobi_param('MIPGap', MIPGap)
+        opt.set_gurobi_param('Threads', int(threads) if threads else 12)
+        opt.set_gurobi_param('LogToConsole', int(verbose))
+        opt.set_gurobi_param('TimeLimit', int(timelimit))
+        opt.set_gurobi_param('Presolve', 2)
+        opt.set_gurobi_param('Aggregate', 2)
+        if lp_method == "barrier":
+            opt.set_gurobi_param('Method', 2)
+            opt.set_gurobi_param('Crossover', 0)
+        elif lp_method == "dual":
+            opt.set_gurobi_param('Method', 1)
+
+        res = opt.solve(tee=verbose)
+    else:
+        res = pyo.SolverFactory(solver).solve(m, tee=verbose, options={
+            'MIPGap': MIPGap, 'TimeLimit': int(timelimit)
+        })
+
+    # ---------------- Extract in the SAME format as milp_tsa() ----------------
+    # selected reps: list of GLOBAL day indices
+    if fix_reps:
+        selected_days = list(C_ids)
+    else:
+        selected_days = [int(i) for i in m.I if pyo.value(m.y[i]) > 0.5]
+
+    # assignments: j -> GLOBAL representative day
+    assignments = {}
+    # numerical guard so we don't crash if all x[i,j] are ~0 due to tolerance
+    for j in m.J:
+        # primary: exact 1’s
+        chosen = [int(i) for i in m.I if (pyo.value(m.x[i, j]) or 0.0) > 0.5]
+        if chosen:
+            assignments[int(j)] = chosen[0]
+        else:
+            # fallback: argmax over i
+            best_i, best_val = None, -1.0
+            for i in m.I:
+                val = pyo.value(m.x[i, j]) or 0.0
+                if val > best_val:
+                    best_val, best_i = val, int(i)
+            assignments[int(j)] = best_i  # still GLOBAL
+
+    return {
+        "selected_days": selected_days,   # GLOBAL ids
+        "assignments": assignments,       # j -> GLOBAL id
+        "model": m,
+        "results": res,
+    }
+
 def save_milp_result_to_cluster_map(
     result: dict,
     dates_index: pd.DatetimeIndex,
@@ -252,7 +379,8 @@ def save_milp_result_to_cluster_map(
     mapping_df["PeriodNum"] = mapping_df["PeriodNum"].dt.strftime("%Y-%m-%d")
 
     # Save to CSV
-    mapping_df.to_csv(output_path, index=False)
+    mapping_df = mapping_df.set_index('timesteps')
+    mapping_df.to_csv(output_path)
 
 
 def _exogenous_objective_function(m):
@@ -443,352 +571,6 @@ def build_feature_design_matrices(
 
 # === RR (batched, TS + DC) =====================================================
 
-def build_feature_design_matrices_for_rr(
-    df_features: pd.DataFrame,
-    candidates: list[int],
-    preferred_features: list[str] | None = None,
-    normalize: str = "minmax_signed",
-    feature_weights: dict[str, float] | None = None,
-):
-    """
-    Like build_feature_design_matrices, but also returns:
-      - X_norm  : (N, D) normalized UNweighted (for DC histograms)
-      - group_slices : {base: (start, stop)} slices into the concatenated columns
-      - group_names  : list[str] in the concatenation order (parallel to group_slices)
-    """
-    if feature_weights is None:
-        feature_weights = {}
-
-    mode, groups = group_feature_columns(df_features, preferred_features)  # same as ORDO
-
-    X_blocks = []
-    A_blocks = []
-    Xnorm_blocks = []        # unweighted, normalized
-    scale_params = []
-    colnames = []
-    group_slices = {}
-    group_names = []
-
-    def _scale_signed(col: np.ndarray):
-        cmin = np.nanmin(col); cmax = np.nanmax(col)
-        if not np.isfinite(cmin) or not np.isfinite(cmax) or cmax == cmin:
-            return np.zeros_like(col, dtype=float), (0.0, 1.0)
-        z = (col - cmin) / (cmax - cmin); z = 2.0 * z - 1.0
-        return z.astype(float), (cmin, cmax)
-
-    pos = 0
-    for base, cols in groups.items():
-        block = df_features[cols].to_numpy(dtype=float, copy=False)
-        nb = block.shape[1]
-
-        norm_cols = np.empty_like(block, dtype=float)
-        mins_maxs = []
-        for j in range(nb):
-            norm_cols[:, j], mm = _scale_signed(block[:, j])
-            mins_maxs.append(mm)
-
-        Xnorm_blocks.append(norm_cols)           # (N, nb), unweighted
-        X_blocks.append(norm_cols)               # we’ll weight later
-        A_blocks.append(norm_cols[candidates, :])
-
-        scale_params.extend(mins_maxs)
-        colnames.extend(cols)
-
-        group_slices[base] = (pos, pos + nb)
-        group_names.append(base)
-        pos += nb
-
-    X_norm = np.concatenate(Xnorm_blocks, axis=1)     # (N, D)
-    X_w    = np.concatenate(X_blocks, axis=1)         # (N, D)
-    A_norm = np.concatenate(A_blocks, axis=1)         # (C, D)
-
-    # column weights via √(feature weight)
-    wcols = []
-    for base, cols in groups.items():
-        w = float(feature_weights.get(base, 1.0))
-        if w < 0: w = 0.0
-        factor = np.sqrt(w) if w > 0 else 0.0
-        wcols.extend([factor] * len(cols))
-    wcols = np.asarray(wcols, dtype=float)
-
-    X_fit = X_w * wcols[None, :]
-    A_fit = A_norm * wcols[None, :]
-
-    return X_fit, A_fit, A_norm, X_norm, scale_params, colnames, group_slices, group_names
-
-
-def build_duration_curve_quadratic_terms(
-    *,
-    X_norm: np.ndarray,            # (N, D) normalized (no weights)
-    A_norm: np.ndarray,            # (C, D) normalized (no weights)
-    group_slices: dict[str, tuple],
-    group_weights: dict[str, float] | None = None,
-    nbins: int = 16,
-):
-    """
-    Construct DC penalty terms:
-      R (C x C) and s (C),
-    so that  DC_obj = (Σ_j v_j)^T R (Σ_j v_j) - 2 s^T (Σ_j v_j) + const
-    where v_j ∈ R^C are the day-simplex weights and w = Σ_j v_j.
-
-    We use simple per-group histograms over [-1,1] in `nbins` equal bins,
-    built on normalized values. Counts are *raw* (not normalized to frequency);
-    trade-off vs TS handled by a global scalar weight later.
-    """
-    C, D = A_norm.shape
-    N    = X_norm.shape[0]
-    edges = np.linspace(-1.0, 1.0, nbins + 1)
-
-    if group_weights is None:
-        group_weights = {g: 1.0 for g in group_slices.keys()}
-
-    R = np.zeros((C, C), dtype=float)
-    s = np.zeros(C, dtype=float)
-
-    for g, (a, b) in group_slices.items():
-        w_g = float(group_weights.get(g, 1.0))
-        # original counts across all days for this group
-        xg = X_norm[:, a:b].ravel()                         # length N * cols_in_group
-        y_counts, _ = np.histogram(xg, bins=edges)          # (B,)
-
-        # per-rep histogram for this group: H_g (B x C)
-        cols_in_g = b - a
-        H = np.zeros((nbins, C), dtype=float)
-        for i in range(C):
-            xi = A_norm[i, a:b]                             # (cols_in_g,)
-            hi, _ = np.histogram(xi, bins=edges)
-            # each representative day contributes once per column in group
-            H[:, i] = hi
-
-        # accumulate: R += w_g * H^T H ; s += w_g * H^T y
-        R += w_g * (H.T @ H)                                # (C x C)
-        s += w_g * (H.T @ y_counts)                         # (C,)
-    return R, s
-
-
-def rr_soft_fit_weights_batched(
-    *,
-    X_fit: np.ndarray,            # (N, D) normalized + √weights
-    A_fit: np.ndarray,            # (C, D) normalized + √weights
-    R_dc: np.ndarray,             # (C, C) from build_duration_curve_quadratic_terms
-    s_dc: np.ndarray,             # (C,)   from build_duration_curve_quadratic_terms
-    ts_weight: float = 1.0,
-    dc_weight: float = 1.0,
-    solver: str = "gurobi",
-    verbose: bool = False,
-):
-    """
-    One convex QP for all days:
-      min_v  ts_weight * [Σ_j v_j^T Q v_j - 2 Σ_j c_j^T v_j]
-             + dc_weight * [(Σ_j v_j)^T R (Σ_j v_j) - 2 s^T (Σ_j v_j)]
-      s.t.   v_{ij} ≥ 0,  Σ_i v_{ij} = 1.
-
-    where  Q = A_fit A_fit^T   (C x C)
-           c_j = A_fit x_j     (C)
-
-    Returns
-    -------
-    V : (C, N) with columns v_j ; also returns w := Σ_j v_j for convenience.
-    """
-    N, D = X_fit.shape
-    C, D2 = A_fit.shape
-    assert D == D2
-
-    # Precompute TS matrices
-    Q = A_fit @ A_fit.T            # (C x C), PSD
-    Cmat = A_fit @ X_fit.T         # (C x N), columns c_j
-
-    # Build QP
-    m = pyo.ConcreteModel()
-    m.I = pyo.RangeSet(0, C - 1)
-    m.J = pyo.RangeSet(0, N - 1)
-
-    # Variables
-    m.v = pyo.Var(m.I, m.J, domain=pyo.NonNegativeReals)  # v[i,j]
-    m.w = pyo.Var(m.I, domain=pyo.NonNegativeReals)       # w[i] = Σ_j v[i,j]
-
-    # Constraints: simplex per day
-    def sum_to_one(_m, j):
-        return sum(_m.v[i, j] for i in _m.I) == 1.0
-    m.simplex = pyo.Constraint(m.J, rule=sum_to_one)
-
-    # Link w = Σ_j v[:,j]
-    def link_w(_m, i):
-        return _m.w[i] == sum(_m.v[i, j] for j in _m.J)
-    m.link = pyo.Constraint(m.I, rule=link_w)
-
-    # Objective pieces
-    def obj_rule(_m):
-        # TS part: Σ_j (v_j^T Q v_j - 2 c_j^T v_j)
-        ts_quad = sum(_m.v[i, j] * Q[i, k] * _m.v[k, j]
-                      for j in _m.J for i in _m.I for k in _m.I)
-        ts_lin  = -2.0 * sum(Cmat[i, j] * _m.v[i, j] for j in _m.J for i in _m.I)
-
-        # DC part: (w^T R w) - 2 s^T w
-        dc_quad = sum(_m.w[i] * R_dc[i, k] * _m.w[k] for i in _m.I for k in _m.I)
-        dc_lin  = -2.0 * sum(s_dc[i] * _m.w[i] for i in _m.I)
-
-        return ts_weight * (ts_quad + ts_lin) + dc_weight * (dc_quad + dc_lin)
-
-    m.obj = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
-
-    opt = pyo.SolverFactory(solver)
-    opts = {}
-    if solver.lower() == "gurobi":
-        # Continuous QP → these parameters are fine
-        opts = {"OutputFlag": int(verbose)}
-    opt.solve(m, tee=verbose, options=opts)
-
-    # Extract
-    V = np.zeros((C, N), dtype=float)
-    for j in range(N):
-        for i in range(C):
-            V[i, j] = pyo.value(m.v[i, j])
-    w = np.array([pyo.value(m.w[i]) for i in range(C)], dtype=float)
-    return V, w
-
-
-
-def rr_soft_fit_weights(
-    X_fit: np.ndarray,   # (N, D)  normalized + weighted
-    A_fit: np.ndarray,   # (C, D)  normalized + weighted
-    solver: str = "gurobi",
-    mipgap: float = 0.01,
-    verbose: bool = False,
-):
-    """
-    Solve, for each day j,   min_{v >=0, 1^Tv=1} || A_fit^T v - x_fit ||_2^2
-    Returns V of shape (C, N), columns are v_j.
-
-    Notes
-    -----
-    - This builds a small convex QP per day. Simple and robust prototype.
-    - You can later vectorize or warm-start if needed.
-    """
-    N, D = X_fit.shape
-    C, D2 = A_fit.shape
-    assert D == D2
-
-    # Precompute shared Q = A A^T (C x C). It’s PSD → convex QP.
-    Q = A_fit @ A_fit.T  # (C, C)
-
-    V = np.zeros((C, N), dtype=float)
-
-    for j in range(N):
-        x = X_fit[j, :]                                  # (D,)
-        c_vec = A_fit @ x                                # (C,)
-
-        m = pyo.ConcreteModel()
-        m.I = pyo.RangeSet(0, C - 1)
-        m.v = pyo.Var(m.I, domain=pyo.NonNegativeReals)
-
-        # sum v_i = 1
-        m.sum_to_one = pyo.Constraint(expr=sum(m.v[i] for i in m.I) == 1.0)
-
-        # objective: v^T Q v - 2 c^T v   (constant x^T x dropped)
-        def obj_rule(_):
-            quad = sum(m.v[i] * Q[i, k] * m.v[k] for i in m.I for k in m.I)
-            lin  = -2.0 * sum(c_vec[i] * m.v[i] for i in m.I)
-            return quad + lin
-
-        m.obj = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
-
-        opt = pyo.SolverFactory(solver)
-        opts = {}
-        if solver.lower() == "gurobi":
-            # quiet by default; toggle with verbose
-            opts = {
-                "MIPGap": mipgap,        # harmless here; QP is continuous
-                "OutputFlag": int(verbose),
-            }
-        res = opt.solve(m, tee=verbose, options=opts)
-
-        V[:, j] = [pyo.value(m.v[i]) for i in m.I]
-
-    return V
-
-
-def rr_soft_reconstruct(
-    V: np.ndarray,           # (C, N)
-    A_norm: np.ndarray,      # (C, D)  normalized (no weights)
-    scale_params: list[tuple[float, float]],
-    column_order: list[str],
-) -> pd.DataFrame:
-    """
-    Reconstruct synthetic time series in ORIGINAL units, same columns as df_features subset.
-    """
-    # predicted in normalized space (no weights)
-    Xhat_norm = V.T @ A_norm    # (N, D)
-
-    # invert normalization per column
-    def inv_col(z, cmin, cmax):
-        # z in [-1,1] -> [cmin, cmax]
-        return (0.5 * (z + 1.0)) * (cmax - cmin) + cmin
-
-    cols = []
-    for j, (cmin, cmax) in enumerate(scale_params):
-        cols.append(inv_col(Xhat_norm[:, j], cmin, cmax))
-    Xhat = np.column_stack(cols)
-
-    df_hat = pd.DataFrame(Xhat, columns=column_order, index=None)
-    return df_hat
-
-
-def rr_hard_assign(
-    D: np.ndarray,            # full (N x N) cost matrix in ORDO metric
-    candidates: list[int],    # indices of candidate representative days
-    solver: str = "gurobi",
-    mipgap: float = 0.01,
-    verbose: bool = False,
-):
-    """
-    Restricted assignment MILP:
-      min sum_{i in C, j in N} D[i,j] x_ij
-      s.t. sum_{i in C} x_ij = 1,  x_ij ∈ {0,1}
-
-    Returns
-    -------
-    rep_for_day : np.ndarray shape (N,), each value is the chosen candidate index for that day.
-    """
-    N = D.shape[0]
-    Cset = sorted(set(int(i) for i in candidates))
-    Ic = range(len(Cset))
-    # map local index -> global candidate day id
-    cand_idx = {ii: Cset[ii] for ii in Ic}
-
-    m = pyo.ConcreteModel()
-    m.I = pyo.RangeSet(0, len(Cset) - 1)
-    m.J = pyo.RangeSet(0, N - 1)
-    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)
-
-    # each day assigned to exactly one candidate
-    def one_rep_per_day(_m, j):
-        return sum(_m.x[i, j] for i in _m.I) == 1
-    m.assign = pyo.Constraint(m.J, rule=one_rep_per_day)
-
-    # objective
-    def obj_rule(_m):
-        return sum(D[cand_idx[i], j] * _m.x[i, j] for i in _m.I for j in _m.J)
-    m.obj = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
-
-    opt = pyo.SolverFactory(solver)
-    opts = {}
-    if solver.lower() == "gurobi":
-        opts = {"MIPGap": mipgap, "OutputFlag": int(verbose)}
-    res = opt.solve(m, tee=verbose, options=opts)
-
-    # extract assignment
-    rep_for_day = np.zeros(N, dtype=int)
-    for j in range(N):
-        chosen = None
-        for i in Ic:
-            if pyo.value(m.x[i, j]) > 0.5:
-                chosen = cand_idx[i]
-                break
-        rep_for_day[j] = chosen if chosen is not None else cand_idx[0]
-    return rep_for_day
-
-
 def rebuild_from_assignments(df_features: pd.DataFrame, rep_for_day: np.ndarray) -> pd.DataFrame:
     """
     Build a synthetic df by copying the representative row chosen for each day.
@@ -796,7 +578,6 @@ def rebuild_from_assignments(df_features: pd.DataFrame, rep_for_day: np.ndarray)
     assert len(rep_for_day) == len(df_features)
     df_hat = df_features.iloc[rep_for_day].reset_index(drop=True)
     return df_hat
-
 
 def solve_ordo_from_features(
     df_features: pd.DataFrame,
@@ -816,88 +597,48 @@ def solve_ordo_from_features(
     )
     return milp_tsa(D, k, solver=solver, MIPGap=MIPGap, verbose=verbose)
 
-def build_linear_soc_operator_from_reference(
-    surplus_ref: np.ndarray,              # shape (T,)
-    eta_ch: float,
-    eta_dis: float,
-    enforce_cyclical: bool = True
-):
-    """
-    Build a linear operator L (T x T) such that soc_lin = L @ surplus_hat
-    when we *freeze the charge/discharge gain per time-step* from a reference surplus.
-
-    We define gains a_t = eta_ch if surplus_ref[t] >= 0 else 1/eta_dis.
-    Then soc_raw[t] = sum_{tau<=t} a_tau * surplus_hat[tau].
-
-    If enforce_cyclical:
-        we subtract a linear ramp so soc_lin[-1] == soc_lin[0] (0).
-        That ramp is also linear in surplus_hat.
-    """
-    
-    T = len(surplus_ref)
-
-    raise Exception(f'This function builds several TxT matrices. Given that T = {T}, this will crash most PCs with memory requirements of >.1TB. Use the dynamic pyomo formulation instead.')
-
-    # a = np.where(surplus_ref >= 0.0, eta_ch, 1.0/eta_dis).astype(float)
-
-    # # Cumulative-sum operator with per-step gain: (lower-triangular)
-    # # (soc_raw = C @ (a ⊙ surplus_hat))
-    # C = np.tril(np.ones((T, T), dtype=float))
-    # A = np.diag(a)
-    # CA = C @ A  # shape (T, T)
-
-    # if not enforce_cyclical:
-    #     return CA
-
-    # # Enforce cyclical by subtracting a ramp that removes final offset.
-    # # soc_lin = CA @ s - r @ (e^T @ CA @ s), where
-    # # e^T selects the final row, and r = linspace(0,1,T)
-    # eT = np.zeros((1, T), dtype=float)
-    # eT[0, -1] = 1.0
-    # r  = np.linspace(0.0, 1.0, T).reshape(T, 1)
-    # # For any s: soc_end = eT @ CA @ s  (scalar)
-    # # soc_lin  = CA @ s - r * soc_end
-    # # => L = CA - r @ (eT @ CA)
-    # L = CA - r @ (eT @ CA)
-    # return L
-
-def build_soc_coeff_tensor_for_assignments(
+def solve_ordo_from_features_restricted(
     *,
-    surplus_hourly_by_day: np.ndarray,  # shape (N_days, 24) in row order of df_daily
-    L: np.ndarray,                      # (T x T) linear SoC operator from build_linear_soc_operator_from_reference
-    hours_per_day: int = 24
+    df_features,                 # your daily feature DF
+    k: int,
+    feature_weights: dict[str, float],
+    preferred_features: list[str] | None = None,
+    normalize: str = "minmax_signed",
+    candidates: list[int],       # global row indices (from precluster_to_row_indices)
+    fix_reps: bool = False,      # True when |C| == k and you just want “reassign to fixed reps”
+    warm_start_rep_for_day: np.ndarray | None = None,  # optional global rep-per-day from precluster
+    solver: str = "gurobi",
+    MIPGap: float = 0.01,
+    threads: int | None = 12,
+    timelimit: int = 3600,
+    verbose: bool = True,
+    lp_method: str = "barrier",
 ):
     """
-    Return:
-        H  : np.ndarray with shape (T, N_days, N_days)
-             soc_hat[t] = sum_{i,j} H[t, i, j] * x[i, j]
-        T  = N_days * hours_per_day
-    Logic:
-        surplus_hat at hour (j,h) = sum_i surplus[i,h] * x[i,j]
-        soc_hat = L @ surplus_hat  -> linear in x.
+    Build the ORDO distance, restrict rows to `candidates`, and solve the MILP.
     """
-    N = surplus_hourly_by_day.shape[0]
-    T = N * hours_per_day
-    assert L.shape == (T, T)
+    import numpy as np
 
-    # Flatten surplus (by day-hour) for each candidate day i into a T-vector basis B_i
-    # where B_i[tau] = surplus[i, h(tau)] if tau belongs to some day j; BUT assignment x[i,j]
-    # picks day j's hours from candidate i. So we need a per-(i,j) vector whose nonzeros are
-    # the 24 hours of day j filled with the 24 hourly values from candidate i.
-    H = np.zeros((T, N, N), dtype=float)
+    # 1) Build full NxN ORDO distance using your existing function
+    D_full = _ordo_cost_matrix_from_features(
+        df_features=df_features,
+        feature_weights=feature_weights,
+        preferred_features=preferred_features,
+        normalize=normalize,
+    )  # shape (N, N)
 
-    for i in range(N):            # representative day index
-        # template block for one day (24-length) from candidate i
-        block = surplus_hourly_by_day[i, :]  # (24,)
-        for j in range(N):        # assigned day index
-            # Place this block into positions of day j in the full T-vector
-            s_ij = np.zeros(T, dtype=float)
-            pos0 = j * hours_per_day
-            s_ij[pos0: pos0 + hours_per_day] = block
-            # Map to SoC with L: contributes L @ s_ij scaled by x[i,j]
-            H[:, i, j] = L @ s_ij
+    # 2) Slice to candidate rows: shape (|C|, N)
+    C_ids = list(map(int, candidates))
+    Dsub = D_full[np.ix_(C_ids, np.arange(D_full.shape[0]))]
 
-    return H
+    # 3) Solve the restricted MILP (with optional warm start)
+    return milp_ordo_restricted_candidates(
+        Dsub=Dsub, C_ids=C_ids, k=k, fix_reps=fix_reps,
+        warm_start_rep_for_day=warm_start_rep_for_day,
+        solver=solver, MIPGap=MIPGap, threads=threads,
+        timelimit=timelimit, verbose=verbose, lp_method=lp_method,
+    )
+
 
 # === MILP: ORDO + L1 SoC error ================================================
 def milp_tsa_endogenous(
@@ -1233,3 +974,234 @@ def solve_ordo_with_endogenous_soc(
         verbose=verbose,
     )
 
+def milp_tsa_endogenous_restricted_candidates(
+    *,
+    Dsub: np.ndarray,                 # (|C|, N) ORDO cost: cand row vs all days
+    C_ids: list[int],                 # GLOBAL row ids of candidates, len = |C|
+    k: int,
+    soc_ref: np.ndarray,              # (T,)
+    S_by_cand: np.ndarray,            # (|C|, 24) hourly surplus for each candidate day (aligned to C_ids)
+    a: np.ndarray,                    # (T,) frozen gains from reference sign / efficiencies
+    lambda_soc: float = 0.5,
+    hours_per_day: int = 24,
+    fix_reps: bool = False,           # if True: fixes all y[i]=1 (|C| must equal k)
+    warm_start_rep_for_day: np.ndarray | None = None,   # length N, GLOBAL rep id per day
+    solver: str = "gurobi",
+    MIPGap: float = 0.01,
+    threads: int | None = 12,
+    timelimit: int = 3600,
+    verbose: bool = True,
+    lp_method: str = "barrier",       # "barrier" or "dual"
+):
+    import numpy as np
+    import pyomo.environ as pyo
+
+    Ic, N = Dsub.shape
+    assert Ic == len(C_ids), "Dsub rows must align with C_ids"
+    if fix_reps:
+        assert k == Ic, "fix_reps=True requires k == len(C_ids)"
+    assert S_by_cand.shape == (Ic, hours_per_day), "S_by_cand must be (|C|, 24)"
+
+    # time maps
+    T = int(N * hours_per_day)
+    assert soc_ref.shape[0] == T and a.shape[0] == T, "soc_ref and a must be length N*24"
+    day_of_t  = [t // hours_per_day for t in range(T)]
+    hour_of_t = [t %  hours_per_day for t in range(T)]
+
+    # Build params keyed by GLOBAL candidate id
+    row_of_global = {g: r for r, g in enumerate(C_ids)}
+    D_map = {(int(i), j): float(Dsub[row_of_global[int(i)], j])
+             for i in C_ids for j in range(N)}
+    S_map = {(int(i), h): float(S_by_cand[row_of_global[int(i)], h])
+             for i in C_ids for h in range(hours_per_day)}
+
+    # ---------- model ----------
+    m = pyo.ConcreteModel()
+    m.I = pyo.Set(initialize=list(map(int, C_ids)), ordered=True)  # GLOBAL ids
+    m.J = pyo.RangeSet(0, N - 1)
+    m.T = pyo.RangeSet(0, T - 1)
+
+    m.D = pyo.Param(m.I, m.J, initialize=D_map, within=pyo.NonNegativeReals)
+
+    m.y = pyo.Var(m.I, domain=pyo.Binary)             # select reps among candidates
+    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)        # assign each day to a candidate
+
+    # assignment & linking
+    m.assign_once = pyo.Constraint(m.J, rule=lambda _m, j: sum(_m.x[i, j] for i in _m.I) == 1)
+    m.link        = pyo.Constraint(m.I, m.J, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
+
+    if fix_reps:
+        for i in m.I:
+            m.y[i].fix(1)
+    else:
+        m.num_reps = pyo.Constraint(expr=sum(m.y[i] for i in m.I) == k)
+
+    # surplus_hat[t] from assignments
+    def surplus_hat_rule(_m, t):
+        j = day_of_t[t]
+        h = hour_of_t[t]
+        # sum over GLOBAL candidates
+        return sum(S_map[(int(i), h)] * _m.x[i, j] for i in _m.I)
+    m.surplus_hat = pyo.Expression(m.T, rule=surplus_hat_rule)
+
+    # SoC dynamics (same as your basic endogenous form, just with restricted x)
+    Smax = float(np.max(np.abs(S_by_cand))) if Ic > 0 else 1.0
+    sum_abs_a = float(np.sum(np.abs(a)))
+    UB_soc_raw = max(1.0, Smax * sum_abs_a)
+    UB_z = 2.0 * UB_soc_raw
+
+    m.soc_raw = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
+    m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == float(a[0]) * m.surplus_hat[0])
+    def soc_raw_dyn(_m, t):
+        if t == 0: return pyo.Constraint.Skip
+        return _m.soc_raw[t] == _m.soc_raw[t-1] + float(a[t]) * _m.surplus_hat[t]
+    m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn)
+
+    m.soc_end = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
+    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T-1])
+
+    # cyclical correction already baked into soc_ref (since you build a with cyc=True),
+    # so no additional r[t]*soc_end term here.
+
+    m.socdiff = pyo.Var(m.T)  # free
+    m.z       = pyo.Var(m.T, domain=pyo.NonNegativeReals, bounds=(0.0, UB_z))
+    m.soc_def = pyo.Constraint(m.T, rule=lambda _m, t: _m.socdiff[t] == _m.soc_raw[t] - soc_ref[t])
+    m.z_pos   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
+    m.z_neg   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
+
+    # objective (scaled)
+    import numpy as _np
+    dist_scale = max(1e-12, float(_np.mean(Dsub)))
+    prox_scale = max(1e-12, float(_np.mean(_np.abs(soc_ref))))
+    m.obj = pyo.Objective(
+        expr=(1 - lambda_soc) * (sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J) / dist_scale)
+           +      lambda_soc  * (sum(m.z[t]                for t in m.T)              / prox_scale),
+        sense=pyo.minimize
+    )
+
+    # ---------- solve (with optional warm start) ----------
+    if solver == "gurobi":
+        opt = pyo.SolverFactory("gurobi_persistent")
+        opt.set_instance(m)
+
+        if warm_start_rep_for_day is not None:
+            gv = opt._pyomo_var_to_solver_var_map
+            Cset = set(int(i) for i in C_ids)
+            used = set()
+            for j in range(N):
+                g = int(warm_start_rep_for_day[j])
+                if g in Cset:
+                    gv[m.x[g, j]].Start = 1.0
+                    used.add(g)
+            if not fix_reps:
+                for i in m.I:
+                    gv[m.y[i]].Start = 1.0 if int(i) in used else 0.0
+
+        opt.set_gurobi_param('MIPGap', MIPGap)
+        if threads is not None: opt.set_gurobi_param('Threads', int(threads))
+        opt.set_gurobi_param('LogToConsole', int(verbose))
+        opt.set_gurobi_param('TimeLimit', int(timelimit))
+        opt.set_gurobi_param('Presolve', 2)
+        opt.set_gurobi_param('Aggregate', 2)
+        if lp_method == "barrier":
+            opt.set_gurobi_param('Method', 2)
+            opt.set_gurobi_param('Crossover', 0)
+        elif lp_method == "dual":
+            opt.set_gurobi_param('Method', 1)
+
+        res = opt.solve(tee=verbose)
+    else:
+        res = pyo.SolverFactory(solver).solve(m, tee=verbose, options={
+            'MIPGap': MIPGap, 'TimeLimit': int(timelimit)
+        })
+
+    # ---------- extract in GLOBAL coords ----------
+    if fix_reps:
+        selected_days = list(map(int, C_ids))
+    else:
+        selected_days = [int(i) for i in m.I if pyo.value(m.y[i]) > 0.5]
+
+    assignments = {}
+    for j in m.J:
+        # prefer exact 1s, fall back to argmax
+        chosen = [int(i) for i in m.I if (pyo.value(m.x[i, j]) or 0.0) > 0.5]
+        if chosen:
+            assignments[int(j)] = chosen[0]
+        else:
+            best_i, best_v = None, -1.0
+            for i in m.I:
+                v = pyo.value(m.x[i, j]) or 0.0
+                if v > best_v:
+                    best_v, best_i = v, int(i)
+            assignments[int(j)] = best_i
+
+    return {"selected_days": selected_days, "assignments": assignments, "model": m, "results": res}
+
+def solve_ordo_with_endogenous_soc_restricted(
+    *,
+    df_features: pd.DataFrame,         # DAILY rows (N)
+    k: int,
+    feature_weights: dict[str, float],
+    preferred_features: list[str] | None,
+    candidates: list[int],             # GLOBAL daily row ids (from precluster_to_row_indices)
+    fix_reps: bool,                    # True if |C| == k (pure reassignment to fixed reps)
+    warm_start_rep_for_day: np.ndarray | None,  # length N, GLOBAL rep id per day
+    eta_ch: float,
+    eta_dis: float,
+    lambda_soc: float,
+    surplus_hourly_by_day: np.ndarray, # (N, 24) hourly surplus for EVERY day
+    normalize: str = "minmax_signed",
+    solver: str = "gurobi",
+    MIPGap: float = 0.01,
+    threads: int | None = 12,
+    timelimit: int = 3600,
+    verbose: bool = True,
+    lp_method: str = "barrier",
+):
+    import numpy as np
+
+    # 1) ORDO distance over all days (daily / hourly24 features supported)
+    D_full = _ordo_cost_matrix_from_features(
+        df_features=df_features,
+        feature_weights=feature_weights,
+        preferred_features=preferred_features,
+        normalize=normalize,
+    )  # (N, N)
+
+    N = D_full.shape[0]
+    hours_per_day = 24
+
+    # 2) Slice rows to candidate set
+    C_ids = list(map(int, candidates))
+    Dsub = D_full[np.ix_(C_ids, np.arange(N))]  # (|C|, N)
+
+    # 3) Build SoC pieces (scale surplus for numerics like your earlier path)
+    assert surplus_hourly_by_day.shape == (N, hours_per_day), "surplus_hourly_by_day must be (N, 24)"
+    s_scale = float(np.percentile(np.abs(surplus_hourly_by_day), 99.5))
+    s_scale = max(s_scale, 1.0)
+    S_day_scaled = surplus_hourly_by_day / s_scale
+    S_by_cand = S_day_scaled[C_ids, :]                      # (|C|, 24)
+
+    reference_surplus = surplus_hourly_by_day.reshape(-1)   # (T,)
+    reference_surplus_scaled = reference_surplus / s_scale
+    a, soc_ref = build_a_and_soc_ref(reference_surplus_scaled, eta_ch, eta_dis, cyc=True)
+
+    # 4) Solve restricted endogenous MILP
+    return milp_tsa_endogenous_restricted_candidates(
+        Dsub=Dsub,
+        C_ids=C_ids,
+        k=k,
+        soc_ref=soc_ref,
+        S_by_cand=S_by_cand,
+        a=a,
+        lambda_soc=lambda_soc,
+        hours_per_day=hours_per_day,
+        fix_reps=fix_reps,
+        warm_start_rep_for_day=warm_start_rep_for_day,
+        solver=solver,
+        MIPGap=MIPGap,
+        threads=threads,
+        timelimit=timelimit,
+        verbose=verbose,
+        lp_method=lp_method,
+    )

@@ -96,7 +96,6 @@ tsa_params = {
     'extremes_spec': {},
     'soft_prune': False,
     'post_cluster_optimisation_params': {}
-    
 }
 
 
@@ -106,7 +105,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['proxy_k60','cluster_with_optimisation'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
+scenarios = ['cluster_with_optimisation'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
 # exogenous_optimisation_baseline   endogenous_optimisation_baseline
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -140,7 +139,7 @@ for scenario_name, scenario_batch in batch_config.items():
 
             list_model_dict.append({
                 'model': m,
-                'name': f'id={m.id[:4]}... {model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                'name': f'{model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
                 'params': {},
             })
 
@@ -165,6 +164,8 @@ visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
     y_field='State of Charge', #'State of Charge', 'SoC Proxy'
-    colour_field='MAGMe'
+    # colour_field='MAGMe',
+    # show_tsa_internal_surplus_accumulation=True,
+    # save_fig=True
 )
 

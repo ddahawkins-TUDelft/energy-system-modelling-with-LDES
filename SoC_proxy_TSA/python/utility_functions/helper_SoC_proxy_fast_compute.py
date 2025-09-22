@@ -42,6 +42,7 @@ def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: 
         pd.Series: Computed SoC proxy.
         (Optional) pd.Series: corrected_surplus
     """
+
     soc_proxy = compute_soc_proxy(df[surplus_col].values.astype(np.float64), charging_eff, discharging_eff)
     soc_series = pd.Series(soc_proxy, index=df.index)
 
@@ -51,6 +52,8 @@ def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: 
     # Compute delta SoC
     delta_soc = soc_series.diff().fillna(0)
 
+    #   Corrected surpluses is an abstract represention of the fluctuations without efficiency losses/gains
+    #   For this reason, surpluses do not sum to 0 and this signal should be avoided unless properly understood
     # Infer actual surplus from SoC deltas and efficiencies
     corrected_surplus = np.where(
         delta_soc >= 0,
@@ -58,7 +61,7 @@ def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: 
         delta_soc * discharging_eff
     )
 
-    corrected_surplus = pd.Series(corrected_surplus, index=df.index)
+    df_surpluses = pd.Series(delta_soc, index=df.index)
 
     if check_cyclical:
         residual = soc_series.iloc[-1] - soc_series.iloc[0]
@@ -67,7 +70,7 @@ def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: 
         
 
     if return_corrected_surplus:
-        return soc_series, corrected_surplus
+        return soc_series, df_surpluses
     else:
         return soc_series
 
@@ -119,7 +122,6 @@ def decompose_surplus(
         raise ValueError("Timestamps have zero time difference. Check the index or timestamp column.")
     timestep_hours = timestep_seconds / 3600
 
-    
     surplus = df['surplus'].values
     n = len(surplus)
     timestep_hours = (timestamps.iloc[1] - timestamps.iloc[0]).total_seconds() / 3600
@@ -149,6 +151,7 @@ def decompose_surplus(
         else:
             raise ValueError(f"Unsupported method: {soc_decomposition_method}")
         surplus_LDES = convolve(surplus, kernel, mode='same')
+    
 
     # SDES = Original - LDES
     surplus_SDES = surplus - surplus_LDES
@@ -156,6 +159,7 @@ def decompose_surplus(
     # Store results in dataframe
     df['surplus_LDES'] = surplus_LDES
     df['surplus_SDES'] = surplus_SDES
+
     df['soc_proxy_LDES'], df['surplus_LDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_LDES), 'temp_surplus', charging_efficiency, discharging_efficiency, return_corrected_surplus=True, check_cyclical=True)
     df['soc_proxy_SDES'], df['surplus_SDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_SDES), 'temp_surplus', charging_efficiency, discharging_efficiency, return_corrected_surplus=True, check_cyclical=True)
 

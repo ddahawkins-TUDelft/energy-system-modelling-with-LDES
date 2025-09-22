@@ -14,6 +14,9 @@ from utility_functions.class_visual_adapter import ModelAdapter
 from utility_functions.class_visual_metric import METRICS, EvalContext, _unwrap_metric_output
 matplotlib.use("TkAgg")
 
+
+
+
 _FIELD_MAP = {
     "Time": "time",
     "State of Charge": "soc",
@@ -92,8 +95,28 @@ def visualise(
     x_field: str,
     y_field: str,
     colour_field: Optional[str] = None,
-    user_params: Optional[Dict[str, Any]] = None
+    user_params: Optional[Dict[str, Any]] = None,
+    show_tsa_internal_surplus_accumulation: bool = False,
+    save_fig: bool = False
+
 ):
+    if save_fig:
+        matplotlib.rcParams.update({
+        "font.family": "Arial",
+        "font.sans-serif": ["Arial", "DejaVu Sans", "Liberation Sans"],  # fallbacks
+        "font.size": 32,          # default text size
+        "axes.titlesize": 36,
+        "axes.labelsize": 32,
+        "xtick.labelsize": 32,
+        "ytick.labelsize": 32,
+        "legend.fontsize": 28,
+
+        # keep text editable in vector exports
+        "pdf.fonttype": 42,       # embed TrueType
+        "ps.fonttype": 42,
+        "svg.fonttype": "none",
+        })
+    
     x_field = _resolve_field(x_field)
     y_field = _resolve_field(y_field)
     colour_field = _resolve_field(colour_field)
@@ -215,12 +238,24 @@ def visualise(
 
 
         lines.append(line)
+    
+    # Test code for exploring how the tsa internally considers soc proxy
+    if show_tsa_internal_surplus_accumulation:
+        m = list_model_dict[0]['model']
+        if m.tsa.type == 'optimisation' and m.tsa.params['soc_proxy']['optimisation_proxy_mode'] == 'exogenous': 
+            df_internal_surpluses = m.soc_proxy.df
+            df_internal_surpluses['accum_surplus'] = df_internal_surpluses['surplus_LDES'].cumsum()
+            df_internal_surpluses['accum_surplus'] += df_internal_surpluses['soc_proxy_LDES'].iloc[0]
+            plt.plot(df_internal_surpluses.index, df_internal_surpluses['accum_surplus'], label='TSA Internal SoC Proxy')
+        else:
+            raise Exception('show_tsa_internal_surplus_accumulation set to True, but tsa method is not an exogenous optimisation')
 
     plt.xlabel(x_field)
     plt.ylabel(y_field)
     plt.title(f'{y_field} vs. {x_field}')
     plt.grid(True)
-    plt.legend()
+    # plt.legend()
+    ax.legend(loc="upper right")
     plt.tight_layout()
 
     
@@ -245,4 +280,9 @@ def visualise(
         sel.annotation.set_text("\n".join(f"{k}: {v}" for k, v in info.items()) if info else sel.artist.get_label())
         sel.annotation.get_bbox_patch().set_alpha(0.9)
 
-    plt.show()
+    if save_fig:
+        fig.set_size_inches(56/2.54, 22/2.54)       
+        fig.set_dpi(300)                 # bump DPI
+        plt.savefig("poster.svg", dpi=300, bbox_inches="tight")
+    else:
+        plt.show()

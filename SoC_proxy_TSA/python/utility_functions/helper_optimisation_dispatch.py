@@ -85,6 +85,7 @@ def optimisation_dispatch(
             S_by_day = tsa_config._surplus_hourly_by_day
             if S_by_day is None or S_by_day.shape[0] != len(tsa_config.df_features):
                 raise RuntimeError("Endogenous-restricted path needs cached hourly surplus (N x 24) aligned with df_features.")
+            
 
             eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])

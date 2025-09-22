@@ -247,6 +247,10 @@ class tsa_model:
             )
             df_timeseries = df_timeseries[original_columns]
 
+            test_surluses = df_timeseries['surplus_LDES'].cumsum().iloc[-1]
+            # if test_surluses != 0:
+            #     raise Exception('DEBUG: Surplus are buggy and need checking')
+
             self.soc_proxy.df = df_timeseries
 
         else:

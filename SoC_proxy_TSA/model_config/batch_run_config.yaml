@@ -198,7 +198,7 @@ cluster_with_optimisation:
       calliope_params:
       soc_proxy_params:
       tsa_params:
-        k_periods: 60
+        k_periods: 200
         resample_to_daily_resolution: True
         distance_matrix_metric: 'euclidean'
         soc_proxy: 
@@ -206,15 +206,15 @@ cluster_with_optimisation:
             proxy_inputs_to_consider: ['surplus_LDES'] 
             proxy_window: None
             optimisation_proxy_mode: 'endogenous'
-            lambda_soc: 0.8
-        timelimit: 10000
+            lambda_soc: .5
+        timelimit: 2000
         matrix_weights: 
               renewables: 1
               demand: 1
-              proxy: 10
+              proxy: 1
         soc_features:
-          soc_discharge_MWh: 10
-          soc_charge_MWh: 10
+          soc_charge_MWh: 1
+          soc_discharge_MWh: 1
         extremes_spec: {}
         soft_prune: False
         post_cluster_optimisation_params:

@@ -81,12 +81,15 @@ def optimisation_dispatch(
             fix_reps_flag = (len(C) == tsa_config.params['k_periods'])
 
 
-            # pull hourly surplus (N x 24) from cache, same day order as df_features (daily)
-            S_by_day = tsa_config._surplus_hourly_by_day
+            # pull surplus (N) from cache, same day order as df_features (daily)
+            S_by_day = np.zeros(tsa_config._surplus_hourly_by_day.shape[0])
+            if tsa_config.params['resample_to_daily_resolution']:
+                S_by_day = tsa_config._surplus_by_day.to_numpy(dtype='float64')
+            else:
+                S_by_day = tsa_config._surplus_hourly_by_day
             if S_by_day is None or S_by_day.shape[0] != len(tsa_config.df_features):
                 raise RuntimeError("Endogenous-restricted path needs cached hourly surplus (N x 24) aligned with df_features.")
             
-
             eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])
             lambda_soc = float(tsa_config.params['soc_proxy'].get('lambda_soc', 0.5))
@@ -102,7 +105,7 @@ def optimisation_dispatch(
                 eta_ch=eta_ch,
                 eta_dis=eta_dis,
                 lambda_soc=lambda_soc,
-                surplus_hourly_by_day=S_by_day,            # (N, 24)
+                surplus_by_day=S_by_day,            # (N) or (N, 24) if resample_to_daily_resolution == False
                 normalize="minmax_signed",
                 solver="gurobi",
                 MIPGap=tsa_config.params.get('mipgap', 0.01),

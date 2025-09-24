@@ -393,6 +393,9 @@ class tsa_model:
                 and self.tsa.params['soc_proxy']['optimisation_proxy_mode'] == 'endogenous'
                 ):
 
+                self.tsa._surplus_by_day = df_timeseries['surplus_LDES'].resample('D').sum()
+                self.tsa._surplus_by_day_index = self.tsa._surplus_by_day.index
+                
                 days, rows = [], []
                 for day, g in df_timeseries.groupby(pd.Grouper(freq="D")):
                     if len(g) != 24:

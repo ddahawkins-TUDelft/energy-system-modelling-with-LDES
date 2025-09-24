@@ -886,7 +886,8 @@ def apply_linear_soc(s_hat: np.ndarray, a: np.ndarray, cyc: bool = True) -> np.n
 
 def build_a_and_soc_ref(reference_surplus: np.ndarray, eta_ch: float, eta_dis: float, cyc: bool = True):
     """Frozen gains a_t from the reference sign pattern + the corresponding reference SoC."""
-    a = np.where(reference_surplus >= 0.0, eta_ch, 1.0 / eta_dis).astype(float)
+    # a = np.where(reference_surplus >= 0.0, eta_ch, 1.0 / eta_dis).astype(float)
+    a = np.where(reference_surplus >= 0.0, 1, 1.0).astype(float)
     soc_ref = apply_linear_soc(reference_surplus, a, cyc=cyc)
     return a, soc_ref
 
@@ -925,19 +926,6 @@ def solve_ordo_with_endogenous_soc(
         assert surplus_columns_24h is not None, "Provide either surplus_hourly_by_day or surplus_columns_24h."
         surplus_hourly_by_day = df_features[surplus_columns_24h].to_numpy(dtype=float)
     
-
-    #it is possible to precompute the linear operators and a tensor. But given the scale of model, this will crash most computers and is not recommended. Memory (RAM) requirements scale cubically and exceed 1TB for a 5yr model.
-    # print('[TSA] Building linear operators for endogenous soc proxy')
-    # # 4) Linear operator & H tensor
-    # L = build_linear_soc_operator_from_reference(reference_surplus, eta_ch, eta_dis, enforce_cyclical=True)
-    # print('[TSA] Building tensor for endogenous soc proxy assignments')
-    # H = build_soc_coeff_tensor_for_assignments(surplus_hourly_by_day=surplus_hourly_by_day, L=L)
-    # return milp_tsa_endogenous(
-    #     D=D, k=k,
-    #     soc_ref=L @ reference_surplus,
-    #     H=H, lambda_soc=lambda_soc,
-    #     solver=solver, MIPGap=MIPGap, verbose=verbose
-    # )
 
     # --- Sanity checks ---
     assert surplus_hourly_by_day.shape == (N, hours_per_day), \
@@ -1000,20 +988,24 @@ def milp_tsa_endogenous_restricted_candidates(
     assert Ic == len(C_ids), "Dsub rows must align with C_ids"
     if fix_reps:
         assert k == Ic, "fix_reps=True requires k == len(C_ids)"
-    assert S_by_cand.shape == (Ic, hours_per_day), "S_by_cand must be (|C|, 24)"
+    assert S_by_cand.shape[0] == Ic, "S_by_cand must be (|C|, ..."
 
     # time maps
-    T = int(N * hours_per_day)
-    assert soc_ref.shape[0] == T and a.shape[0] == T, "soc_ref and a must be length N*24"
-    day_of_t  = [t // hours_per_day for t in range(T)]
-    hour_of_t = [t %  hours_per_day for t in range(T)]
+    T = int(N)
+    assert soc_ref.shape[0] == T and a.shape[0] == T, "soc_ref and a must be length N"
+    # day_of_t  = [t // hours_per_day for t in range(T)]
+    # hour_of_t = [t %  hours_per_day for t in range(T)]
+    day_of_t = list(range(T))  
+    if soc_ref.shape == (N,hours_per_day):
+        raise NotImplementedError('Capability for N*hours_per_day removed and required reimplementation')
 
     # Build params keyed by GLOBAL candidate id
     row_of_global = {g: r for r, g in enumerate(C_ids)}
     D_map = {(int(i), j): float(Dsub[row_of_global[int(i)], j])
              for i in C_ids for j in range(N)}
-    S_map = {(int(i), h): float(S_by_cand[row_of_global[int(i)], h])
-             for i in C_ids for h in range(hours_per_day)}
+    # S_map = {(int(i), h): float(S_by_cand[row_of_global[int(i)], h])
+    #          for i in C_ids for h in range(hours_per_day)}
+    S_map = {int(i): float(S_by_cand[row_of_global[int(i)]]) for i in C_ids}
 
     # ---------- model ----------
     m = pyo.ConcreteModel()
@@ -1039,21 +1031,21 @@ def milp_tsa_endogenous_restricted_candidates(
     # surplus_hat[t] from assignments
     def surplus_hat_rule(_m, t):
         j = day_of_t[t]
-        h = hour_of_t[t]
+        # h = hour_of_t[t]
         # sum over GLOBAL candidates
-        return sum(S_map[(int(i), h)] * _m.x[i, j] for i in _m.I)
+        return sum(S_map[int(i)] * _m.x[i, j] for i in _m.I)
     m.surplus_hat = pyo.Expression(m.T, rule=surplus_hat_rule)
 
-    # SoC dynamics (same as your basic endogenous form, just with restricted x)
-    Smax = float(np.max(np.abs(S_by_cand))) if Ic > 0 else 1.0
-    sum_abs_a = float(np.sum(np.abs(a)))
-    UB_soc_raw = max(1.0, Smax * sum_abs_a)
-    UB_z = 2.0 * UB_soc_raw
+    # SoC dynamics (same as basic endogenous form, just with restricted x)
+    # Smax = float(np.max(np.abs(S_by_cand))) if Ic > 0 else 1.0
+    # sum_abs_a = float(np.sum(np.abs(a)))
+    # UB_soc_raw = max(1.0, Smax * sum_abs_a)
+    UB_soc_raw = 1.1*max(np.abs(soc_ref)) #given the target of matching signals, we can set the max ref as the UB of the clustered signal
 
     m.soc_raw = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
     m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == float(a[0]) * m.surplus_hat[0])
     def soc_raw_dyn(_m, t):
-        if t == 0: return pyo.Constraint.Skip
+        if t == m.T.first(): return pyo.Constraint.Skip
         return _m.soc_raw[t] == _m.soc_raw[t-1] + float(a[t]) * _m.surplus_hat[t]
     m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn)
 
@@ -1064,8 +1056,8 @@ def milp_tsa_endogenous_restricted_candidates(
     # so no additional r[t]*soc_end term here.
 
     m.socdiff = pyo.Var(m.T)  # free
-    m.z       = pyo.Var(m.T, domain=pyo.NonNegativeReals, bounds=(0.0, UB_z))
-    m.soc_def = pyo.Constraint(m.T, rule=lambda _m, t: _m.socdiff[t] == _m.soc_raw[t] - soc_ref[t])
+    m.z = pyo.Var(m.T, domain=pyo.NonNegativeReals, bounds=lambda _m, t: (0.0, UB_soc_raw + abs(float(soc_ref[t]))))
+    m.soc_def = pyo.Constraint(m.T, rule=lambda _m, t: _m.socdiff[t] == soc_ref[t] - _m.soc_raw[t]) #DANO, i flipped this, may need to flip back but shouldnt matter
     m.z_pos   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
     m.z_neg   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
 
@@ -1149,7 +1141,7 @@ def solve_ordo_with_endogenous_soc_restricted(
     eta_ch: float,
     eta_dis: float,
     lambda_soc: float,
-    surplus_hourly_by_day: np.ndarray, # (N, 24) hourly surplus for EVERY day
+    surplus_by_day: np.ndarray, # (N, 24) hourly surplus for EVERY day
     normalize: str = "minmax_signed",
     solver: str = "gurobi",
     MIPGap: float = 0.01,
@@ -1176,13 +1168,17 @@ def solve_ordo_with_endogenous_soc_restricted(
     Dsub = D_full[np.ix_(C_ids, np.arange(N))]  # (|C|, N)
 
     # 3) Build SoC pieces (scale surplus for numerics like your earlier path)
-    assert surplus_hourly_by_day.shape == (N, hours_per_day), "surplus_hourly_by_day must be (N, 24)"
-    s_scale = float(np.percentile(np.abs(surplus_hourly_by_day), 99.5))
+    
+    assert surplus_by_day.shape[0] == N, "surplus_hourly_by_day must be (N, ...)"
+    s_scale = float(np.percentile(np.abs(surplus_by_day), 99.5))
     s_scale = max(s_scale, 1.0)
-    S_day_scaled = surplus_hourly_by_day / s_scale
-    S_by_cand = S_day_scaled[C_ids, :]                      # (|C|, 24)
+    S_day_scaled = surplus_by_day / s_scale
+    if surplus_by_day.shape == (N, hours_per_day):
+        S_by_cand = S_day_scaled[C_ids, :]
+    else:
+        S_by_cand = S_day_scaled[C_ids]                      # (|C|, ...)
 
-    reference_surplus = surplus_hourly_by_day.reshape(-1)   # (T,)
+    reference_surplus = surplus_by_day.reshape(-1)   # (T,)
     reference_surplus_scaled = reference_surplus / s_scale
     a, soc_ref = build_a_and_soc_ref(reference_surplus_scaled, eta_ch, eta_dis, cyc=True)
 

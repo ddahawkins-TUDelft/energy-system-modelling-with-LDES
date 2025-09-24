@@ -105,7 +105,7 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['cluster_with_optimisation'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
+scenarios = ['proxy_baseline','soc_features','cluster_with_optimisation'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
 # exogenous_optimisation_baseline   endogenous_optimisation_baseline
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
     y_field='State of Charge', #'State of Charge', 'SoC Proxy'
-    # colour_field='MAGMe',
+    colour_field='MAGMe',
     # show_tsa_internal_surplus_accumulation=True,
     # save_fig=True
 )

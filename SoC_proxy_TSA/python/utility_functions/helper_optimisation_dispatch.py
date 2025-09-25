@@ -126,10 +126,14 @@ def optimisation_dispatch(
             lambda_soc = float(tsa_config.params['soc_proxy'].get('lambda_soc', 0.5)) 
 
             #pull the cached (N_days x 24) surplus directly ---
-            S_by_day = tsa_config._surplus_hourly_by_day  # set in class_tsa_model per above
-            if S_by_day is None or S_by_day.size == 0:
-                raise RuntimeError("Endogenous mode requires cached hourly surplus; none found. "
-                                "Ensure _build_timeseries cached it (optimisation + endogenous).")
+            # pull surplus (N) from cache, same day order as df_features (daily)
+            S_by_day = np.zeros(tsa_config._surplus_hourly_by_day.shape[0])
+            if tsa_config.params['resample_to_daily_resolution']:
+                S_by_day = tsa_config._surplus_by_day.to_numpy(dtype='float64')
+            else:
+                S_by_day = tsa_config._surplus_hourly_by_day
+            if S_by_day is None or S_by_day.shape[0] != len(tsa_config.df_features):
+                raise RuntimeError("Endogenous-restricted path needs cached hourly surplus (N x 24) aligned with df_features.")
             reference_surplus = S_by_day.reshape(-1)  # (T,)
 
             result = opt.solve_ordo_with_endogenous_soc(
@@ -137,13 +141,13 @@ def optimisation_dispatch(
                 k=tsa_config.params['k_periods'],
                 feature_weights=feature_weights,
                 preferred_features=None,
-                surplus_columns_24h=None,           
                 eta_ch=eta_ch,
                 eta_dis=eta_dis,
                 lambda_soc=lambda_soc,
                 reference_surplus=reference_surplus,
                 normalize="minmax_signed",
-                surplus_hourly_by_day=S_by_day,
+                surplus_by_day=S_by_day,
+                use_endogenous_biases= tsa_config.params['apply_endogenous_biases'] if tsa_config.params['apply_endogenous_biases'] else False
             )
 
         print('[TSA] Solution Found')

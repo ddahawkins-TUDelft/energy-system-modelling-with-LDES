@@ -139,7 +139,7 @@ def visualise(
             color=plt.cm.plasma(np.linspace(0.0, 0.92, len(adapters)))
         )
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 5))
     cache = {}
 
     colour_values = None

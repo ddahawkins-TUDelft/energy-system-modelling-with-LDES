@@ -93,10 +93,16 @@ def optimisation_dispatch(
             eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])
             lambda_soc = float(tsa_config.params['soc_proxy'].get('lambda_soc', 0.5))
+            
+            if tsa_config.params['k_periods_optimisation']:
+                k = tsa_config.params['k_periods_optimisation']
+                print(f'[TSA] Optimisation will select {k} rep days from {tsa_config.params['k_periods']} candidates identified by pre-clustering.')
+            else:
+                k = tsa_config.params['k_periods']
 
             result = opt.solve_ordo_with_endogenous_soc_restricted(
                 df_features=tsa_config.df_features,        # DAILY
-                k=tsa_config.params['k_periods'],
+                k=k,
                 feature_weights=feature_weights,
                 preferred_features=target_columns,         # same set as exogenous ORDO
                 candidates=C,                              # GLOBAL ids from precluster
@@ -110,7 +116,7 @@ def optimisation_dispatch(
                 solver="gurobi",
                 MIPGap=tsa_config.params.get('mipgap', 0.01),
                 threads=10,
-                timelimit=tsa_config.params.get('timelimit', 3600),
+                timelimit=tsa_config.params.get('timelimit', 1200),
                 verbose=True,
                 lp_method="barrier",
             )
@@ -118,8 +124,6 @@ def optimisation_dispatch(
 
         else:
             print('[TSA] Solving MILP with endogenous soc proxy features')
-
-
 
             eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])

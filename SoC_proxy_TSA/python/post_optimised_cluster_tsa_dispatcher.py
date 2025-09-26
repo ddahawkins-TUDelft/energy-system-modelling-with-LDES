@@ -6,6 +6,18 @@ import yaml
 from copy import deepcopy
 from utility_functions.helper_calliope import read_clustered_netcdf
 
+
+
+
+
+scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation' # exogenous_optimisation_baseline   endogenous_optimisation_baseline
+show_soc = True
+date_range = [2015,2019]
+
+
+
+
+
 def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 
     #MODEL SETUP FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -48,7 +60,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 calliope_params = {
         'type': 'cluster',
         'config_yaml_name': 'model',
-        'date_range': [2016,2017],
+        'date_range': date_range,
         'calliope_full_log': [False, False],
 }
 
@@ -105,8 +117,6 @@ tsa_params = {
 with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
     batch_config = yaml.safe_load(f)
 
-scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation'
-# exogenous_optimisation_baseline   endogenous_optimisation_baseline
 
 #EXECUTION FUNCTIONS -------------------------------------------------------------------------------------------------
 
@@ -159,14 +169,13 @@ list_model_dict.append({
     },
 })
 
-show_soc = False
 
 print('> Dispatch: Visualising results')
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
     y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-    # colour_field='MAGMe',
+    colour_field='MAGMe',
     # show_tsa_internal_surplus_accumulation=True,
     # save_fig=True
 )

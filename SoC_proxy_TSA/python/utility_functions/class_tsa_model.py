@@ -124,6 +124,10 @@ class tsa_model:
         dest = f"{ts_dir}/{self.id}.csv"
         if not os.path.exists(dest):
             shutil.copy2(self.paths['timeseries'], dest)
+        else:
+            if not os.path.exists(self.paths['cluster_map']):
+                print('[Dispatch] timeseries file was overwritten as clustermap does not exist yet.')
+
         self.paths['timeseries'] = dest
         
 
@@ -297,7 +301,7 @@ class tsa_model:
 
             # Compute weights dictionary
             
-                
+            print(f'[TSA]: Applying {self.tsa.params['cluster_method']} clustering method, with {self.tsa.params['representation_method']} representation.')
             result = cluster_tsa_with_extremes(
                     df_timeseries=self.tsa.df_features,
                     number_typical_periods=self.tsa.params['k_periods'],
@@ -317,7 +321,7 @@ class tsa_model:
         if self.tsa.type in ['optimisation','cluster_with_optimisation']:
 
             from utility_functions.helper_optimisation_dispatch import optimisation_dispatch
-
+            
             if self.tsa.type == 'optimisation':
 
                 result = optimisation_dispatch(

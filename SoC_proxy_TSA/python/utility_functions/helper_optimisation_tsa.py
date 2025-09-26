@@ -491,87 +491,6 @@ def _ordo_cost_matrix_from_features(
     np.fill_diagonal(D, 0.0)
     return D
 
-# === RR utilities (soft & hard) ===============================================
-
-def build_feature_design_matrices(
-    df_features: pd.DataFrame,
-    candidates: list[int],
-    preferred_features: list[str] | None = None,
-    normalize: str = "minmax_signed",
-    feature_weights: dict[str, float] | None = None,
-):
-    """
-    Prepare matrices for RR:
-      - Normalizes per column ([-1,1]) using the SAME logic as ORDO,
-      - Builds design matrices for ALL days (X_norm) and CANDIDATE days (A_norm),
-      - Applies sqrt(weights) per feature *only* for the FITTING copies (X_fit, A_fit),
-      - Returns per-column (min,max) so we can invert later.
-
-    Returns
-    -------
-    X_fit : (N, D)   # normalized + column-weighted for fitting
-    A_fit : (C, D)   # normalized + column-weighted for fitting (rows are candidates)
-    A_norm: (C, D)   # normalized (no weights) for reconstruction
-    scale_params : list[tuple[float,float]]  # [(min,max) per column, in df_features units]
-    column_order : list[str]                 # df_features columns used, in the order of the matrices
-    """
-    if feature_weights is None:
-        feature_weights = {}
-
-    # reuse your grouping logic so "daily" vs "hourly24" just works
-    mode, groups = group_feature_columns(df_features, preferred_features)
-
-    # Build one large design matrix X_norm (N x D) by concatenating blocks
-    X_blocks = []
-    A_blocks = []
-    scale_params = []
-    colnames = []
-
-    def _scale_signed(col: np.ndarray):
-        cmin = np.nanmin(col)
-        cmax = np.nanmax(col)
-        if not np.isfinite(cmin) or not np.isfinite(cmax) or cmax == cmin:
-            return np.zeros_like(col, dtype=float), (0.0, 1.0)  # degenerate → zeros
-        z = (col - cmin) / (cmax - cmin)
-        z = 2.0 * z - 1.0
-        return z.astype(float), (cmin, cmax)
-
-    for base, cols in groups.items():
-        block = df_features[cols].to_numpy(dtype=float, copy=False)
-        # normalize per column
-        nb = block.shape[1]
-        norm_cols = np.empty_like(block, dtype=float)
-        mins_maxs = []
-        for j in range(nb):
-            norm_cols[:, j], mm = _scale_signed(block[:, j])
-            mins_maxs.append(mm)
-
-        X_blocks.append(norm_cols)            # all days
-        A_blocks.append(norm_cols[candidates, :])  # candidate rows only
-        scale_params.extend(mins_maxs)
-        colnames.extend(cols)
-
-    # concatenate blocks -> (N, D) and (C, D)
-    X_norm = np.concatenate(X_blocks, axis=1)
-    A_norm = np.concatenate(A_blocks, axis=1)
-
-    # apply sqrt(weights) per FEATURE block (spread equally to its columns)
-    # we recorded blocks in order; rebuild the same iteration to apply weights
-    wcols = []
-    for base, cols in groups.items():
-        w = float(feature_weights.get(base, 1.0))
-        if w < 0:
-            w = 0.0
-        factor = np.sqrt(w) if w > 0 else 0.0
-        wcols.extend([factor] * len(cols))
-    wcols = np.asarray(wcols, dtype=float)  # length D
-
-    X_fit = X_norm * wcols[None, :]
-    A_fit = A_norm * wcols[None, :]
-
-    return X_fit, A_fit, A_norm, scale_params, colnames
-
-# === RR (batched, TS + DC) =====================================================
 
 def rebuild_from_assignments(df_features: pd.DataFrame, rep_for_day: np.ndarray) -> pd.DataFrame:
     """
@@ -643,262 +562,6 @@ def solve_ordo_from_features_restricted(
 
 
 # === MILP: ORDO + L1 SoC error ================================================
-def milp_tsa_endogenous(
-    *,
-    D: np.ndarray,                 # (N x N) standard ORDO cost matrix
-    k: int,
-    soc_ref: np.ndarray,           # (T,)
-    H: np.ndarray,                 # (T, N, N) from build_soc_coeff_tensor_for_assignments
-    lambda_soc: float = 0.5,
-    solver: str = "gurobi",
-    MIPGap: float = 0.01,
-    verbose: bool = True
-):
-    """
-    Minimize: (1-lambda_soc)*sum_{i,j} D[i,j] * x[i,j] + lambda_soc * sum_t z_t
-    s.t.     z_t >=  soc_hat[t] - soc_ref[t]
-             z_t >= -soc_hat[t] + soc_ref[t]
-             (standard ORDO constraints)
-    """
-    import pyomo.environ as pyo
-
-    N = D.shape[0]
-    T = soc_ref.shape[0]
-
-    m = pyo.ConcreteModel()
-    m.I = pyo.RangeSet(0, N - 1)
-    m.J = pyo.RangeSet(0, N - 1)
-    m.T = pyo.RangeSet(0, T - 1)
-
-    m.D = pyo.Param(m.I, m.J, initialize={(i,j): float(D[i,j]) for i in range(N) for j in range(N)}, within=pyo.NonNegativeReals)
-
-    m.y = pyo.Var(m.I, domain=pyo.Binary)
-    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)
-
-    # standard ORDO constraints
-    def assign_once(_m, j): return sum(_m.x[i,j] for i in _m.I) == 1
-    m.assign_once = pyo.Constraint(m.J, rule=assign_once)
-
-    def link_x_y(_m, i, j): return _m.x[i,j] <= _m.y[i]
-    m.link = pyo.Constraint(m.I, m.J, rule=link_x_y)
-
-    def num_reps(_m): return sum(_m.y[i] for i in _m.I) == k
-    m.num_reps = pyo.Constraint(rule=num_reps)
-
-    # SoC pieces
-    m.z = pyo.Var(m.T, domain=pyo.NonNegativeReals)  # L1 residuals
-    m.socdiff = pyo.Var(m.T, domain=pyo.Reals)       # soc_hat[t] - soc_ref[t]
-
-    # soc_hat[t] = sum_{i,j} H[t,i,j] * x[i,j]
-    H_dict = {(t,i,j): float(H[t,i,j]) for t in range(T) for i in range(N) for j in range(N)}
-
-    def soc_affine(_m, t):
-        return _m.socdiff[t] == sum(H_dict[(t,i,j)] * _m.x[i,j] for i in _m.I for j in _m.J) - soc_ref[t]
-    m.soc_def = pyo.Constraint(m.T, rule=soc_affine)
-
-    # |socdiff[t]| <= z[t]
-    def z_pos(_m, t): return  _m.z[t] >=  _m.socdiff[t]
-    def z_neg(_m, t): return  _m.z[t] >= -_m.socdiff[t]
-    m.z_pos = pyo.Constraint(m.T, rule=z_pos)
-    m.z_neg = pyo.Constraint(m.T, rule=z_neg)
-
-    # Good scaling baselines
-    dist_scale = max(1e-12, np.mean(D) * D.shape[0])          # ~ N * mean(D_ij)
-    T = len(soc_ref)
-    prox_scale = max(1e-12, np.mean(np.abs(soc_ref)) * T)     # == sum(|soc_ref|)
-    # or simply: prox_scale = max(1e-12, np.sum(np.abs(soc_ref)))
-
-    def obj(_m):
-        dist = (1 - lambda_soc) * (sum(_m.x[i,j]*_m.D[i,j] for i in _m.I for j in _m.J) / dist_scale)
-        prox =      lambda_soc  * (sum(_m.z[t]             for t in _m.T) / prox_scale)
-        return dist + prox
-    m.obj = pyo.Objective(rule=obj, sense=pyo.minimize)
-
-
-    # Solve
-    if verbose: print("[TSA] Solving with", solver)
-    opt = pyo.SolverFactory(solver)
-    res = opt.solve(m, tee=verbose, options={
-        # 'TimeLimit': 1800, #20mins is often enough, see literature ref'd by Gonzato #TODO:
-        'WorkLimit': 1500,
-        'MIPGap': MIPGap,
-        'Threads': min(max_threads-4 if max_threads>4 else 1, 16),
-        'LogToConsole': int(verbose),
-    })
-
-    selected_days = [i for i in range(N) if pyo.value(m.y[i]) > 0.5]
-    assignments = {j: next(i for i in range(N) if pyo.value(m.x[i,j]) > 0.5) for j in range(N)}
-    return {"selected_days": selected_days, "assignments": assignments, "model": m, "results": res}
-
-def milp_tsa_endogenous_basic(
-    *,
-    D: np.ndarray,                    # (N x N) ORDO cost matrix
-    k: int,
-    soc_ref: np.ndarray,              # (T,) reference SoC
-    S_by_day: np.ndarray,             # (N x 24) hourly surplus per candidate day
-    a: np.ndarray,                    # (T,) frozen gains: eta_ch or 1/eta_dis
-    lambda_soc: float = 0.5,
-    solver: str = "gurobi",
-    MIPGap: float = 0.01,
-    threads: int | None = 12,
-    timelimit: int = 1200,
-    verbose: bool = True,
-    root_lp: str = "barrier",         # "dual" | "barrier"
-    endogenous_biases: list | np.ndarray | None = None,
-    bias_minmax: tuple[float, float] = (0.2, 1.0),  # rescale weights to this closed interval
-    bias_zero_threshold: float = 0.3,
-):
-    """
-    Minimize: (1-λ)*sum_{i,j} D[i,j] x[i,j] + λ * sum_t b_t * |soc_hat[t] - soc_ref[t]|
-    with endogenous SoC built from chosen representative-day sequence.
-
-    Notes
-    -----
-    - 'endogenous_biases' are per-timestep weights b_t. They are rescaled to [bias_min, bias_max]
-      and applied only to the proxy term. If None, b_t := 1 for all t.
-    - We divide the proxy scaling by avg(b) so lambda_soc remains comparable across runs.
-    """
-    import numpy as np
-    import pyomo.environ as pyo
-
-    # ---------- Shapes & guards ----------
-    print('[TSA] Constructing and testing inputs for endogenous MILP')
-    N = D.shape[0]
-    assert D.shape == (N, N), "D must be (N,N)"
-    assert S_by_day.shape[0] == N, "S_by_day must be (N)"
-    T = N
-    assert soc_ref.shape[0] == T, f"soc_ref length {soc_ref.shape[0]} != {T}"
-    assert a.shape[0] == T, f"a length {a.shape[0]} != {T}"
-
-    # ---------- Bias handling ----------
-    def _rescale_biases(b: np.ndarray, lo: float, hi: float) -> np.ndarray:
-        """Rescale b to [lo, hi]. If constant or invalid, return ones * hi."""
-        b = np.asarray(b, dtype=float).reshape(-1)
-        if b.size != T or not np.all(np.isfinite(b)):
-            return np.ones(T, dtype=float) * hi
-        bmin, bmax = float(np.min(b)), float(np.max(b))
-        if bmax <= bmin + 1e-12:
-            return np.ones(T, dtype=float) * hi
-        return lo + (b - bmin) * (hi - lo) / (bmax - bmin)
-
-    if endogenous_biases is None:
-        b = np.ones(T, dtype=float) * bias_minmax[1]  # uniform at ceiling
-    else:
-        b = _rescale_biases(endogenous_biases, bias_minmax[0], bias_minmax[1])
-
-    b_avg = float(np.mean(b))
-    if not np.isfinite(b_avg) or b_avg <= 0:
-        b_avg = 1.0
-
-    # mapping t -> (day, hour) and cyc ramp r[t]
-    day_of_t = list(range(T))
-
-    # pack constants
-    S_dict = {(i): float(S_by_day[i]) for i in range(N)}
-    D_dict = {(i, j): float(D[i, j]) for i in range(N) for j in range(N)}
-    a_vec  = [float(x) for x in a]
-    b_vec  = [float(x) for x in b]
-
-    print('[TSA] Constructing pyomo model')
-
-    # ---------- Model ----------
-    m = pyo.ConcreteModel()
-    m.I = pyo.RangeSet(0, N - 1)
-    m.J = pyo.RangeSet(0, N - 1)
-    m.T = pyo.RangeSet(0, T - 1)
-
-    m.D = pyo.Param(m.I, m.J, initialize=D_dict, within=pyo.NonNegativeReals)
-
-    m.y = pyo.Var(m.I, domain=pyo.Binary)
-    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)
-
-    # ORDO constraints
-    m.assign_once = pyo.Constraint(m.J, rule=lambda _m, j: sum(_m.x[i, j] for i in _m.I) == 1)
-    m.link        = pyo.Constraint(m.I, m.J, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
-    m.num_reps    = pyo.Constraint(rule=lambda _m: sum(_m.y[i] for i in _m.I) == k)
-    m.used_rep    = pyo.Constraint(m.I, rule=lambda _m, i: sum(_m.x[i, j] for j in _m.J) >= _m.y[i])
-
-    # surplus_hat[t]
-    def surplus_hat_rule(_m, t):
-        j = day_of_t[t]
-        return sum(S_dict[(i)] * _m.x[i, j] for i in _m.I)
-    m.surplus_hat = pyo.Expression(m.T, rule=surplus_hat_rule)
-
-    # SoC bounds (crude but finite)
-    UB_soc_raw = 1.1 * max(1e-9, float(np.max(np.abs(soc_ref))))  # guard tiny signals
-
-    # SoC dynamics
-    m.soc_raw   = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
-    m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == a_vec[0] * m.surplus_hat[0])
-    def soc_raw_dyn_rule(_m, t):
-        if t == m.T.first():
-            return pyo.Constraint.Skip
-        return _m.soc_raw[t] == _m.soc_raw[t - 1] + a_vec[t] * _m.surplus_hat[t]
-    m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn_rule)
-
-    m.soc_end     = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
-    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T - 1])
-
-    # L1 residuals
-    m.socdiff = pyo.Var(m.T)  # free (can be +/-)
-    # sensible upper bound for z: UB on diff <= UB_soc_raw + |ref|
-    def _z_bounds(_m, t):
-        return (0.0, UB_soc_raw + abs(float(soc_ref[t])))
-    m.z = pyo.Var(m.T, domain=pyo.NonNegativeReals, bounds=_z_bounds)
-
-    # socdiff definition and absolute-value modeling via z
-    m.soc_def = pyo.Constraint(m.T, rule=lambda _m, t: _m.socdiff[t] == soc_ref[t] - _m.soc_raw[t])
-    m.z_pos   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
-    m.z_neg   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
-
-    # Objective (scaled to O(1)).
-    # Keep lambda_soc meaning stable by dividing proxy scale by avg(bias).
-    dist_scale = max(1e-12, float(np.mean(D)))
-    prox_scale = max(1e-12, float(np.mean(np.abs(soc_ref)))) * b_avg
-
-    def obj(_m):
-        dist = (1 - lambda_soc) * (sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale)
-        prox =      lambda_soc  * (sum(b_vec[t] * _m.z[t]       for t in _m.T)                          / prox_scale)
-        return dist + prox
-
-    m.obj = pyo.Objective(rule=obj, sense=pyo.minimize)
-
-    # ---------- Solve ----------
-    if solver == "gurobi":
-        opt = pyo.SolverFactory("gurobi_persistent")
-        opt.set_instance(m)
-
-        opt.set_gurobi_param('MIPGap', MIPGap)
-        if threads is not None: opt.set_gurobi_param('Threads', int(threads))
-        opt.set_gurobi_param('LogToConsole', int(verbose))
-        opt.set_gurobi_param('TimeLimit', int(timelimit))
-        opt.set_gurobi_param('Presolve', 2)
-        opt.set_gurobi_param('Aggregate', 2)
-        if root_lp == "barrier":
-            opt.set_gurobi_param('Method', 2)
-            opt.set_gurobi_param('Crossover', 0)
-        elif root_lp == "dual":
-            opt.set_gurobi_param('Method', 1)
-
-        res = opt.solve(tee=verbose)
-    else:
-        res = pyo.SolverFactory(solver).solve(m, tee=verbose, options={
-            'MIPGap': MIPGap, 'TimeLimit': int(timelimit)
-        })
-
-    # ---------- Extract ----------
-    selected_days = [i for i in range(N) if pyo.value(m.y[i]) > 0.5]
-    assignments   = {j: max(range(N), key=lambda i: pyo.value(m.x[i, j])) for j in range(N)}
-
-    return {
-        "selected_days": selected_days,
-        "assignments": assignments,
-        "model": m,
-        "results": res,
-        "biases_used": b,        # echo the effective biases for logging/debug
-        "bias_avg": b_avg,
-    }
-
 
 def milp_tsa_endogenous_with_bias_handling(
     *,
@@ -1203,61 +866,99 @@ def solve_ordo_with_endogenous_soc(
 
 def milp_tsa_endogenous_restricted_candidates(
     *,
-    Dsub: np.ndarray,                 # (|C|, N) ORDO cost: cand row vs all days
+    Dsub: np.ndarray,                 # (|C|, N) ORDO cost: candidate row vs ALL days
     C_ids: list[int],                 # GLOBAL row ids of candidates, len = |C|
     k: int,
     soc_ref: np.ndarray,              # (T,)
-    S_by_cand: np.ndarray,            # (|C|, 24) hourly surplus for each candidate day (aligned to C_ids)
-    a: np.ndarray,                    # (T,) frozen gains from reference sign / efficiencies
+    S_by_cand: np.ndarray,            # (|C|,) or (|C|, 24) surplus for each candidate day (aligned to C_ids)
+    a: np.ndarray,                    # (T,) frozen gains
     lambda_soc: float = 0.5,
-    hours_per_day: int = 24,
     fix_reps: bool = False,           # if True: fixes all y[i]=1 (|C| must equal k)
     warm_start_rep_for_day: np.ndarray | None = None,   # length N, GLOBAL rep id per day
     solver: str = "gurobi",
     MIPGap: float = 0.01,
     threads: int | None = 12,
-    timelimit: int = 3600,
+    timelimit: int = 1200,
     verbose: bool = True,
     lp_method: str = "barrier",       # "barrier" or "dual"
+    endogenous_biases: list | np.ndarray | None = None,
+    bias_minmax: tuple[float, float] = (0.0, 1.0),
+    bias_zero_threshold: float = 0.25,
 ):
+    """
+    Restricted ORDO + endogenous SoC with bias handling.
+    Mirrors milp_tsa_endogenous_with_bias_handling but with:
+      - rows restricted to GLOBAL candidate ids C_ids
+      - surplus built from candidates only
+    """
     import numpy as np
     import pyomo.environ as pyo
 
     Ic, N = Dsub.shape
     assert Ic == len(C_ids), "Dsub rows must align with C_ids"
-    if fix_reps:
-        assert k == Ic, "fix_reps=True requires k == len(C_ids)"
-    assert S_by_cand.shape[0] == Ic, "S_by_cand must be (|C|, ..."
-
-    # time maps
     T = int(N)
     assert soc_ref.shape[0] == T and a.shape[0] == T, "soc_ref and a must be length N"
-    # day_of_t  = [t // hours_per_day for t in range(T)]
-    # hour_of_t = [t %  hours_per_day for t in range(T)]
-    day_of_t = list(range(T))  
-    if soc_ref.shape == (N,hours_per_day):
-        raise NotImplementedError('Capability for N*hours_per_day removed and required reimplementation')
 
-    # Build params keyed by GLOBAL candidate id
+    # --- Build maps keyed by GLOBAL candidate id
     row_of_global = {g: r for r, g in enumerate(C_ids)}
-    D_map = {(int(i), j): float(Dsub[row_of_global[int(i)], j])
-             for i in C_ids for j in range(N)}
-    # S_map = {(int(i), h): float(S_by_cand[row_of_global[int(i)], h])
-    #          for i in C_ids for h in range(hours_per_day)}
-    S_map = {int(i): float(S_by_cand[row_of_global[int(i)]]) for i in C_ids}
+    D_map = {(int(i), j): float(Dsub[row_of_global[int(i)], j])  for i in C_ids for j in range(N)}
 
-    # ---------- model ----------
+    # Support daily surplus (= scalar per day) or hourly surplus (= vector per day)
+    if S_by_cand.ndim == 2 and S_by_cand.shape[1] != 1:
+        # If you reinstate hourly composition later, replace this with hour-of-t usage
+        # and adapt SoC dynamics accordingly. For now, we aggregate per day.
+        S_map = {int(i): float(np.sum(S_by_cand[row_of_global[int(i)], :])) for i in C_ids}
+    else:
+        S_map = {int(i): float(S_by_cand[row_of_global[int(i)]]) for i in C_ids}
+
+    # --- Bias handling (same as unrestricted path)  :contentReference[oaicite:5]{index=5}
+    def _rescale_biases(b: np.ndarray, lo: float, hi: float) -> np.ndarray:
+        b = np.asarray(b, dtype=float).reshape(-1)
+        if b.size != T or not np.all(np.isfinite(b)):
+            return np.ones(T, dtype=float) * hi
+        bmin, bmax = float(np.min(b)), float(np.max(b))
+        if bmax <= bmin + 1e-12:
+            return np.ones(T, dtype=float) * hi
+        return lo + (b - bmin) * (hi - lo) / (bmax - bmin)
+
+    if endogenous_biases is None:
+        b_full = np.ones(T, dtype=float) * bias_minmax[1]
+    else:
+        b_full = _rescale_biases(endogenous_biases, bias_minmax[0], bias_minmax[1])
+
+    active_mask = b_full > float(bias_zero_threshold)
+    T_pos = [t for t in range(T) if active_mask[t]]
+
+    # Always include anchors (0, T-1, global argmax/min)
+    i_max = int(np.argmax(soc_ref))
+    i_min = int(np.argmin(soc_ref))
+    for t_force in (0, T - 1, i_max, i_min):
+        if t_force not in T_pos:
+            T_pos.append(t_force)
+    T_pos = sorted(set(T_pos))
+
+    b_pos = np.array([float(b_full[t]) for t in T_pos], dtype=float)
+    b_avg = float(np.mean(b_pos)) if b_pos.size else 1.0
+    if not np.isfinite(b_avg) or b_avg <= 0:
+        b_avg = 1.0
+
+    if verbose:
+        pct = 100.0 * len(T_pos) / max(1, T)
+        print(f"[TSA] (restricted) proxy active timesteps: {len(T_pos)}/{T} ({pct:.1f}%), bias_avg_active={b_avg:.3f}")
+
+    # --- Model
     m = pyo.ConcreteModel()
-    m.I = pyo.Set(initialize=list(map(int, C_ids)), ordered=True)  # GLOBAL ids
-    m.J = pyo.RangeSet(0, N - 1)
-    m.T = pyo.RangeSet(0, T - 1)
+    m.I  = pyo.Set(initialize=list(map(int, C_ids)), ordered=True)  # GLOBAL candidate ids
+    m.J  = pyo.RangeSet(0, N - 1)                                   # ALL days (columns)
+    m.T  = pyo.RangeSet(0, T - 1)
+    m.Tz = pyo.Set(initialize=T_pos, ordered=True)                   # active residual set
 
     m.D = pyo.Param(m.I, m.J, initialize=D_map, within=pyo.NonNegativeReals)
 
-    m.y = pyo.Var(m.I, domain=pyo.Binary)             # select reps among candidates
-    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)        # assign each day to a candidate
+    m.y = pyo.Var(m.I, domain=pyo.Binary)      # which candidates are reps
+    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary) # assign each day j to a chosen candidate i
 
-    # assignment & linking
+    # Assignment & linking
     m.assign_once = pyo.Constraint(m.J, rule=lambda _m, j: sum(_m.x[i, j] for i in _m.I) == 1)
     m.link        = pyo.Constraint(m.I, m.J, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
 
@@ -1267,66 +968,119 @@ def milp_tsa_endogenous_restricted_candidates(
     else:
         m.num_reps = pyo.Constraint(expr=sum(m.y[i] for i in m.I) == k)
 
-    # surplus_hat[t] from assignments
+    # surplus_hat[t] (daily index here; if you reintroduce hours, adapt accordingly)
     def surplus_hat_rule(_m, t):
-        j = day_of_t[t]
-        # h = hour_of_t[t]
-        # sum over GLOBAL candidates
+        j = int(t)  # day-of-t is t itself in daily layout
         return sum(S_map[int(i)] * _m.x[i, j] for i in _m.I)
     m.surplus_hat = pyo.Expression(m.T, rule=surplus_hat_rule)
 
-    # SoC dynamics (same as basic endogenous form, just with restricted x)
-    # Smax = float(np.max(np.abs(S_by_cand))) if Ic > 0 else 1.0
-    # sum_abs_a = float(np.sum(np.abs(a)))
-    # UB_soc_raw = max(1.0, Smax * sum_abs_a)
-    UB_soc_raw = 1.1*max(np.abs(soc_ref)) #given the target of matching signals, we can set the max ref as the UB of the clustered signal
+    # SoC dynamics across all T for continuity
+    UB_soc_raw = 1.01*max(1e-9, float(np.max(np.abs(soc_ref))))
+    m.soc_raw   = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
+    m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == a[0] * m.surplus_hat[0])
+    def soc_raw_dyn_rule(_m, t):
+        if t == _m.T.first():
+            return pyo.Constraint.Skip
+        return _m.soc_raw[t] == _m.soc_raw[t - 1] + a[int(t)] * _m.surplus_hat[t]
+    m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn_rule)
+    m.soc_end     = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
+    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T - 1])
 
-    m.soc_raw = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
-    m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == float(a[0]) * m.surplus_hat[0])
-    def soc_raw_dyn(_m, t):
-        if t == m.T.first(): return pyo.Constraint.Skip
-        return _m.soc_raw[t] == _m.soc_raw[t-1] + float(a[t]) * _m.surplus_hat[t]
-    m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn)
+    # --- Peak targeting 
 
-    m.soc_end = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
-    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T-1])
+    # Identify reference-peak index and value
+    t_star = int(np.argmax(soc_ref))
+    s_ref_peak = float(soc_ref[t_star])
 
-    # cyclical correction already baked into soc_ref (since you build a with cyc=True),
-    # so no additional r[t]*soc_end term here.
+    # Peak magnitude slacks
+    m.u_under = pyo.Var(domain=pyo.NonNegativeReals)
+    m.u_over  = pyo.Var(domain=pyo.NonNegativeReals)
 
-    m.socdiff = pyo.Var(m.T)  # free
-    m.z = pyo.Var(m.T, domain=pyo.NonNegativeReals, bounds=lambda _m, t: (0.0, UB_soc_raw + abs(float(soc_ref[t]))))
-    m.soc_def = pyo.Constraint(m.T, rule=lambda _m, t: _m.socdiff[t] == soc_ref[t] - _m.soc_raw[t]) #DANO, i flipped this, may need to flip back but shouldnt matter
-    m.z_pos   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
-    m.z_neg   = pyo.Constraint(m.T, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
+    # Link slacks to soc at t_star (magnitude match)
+    m.peak_under_def = pyo.Constraint(expr = m.u_under >= s_ref_peak - m.soc_raw[t_star])
+    m.peak_over_def  = pyo.Constraint(expr = m.u_over  >= m.soc_raw[t_star] - s_ref_peak)
 
-    # objective (scaled)
-    import numpy as _np
-    dist_scale = max(1e-12, float(_np.mean(Dsub)))
-    prox_scale = max(1e-12, float(_np.mean(_np.abs(soc_ref))))
-    m.obj = pyo.Objective(
-        expr=(1 - lambda_soc) * (sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J) / dist_scale)
-           +      lambda_soc  * (sum(m.z[t]                for t in m.T)              / prox_scale),
-        sense=pyo.minimize
+    # Peak timing slacks: v_t >= soc_raw[t] - soc_raw[t_star]  (only positive excess counts)
+    m.v = pyo.Var(m.T, domain=pyo.NonNegativeReals)
+    def timing_excess_rule(_m, t):
+        return _m.v[t] >= _m.soc_raw[t] - _m.soc_raw[t_star]
+    m.timing_excess = pyo.Constraint(m.T, rule=timing_excess_rule)
+
+    # Distance weights from t_star: w_far[t] = 1 - exp(-|t - t_star| / tau_peak)
+    tau_peak = 10.0  # <-- tune: smaller = more timing focus
+    w_far = {int(t): 1.0 - np.exp(-abs(int(t)-t_star)/max(1.0, tau_peak)) for t in range(len(soc_ref))}
+
+    # Scales for objective terms (keep magnitudes comparable)
+    span_soc = max(1e-12, float(np.max(soc_ref) - np.min(soc_ref)))
+    peak_mag_scale   = span_soc         # typical size of a peak miss
+    peak_time_scale  = span_soc         # v_t is in SoC units too
+
+    # Coefficients (tune these; start modest, then increase)
+    lambda_peak_mag  = lambda_soc/2   # strength on peak magnitude at t_star
+    lambda_peak_time = lambda_soc/2 
+
+    # L1 residuals only on T_pos
+    def _z_bounds(_m, t):
+        return (0.0, UB_soc_raw + abs(float(soc_ref[int(t)])))
+    m.socdiff = pyo.Var(m.Tz)
+    m.z       = pyo.Var(m.Tz, domain=pyo.NonNegativeReals, bounds=_z_bounds)
+    m.soc_def = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.socdiff[t] == soc_ref[int(t)] - _m.soc_raw[t])
+    m.z_pos   = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
+    m.z_neg   = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
+
+    # Objective with balanced scaling (same idea as unrestricted “with bias handling”)  :contentReference[oaicite:6]{index=6}
+    dist_scale = max(1e-12, float(np.max(Dsub)))             # use mean of restricted matrix rows
+    prox_scale = max(1e-12, float(np.max(np.abs(soc_ref)))) * b_avg
+
+    b_for_Tz = {int(t): float(b_full[int(t)]) for t in T_pos}
+
+    
+    # --- Objective components (expressions)
+    m.dist_term_scaled = pyo.Expression(
+        rule=lambda _m: sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale
+    )
+    m.prox_term_scaled = pyo.Expression(
+        rule=lambda _m: (sum(b_for_Tz[int(t)] * _m.z[t] for t in _m.Tz) / prox_scale) if len(T_pos) else 0.0
     )
 
-    # ---------- solve (with optional warm start) ----------
+    # Optional raw, unscaled
+    m.dist_term_raw = pyo.Expression(
+        rule=lambda _m: sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J)
+    )
+    m.prox_term_raw = pyo.Expression(
+        rule=lambda _m: (sum(b_for_Tz[int(t)] * _m.z[t] for t in _m.Tz)) if len(T_pos) else 0.0
+    )
+
+    m.peak_mag_norm = pyo.Expression(rule=lambda _m: (_m.u_under + _m.u_over) / peak_mag_scale)
+    m.peak_time_norm = pyo.Expression(rule=lambda _m: sum(w_far[int(t)] * _m.v[t] for t in _m.T) / peak_time_scale)
+
+    def obj(_m):
+        dist = (1 - lambda_soc) * _m.dist_term_scaled
+        prox =      lambda_soc  * _m.prox_term_scaled
+        peak_mag  = lambda_peak_mag  * _m.peak_mag_norm
+        peak_time = lambda_peak_time * _m.peak_time_norm
+        return dist + prox + peak_mag + peak_time
+
+    m.obj = pyo.Objective(rule=obj, sense=pyo.minimize)
+
+
+    # --- Solve (warm start if provided)
     if solver == "gurobi":
         opt = pyo.SolverFactory("gurobi_persistent")
         opt.set_instance(m)
 
         if warm_start_rep_for_day is not None:
-            gv = opt._pyomo_var_to_solver_var_map
-            Cset = set(int(i) for i in C_ids)
+            gvmap = opt._pyomo_var_to_solver_var_map
+            C_set = set(C_ids)
             used = set()
             for j in range(N):
-                g = int(warm_start_rep_for_day[j])
-                if g in Cset:
-                    gv[m.x[g, j]].Start = 1.0
-                    used.add(g)
+                g_rep = int(warm_start_rep_for_day[j])
+                if g_rep in C_set:
+                    gvmap[m.x[g_rep, j]].Start = 1.0
+                    used.add(g_rep)
             if not fix_reps:
                 for i in m.I:
-                    gv[m.y[i]].Start = 1.0 if int(i) in used else 0.0
+                    gvmap[m.y[i]].Start = 1.0 if int(i) in used else 0.0
 
         opt.set_gurobi_param('MIPGap', MIPGap)
         if threads is not None: opt.set_gurobi_param('Threads', int(threads))
@@ -1335,8 +1089,7 @@ def milp_tsa_endogenous_restricted_candidates(
         opt.set_gurobi_param('Presolve', 2)
         opt.set_gurobi_param('Aggregate', 2)
         if lp_method == "barrier":
-            opt.set_gurobi_param('Method', 2)
-            opt.set_gurobi_param('Crossover', 0)
+            opt.set_gurobi_param('Method', 2); opt.set_gurobi_param('Crossover', 0)
         elif lp_method == "dual":
             opt.set_gurobi_param('Method', 1)
 
@@ -1346,7 +1099,29 @@ def milp_tsa_endogenous_restricted_candidates(
             'MIPGap': MIPGap, 'TimeLimit': int(timelimit)
         })
 
-    # ---------- extract in GLOBAL coords ----------
+    
+    obj_val = float(pyo.value(m.obj))
+    dist_val = float(pyo.value(m.dist_term_scaled))
+    prox_val = float(pyo.value(m.prox_term_scaled))
+    peak_mag_val  = float(pyo.value(getattr(m, "peak_mag_norm", 0.0)))
+    peak_time_val = float(pyo.value(getattr(m, "peak_time_norm", 0.0)))
+
+    # contributions actually used in obj
+    dist_contrib = (1 - lambda_soc) * dist_val
+    prox_contrib =      lambda_soc  * prox_val
+    pm_contrib   = (locals().get("lambda_peak_mag", 0.0))  * peak_mag_val
+    pt_contrib   = (locals().get("lambda_peak_time", 0.0)) * peak_time_val
+
+    def _share(v): return (v / obj_val) if obj_val else 0.0
+
+    print("[OBJ parts] total={:.6g}".format(obj_val))
+    print("  dist_norm={:.4f}  contrib={:.4f}  share={:.2%}".format(dist_val, dist_contrib, _share(dist_contrib)))
+    print("  prox_norm={:.4f}  contrib={:.4f}  share={:.2%}".format(prox_val, prox_contrib, _share(prox_contrib)))
+    print("  peak_mag ={:.4f}  contrib={:.4f}  share={:.2%}".format(peak_mag_val, pm_contrib, _share(pm_contrib)))
+    print("  peak_time={:.4f}  contrib={:.4f}  share={:.2%}".format(peak_time_val, pt_contrib, _share(pt_contrib)))
+
+
+    # --- Extract (GLOBAL ids for selected reps and assignments)
     if fix_reps:
         selected_days = list(map(int, C_ids))
     else:
@@ -1354,7 +1129,6 @@ def milp_tsa_endogenous_restricted_candidates(
 
     assignments = {}
     for j in m.J:
-        # prefer exact 1s, fall back to argmax
         chosen = [int(i) for i in m.I if (pyo.value(m.x[i, j]) or 0.0) > 0.5]
         if chosen:
             assignments[int(j)] = chosen[0]
@@ -1366,7 +1140,12 @@ def milp_tsa_endogenous_restricted_candidates(
                     best_v, best_i = v, int(i)
             assignments[int(j)] = best_i
 
-    return {"selected_days": selected_days, "assignments": assignments, "model": m, "results": res}
+    return {
+        "selected_days": selected_days,
+        "assignments": assignments,
+        "model": m,
+        "results": res,
+    }
 
 def solve_ordo_with_endogenous_soc_restricted(
     *,
@@ -1380,49 +1159,108 @@ def solve_ordo_with_endogenous_soc_restricted(
     eta_ch: float,
     eta_dis: float,
     lambda_soc: float,
-    surplus_by_day: np.ndarray, # (N, 24) hourly surplus for EVERY day
+    surplus_by_day: np.ndarray,        # (N,) or (N, 24) depending on your cache
     normalize: str = "minmax_signed",
     solver: str = "gurobi",
     MIPGap: float = 0.01,
     threads: int | None = 12,
-    timelimit: int = 3600,
+    timelimit: int = 1200,
     verbose: bool = True,
     lp_method: str = "barrier",
+    use_endogenous_biases: bool = False,
+    bias_minmax: tuple[float, float] = (0.0, 1.0),
+    bias_zero_threshold: float = 0,
 ):
+    """
+    Restricted ORDO + endogenous SoC objective, with the SAME bias handling used by the
+    unrestricted path. Mirrors logic in solve_ordo_with_endogenous_soc(...).
+    """
     import numpy as np
 
-    # 1) ORDO distance over all days (daily / hourly24 features supported)
-    D_full = _ordo_cost_matrix_from_features(
+    # 1) Build full ORDO distance once, then slice rows to candidates
+    D_full = _ordo_cost_matrix_from_features(  # :contentReference[oaicite:0]{index=0}
         df_features=df_features,
         feature_weights=feature_weights,
         preferred_features=preferred_features,
         normalize=normalize,
     )  # (N, N)
 
-    N = D_full.shape[0]
-    hours_per_day = 24
+    def normalize_D_unit(D: np.ndarray, method: str = "p99_clip") -> np.ndarray:
+        """
+        Return D' in [0, 1] using a single global scale.
+        - 'max'      : divide by global max of off-diagonals (fallback to max overall)
+        - 'p99_clip' : divide by 99th percentile of off-diagonals, then clip to 1
+        - 'median2'  : divide by 2*median(off-diagonals) (no clip) — very robust
+        """
+        import numpy as np
+        D = np.asarray(D, dtype=float)
+        n = D.shape[0]
+        # take off-diagonal values (diagonal is usually 0)
+        mask = ~np.eye(n, dtype=bool)
+        vals = D[mask]
+        if method == "max":
+            s = float(np.max(vals)) if vals.size else 1.0
+            s = max(s, 1e-12)
+            return np.minimum(D / s, 1.0)
+        elif method == "p99_clip":
+            s = float(np.quantile(vals, 0.99)) if vals.size else 1.0
+            s = max(s, 1e-12)
+            return np.minimum(D / s, 1.0)
+        elif method == "median2":
+            s = 2.0 * float(np.median(vals)) if vals.size else 1.0
+            s = max(s, 1e-12)
+            return D / s
+        else:
+            raise ValueError("Unknown method")
+    D_full = normalize_D_unit(D_full, method="p99_clip")  # <- add this
 
-    # 2) Slice rows to candidate set
+
+    N = D_full.shape[0]
     C_ids = list(map(int, candidates))
     Dsub = D_full[np.ix_(C_ids, np.arange(N))]  # (|C|, N)
 
-    # 3) Build SoC pieces (scale surplus for numerics like your earlier path)
-    
-    assert surplus_by_day.shape[0] == N, "surplus_hourly_by_day must be (N, ...)"
+    # 2) Surplus scaling (same as unrestricted path)
+    assert surplus_by_day.shape[0] == N, "surplus_by_day must be aligned to df_features length"
     s_scale = float(np.percentile(np.abs(surplus_by_day), 99.5))
     s_scale = max(s_scale, 1.0)
-    S_day_scaled = surplus_by_day / s_scale
-    if surplus_by_day.shape == (N, hours_per_day):
-        S_by_cand = S_day_scaled[C_ids, :]
+
+    S_scaled = surplus_by_day / s_scale
+    # Candidate slice (works whether your cache is (N,) daily or (N, 24) hourly)
+    if S_scaled.ndim == 2 and S_scaled.shape[1] != 1:
+        S_by_cand = S_scaled[C_ids, :]       # (|C|, 24)
+        reference_surplus = surplus_by_day.reshape(-1)  # if you still flatten elsewhere
     else:
-        S_by_cand = S_day_scaled[C_ids]                      # (|C|, ...)
+        S_by_cand = S_scaled[C_ids]          # (|C|,)
+        reference_surplus = surplus_by_day.reshape(-1)
 
-    reference_surplus = surplus_by_day.reshape(-1)   # (T,)
     reference_surplus_scaled = reference_surplus / s_scale
-    a, soc_ref = build_a_and_soc_ref(reference_surplus_scaled, eta_ch, eta_dis, cyc=True)
 
-    # 4) Solve restricted endogenous MILP
-    return milp_tsa_endogenous_restricted_candidates(
+    # 3) a_t and soc_ref from the (scaled) reference surplus
+    a, soc_ref = build_a_and_soc_ref(reference_surplus_scaled, eta_ch, eta_dis, cyc=True)  # :contentReference[oaicite:1]{index=1}
+
+    # 4) Optional endogenous bias generation (reusing the same recipe you used in the unrestricted path)
+    if use_endogenous_biases:
+        endo_params = dict(
+            normalize_mode="minmax",
+            smooth_window=1,
+            extrema_window=121,
+            min_prominence=0.05,
+            tau_decay=12,
+            weight_global_extreme_boost=True, coef_global_extreme=3.0, tau_global_extreme=5.0,
+            weight_endpoints=True, coef_endpoints=2.0,
+            priority_floor_multiplier=1.5,
+            weight_extremes=True, coef_extremes=0.75,
+            weight_span=True, coef_span=1.25, span_alpha=2.0,
+            weight_tail_softmax=False, weight_ramp=False, weight_curvature=False, weight_rarity=False,
+            plot=False,
+        )
+        # Use cumulative surplus (SoC-like) to compute weights, same as unrestricted path.  :contentReference[oaicite:2]{index=2}
+        endogenous_biases = generate_endogenous_biases(surplus_by_day.cumsum(), params=endo_params)
+    else:
+        endogenous_biases = None
+
+    # 5) Solve the restricted MILP with bias handling (mirrors the unrestricted version)
+    return milp_tsa_endogenous_restricted_candidates(   # implemented just below
         Dsub=Dsub,
         C_ids=C_ids,
         k=k,
@@ -1430,7 +1268,6 @@ def solve_ordo_with_endogenous_soc_restricted(
         S_by_cand=S_by_cand,
         a=a,
         lambda_soc=lambda_soc,
-        hours_per_day=hours_per_day,
         fix_reps=fix_reps,
         warm_start_rep_for_day=warm_start_rep_for_day,
         solver=solver,
@@ -1439,4 +1276,7 @@ def solve_ordo_with_endogenous_soc_restricted(
         timelimit=timelimit,
         verbose=verbose,
         lp_method=lp_method,
+        endogenous_biases=endogenous_biases,
+        bias_minmax=bias_minmax,
+        bias_zero_threshold=bias_zero_threshold,
     )

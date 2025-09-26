@@ -159,14 +159,14 @@ list_model_dict.append({
     },
 })
 
-show_soc = True
+show_soc = False
 
 print('> Dispatch: Visualising results')
 visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
     y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-    colour_field='MAGMe',
+    # colour_field='MAGMe',
     # show_tsa_internal_surplus_accumulation=True,
     # save_fig=True
 )

@@ -157,6 +157,9 @@ def _local_extrema_with_prominence(
             if prom >= prom_thresh:
                 peaks.append(i)
                 peak_vals.append(v)
+            if v in peak_vals and i not in peaks: #adds any double maxima
+                peaks.append(i)
+                peak_vals.append(v)
 
         # Trough test
         if v <= local.min() and v < vals[i - 1] and v < vals[i + 1]:
@@ -226,29 +229,6 @@ def _relative_prominence_weights(s_smooth: pd.Series, peaks: np.ndarray, troughs
     if q_prom.size:
         q_prom = q_prom / max(q_prom.max(), 1e-12)
     return p_prom, q_prom
-
-
-def _w_global_extreme_boost(s: pd.Series, tau: float = 7.0) -> np.ndarray:
-    """
-    Put a dominant spike at the *global* max and min, with an optional short halo.
-    This does not depend on local-extrema detection.
-    """
-    n = len(s)
-    if n == 0:
-        return np.array([])
-    i_max = int(np.argmax(s.values))
-    i_min = int(np.argmin(s.values))
-    t = np.arange(n)
-    tau = max(float(tau), 1.0)
-
-    w = np.zeros(n, dtype=float)
-    # Unit spikes at the exact extremes
-    w[i_max] += 1.0
-    w[i_min] += 1.0
-    # Optional short halos so nearby hours also get some mass (helps feasibility)
-    w += np.exp(-np.abs(t - i_max) / tau) * 0.25
-    w += np.exp(-np.abs(t - i_min) / tau) * 0.25
-    return w
 
 
 def _w_rarity_state_space(s: pd.Series, bins: int = 20, eps: float = 1e-6) -> np.ndarray:
@@ -349,6 +329,89 @@ def _w_tail_softmax(s_norm: pd.Series, k: float = 8.0, q: float = 0.98) -> np.nd
     dn = np.exp(k * (lo - x))        # lights up near bottom tail
     return up + dn
 
+def _w_global_extreme_plateau(
+    s: pd.Series,
+    window: int = 10,
+    tau: float = 3.0,
+    level: float = 1.0,
+    tol_frac: float = 1e-6,
+) -> np.ndarray:
+    """
+    Create a *flat* plateau at height `level` for all timesteps within +/- `window`
+    of the global max *or* global min. Outside that window, decay exponentially
+    with scale `tau`. This yields a 'flat top and steep sides' around both extremes.
+
+    - Handles flat-topped peaks/valleys by treating any point within `tol_frac * span(s)`
+      of the global max/min as part of the 'ridge center' set.
+    - Plateau is continuous with the decay: w(d=window) = level.
+
+    Parameters
+    ----------
+    s : pd.Series
+        Input series (ideally the smoothed/normalized proxy used for long-window behavior).
+    window : int
+        Half-width of the plateau around each extreme (±window).
+    tau : float
+        Exponential decay scale outside the plateau; smaller => steeper sides.
+    level : float
+        Plateau height (same for max and min plateaus).
+    tol_frac : float
+        Tolerance vs. span(s) for including near-equal values in the ridge centers.
+
+    Returns
+    -------
+    w : np.ndarray
+        Weight array with flat plateaus around both extremes and steep exponential sides.
+    """
+    n = len(s)
+    if n == 0:
+        return np.array([])
+
+    v = s.values.astype(float)
+    smin, smax = float(v.min()), float(v.max())
+    span = smax - smin if smax > smin else 1.0
+    tol = tol_frac * span
+
+    # Ridge centers for max/min (handle flat tops/valleys)
+    max_centers = np.where(np.abs(v - smax) <= tol)[0]
+    min_centers = np.where(np.abs(v - smin) <= tol)[0]
+    if max_centers.size == 0:
+        max_centers = np.array([int(np.argmax(v))])
+    if min_centers.size == 0:
+        min_centers = np.array([int(np.argmin(v))])
+
+    t = np.arange(n)
+
+    def nearest_distance(centers: np.ndarray) -> np.ndarray:
+        if centers.size == 1:
+            return np.abs(t - centers[0])
+        return np.min(np.abs(t[:, None] - centers[None, :]), axis=1)
+
+    # Distance to the *closest* ridge (either max-side or min-side)
+    d_max = nearest_distance(max_centers)
+    d_min = nearest_distance(min_centers)
+    d = np.minimum(d_max, d_min)
+
+    w = np.zeros(n, dtype=float)
+    if window < 0:
+        window = 0
+    inside = d <= window
+    outside = ~inside
+
+    # Flat plateau inside ±window at height = level
+    w[inside] = level
+
+    # Steep exponential decay outside; continuous at boundary (d = window)
+    if tau <= 0:
+        # Step drop to 0 outside (extremely steep)
+        w[outside] = 0.0
+    else:
+        w[outside] = level * np.exp(-(d[outside] - window) / float(tau))
+
+    return w
+
+
+
 # =========================
 # Public API
 # =========================
@@ -426,7 +489,7 @@ def generate_endogenous_biases(
     # Defaults
     dflt = dict(
         normalize_mode="minmax",
-        smooth_window=15,       # ~weekly if hourly data
+        smooth_window=1,       # ~weekly if hourly data
         extrema_window=91,
         min_prominence=0.05,
         tau_decay=30,
@@ -439,6 +502,8 @@ def generate_endogenous_biases(
         tail_k = 8.0,
         tail_q = 0.98,
         priority_floor_multiplier = 1.25,
+        gep_window=0.01*len(df_reference),
+        
         # toggles
         weight_extremes=True,
         weight_rarity=False,
@@ -448,6 +513,7 @@ def generate_endogenous_biases(
         weight_span=True,
         weight_global_extreme_boost = True,
         weight_tail_softmax = True,
+        weight_global_extreme_halo=True,
         # coefficients
         coef_extremes=1.0,
         coef_rarity=0.0, #this one is weird, don't use
@@ -455,7 +521,8 @@ def generate_endogenous_biases(
         coef_ramp=1,
         coef_endpoints=2.0,
         coef_span=0.5,
-        coef_global_extreme = 1.0,        
+        coef_global_extreme = 1.0,    
+        coef_global_extreme_halo=2.0,    
         # plotting
         plot=False,
         plot_scale=1,
@@ -480,9 +547,13 @@ def generate_endogenous_biases(
     ds, d2s = _finite_differences(s_smooth)
 
     # Local extrema (prominent)
-    peaks, troughs, peak_vals, trough_vals = _local_extrema_with_prominence(
+    peaks, troughs, _, _ = _local_extrema_with_prominence(
         s_smooth, window=int(cfg["extrema_window"]), min_prominence=float(cfg["min_prominence"])
     )
+
+    add_manual_peaks = 246
+    peaks = np.sort(np.append(peaks,add_manual_peaks))
+    
 
     p_scale, q_scale = _relative_prominence_weights(s_smooth, peaks, troughs,
                                                 window=int(cfg["extrema_window"]),
@@ -496,9 +567,15 @@ def generate_endogenous_biases(
     # === Component assembly ===
 
     # 2. Global extreme boost (dominates)
-    if cfg.get("weight_global_extreme_boost", True):
-        w_g = _w_global_extreme_boost(s_smooth, tau=float(cfg.get("tau_global_extreme", 7.0)))
-        accum += cfg.get("coef_global_extreme", 5.0) * w_g
+    if cfg.get("weight_global_extreme_plateau", True):
+        w_gep = _w_global_extreme_plateau(
+            s_smooth,
+            window=int(cfg.get("gep_window", 10)),
+            tau=float(cfg.get("gep_tau", 3)),
+            level=float(cfg.get("gep_level", 1.0)),
+            tol_frac=float(cfg.get("gep_tol_frac", 1e-6)),
+        )
+        accum += float(cfg.get("coef_global_extreme_plateau", 5.0)) * w_gep
 
     # 3. Tail softmax (distributional)
     if cfg.get("weight_tail_softmax", True):
@@ -546,19 +623,30 @@ def generate_endogenous_biases(
     else:
         weights = (n * accum) / total
 
+    def _rescale_biases(b: np.ndarray, lo: float, hi: float) -> np.ndarray:
+        """Rescale b to [lo, hi]. If constant or invalid, return ones * hi."""
+        b = np.asarray(b, dtype=float).reshape(-1)
+        bmin, bmax = float(np.min(b)), float(np.max(b))
+        if bmax <= bmin + 1e-12:
+            return np.ones(len(b), dtype=float) * hi
+        return lo + (b - bmin) * (hi - lo) / (bmax - bmin)
+    
+    weights = _rescale_biases(weights, 0.0, 1)
+
     # Optional plot
     if cfg["plot"]:
         # Scale weights to overlay on proxy nicely
         span = float(s_plot.max() - s_plot.min())
+        s_plot = s_plot / s_plot.max()
         span = span if span > 0 else 1.0
-        w_vis = (weights / max(weights.max(), 1e-12)) * (cfg["plot_scale"] * span)
+        w_vis = (weights / max(weights.max(), 1e-12)) * (cfg["plot_scale"])
         baseline = float(s_plot.min())
-        s_smooth = s_smooth * s_plot.max() / s_smooth.max()
-
+        s_smooth = s_smooth / s_smooth.max()
+        
         plt.figure(figsize=(10, 4))
         plt.plot(s_plot.index, s_plot.values, label="SoC proxy", color='black')
         plt.plot(s_smooth.index, s_smooth.values,label='Smoothed Signal', color='blue')
-        plt.scatter(s_plot.index, baseline + w_vis, s=6, label="Relative weights", color='red')
+        plt.scatter(s_plot.index, w_vis, s=6, label="Relative weights", color='red')
         plt.title("Reference proxy with relative endogenous weights")
         plt.xlabel("Time")
         plt.ylabel("Proxy / Relative weight (scaled)")

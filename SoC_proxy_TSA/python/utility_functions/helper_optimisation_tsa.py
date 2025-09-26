@@ -741,11 +741,12 @@ def milp_tsa_endogenous_basic(
     solver: str = "gurobi",
     MIPGap: float = 0.01,
     threads: int | None = 12,
-    timelimit: int = 2000,
+    timelimit: int = 1200,
     verbose: bool = True,
     root_lp: str = "barrier",         # "dual" | "barrier"
     endogenous_biases: list | np.ndarray | None = None,
     bias_minmax: tuple[float, float] = (0.2, 1.0),  # rescale weights to this closed interval
+    bias_zero_threshold: float = 0.3,
 ):
     """
     Minimize: (1-λ)*sum_{i,j} D[i,j] x[i,j] + λ * sum_t b_t * |soc_hat[t] - soc_ref[t]|
@@ -899,6 +900,197 @@ def milp_tsa_endogenous_basic(
     }
 
 
+def milp_tsa_endogenous_with_bias_handling(
+    *,
+    D: np.ndarray,                    # (N x N) ORDO cost matrix
+    k: int,
+    soc_ref: np.ndarray,              # (T,) reference SoC
+    S_by_day: np.ndarray,             # (N x 24) hourly surplus per candidate day  (treated here as (N,))
+    a: np.ndarray,                    # (T,) frozen gains: eta_ch or 1/eta_dis
+    lambda_soc: float = 0.5,
+    solver: str = "gurobi",
+    MIPGap: float = 0.01,
+    threads: int | None = 12,
+    timelimit: int = 2000,
+    verbose: bool = True,
+    root_lp: str = "barrier",         # "dual" | "barrier"
+    endogenous_biases: list | np.ndarray | None = None,
+    bias_minmax: tuple[float, float] = (0.0, 1.0),  # rescale weights to this interval
+    bias_zero_threshold: float = 0.25,               # below/eq this => remove proxy residuals
+):
+    """
+    Minimize: (1-λ)*Σ_{i,j} D[i,j] x[i,j]  +  λ * Σ_{t∈T+} b_t * |soc_hat[t] - soc_ref[t]|
+    with endogenous SoC built from the chosen representative-day sequence.
+
+    T+ = { t | bias(t) > bias_zero_threshold } ∪ {0, T-1, argmax(soc_ref), argmin(soc_ref)}
+
+    Notes
+    -----
+    - 'endogenous_biases' are per-timestep weights b_t. They are rescaled to [bias_min, bias_max].
+      If None, b_t := bias_max for all t (i.e., uniform).
+    - Proxy residual variables/constraints are ONLY created for t ∈ T+ to reduce model size.
+    - The proxy scaling divides by avg(b_t | t ∈ T+) so lambda_soc remains comparable.
+    """
+    import numpy as np
+    import pyomo.environ as pyo
+
+    # ---------- Shapes & guards ----------
+    print('[TSA] Constructing and testing inputs for endogenous MILP (with bias handling)')
+    N = D.shape[0]
+    assert D.shape == (N, N), "D must be (N,N)"
+    assert S_by_day.shape[0] == N, "S_by_day must be (N)"
+    T = N
+    assert soc_ref.shape[0] == T, f"soc_ref length {soc_ref.shape[0]} != {T}"
+    assert a.shape[0] == T, f"a length {a.shape[0]} != {T}"
+
+    # ---------- Bias handling ----------
+    def _rescale_biases(b: np.ndarray, lo: float, hi: float) -> np.ndarray:
+        """Rescale b to [lo, hi]. If invalid or constant, return ones * hi."""
+        b = np.asarray(b, dtype=float).reshape(-1)
+        if b.size != T or not np.all(np.isfinite(b)):
+            return np.ones(T, dtype=float) * hi
+        bmin, bmax = float(np.min(b)), float(np.max(b))
+        if bmax <= bmin + 1e-12:
+            return np.ones(T, dtype=float) * hi
+        return lo + (b - bmin) * (hi - lo) / (bmax - bmin)
+
+    if endogenous_biases is None:
+        b_full = np.ones(T, dtype=float) * bias_minmax[1]  # uniform at ceiling
+    else:
+        b_full = _rescale_biases(endogenous_biases, bias_minmax[0], bias_minmax[1])
+
+    # Active timesteps for proxy term (strictly greater than threshold)
+    active_mask = b_full > float(bias_zero_threshold)
+    T_pos = [t for t in range(T) if active_mask[t]]
+
+    # Ensure critical anchors are always present in proxy term
+    i_max = int(np.argmax(soc_ref))
+    i_min = int(np.argmin(soc_ref))
+    for t_force in (0, T - 1, i_max, i_min):
+        if t_force not in T_pos:
+            T_pos.append(t_force)
+    T_pos = sorted(set(T_pos))
+
+    # Average active bias to keep lambda_soc comparable in the objective scaling
+    b_pos = np.array([float(b_full[t]) for t in T_pos], dtype=float)
+    b_avg = float(np.mean(b_pos)) if b_pos.size else 1.0
+    if not np.isfinite(b_avg) or b_avg <= 0:
+        b_avg = 1.0
+
+    # ---------- Convenience packs ----------
+    day_of_t = list(range(T))
+    S_dict = {(i): float(S_by_day[i]) for i in range(N)}
+    D_dict = {(i, j): float(D[i, j]) for i in range(N) for j in range(N)}
+    a_vec  = [float(x) for x in a]
+    b_dict = {int(t): float(b_full[t]) for t in range(T)}  # for potential debugging
+
+    print(f'[TSA] Proxy active timesteps: {len(T_pos)}/{T} '
+          f'({100.0*len(T_pos)/max(1,T):.1f}%), bias_avg_active={b_avg:.3f}')
+
+    # ---------- Model ----------
+    m = pyo.ConcreteModel()
+    m.I = pyo.RangeSet(0, N - 1)
+    m.J = pyo.RangeSet(0, N - 1)
+    m.T = pyo.RangeSet(0, T - 1)
+    m.Tz = pyo.Set(initialize=T_pos, ordered=True)  # only these timesteps have proxy residuals
+
+    m.D = pyo.Param(m.I, m.J, initialize=D_dict, within=pyo.NonNegativeReals)
+
+    m.y = pyo.Var(m.I, domain=pyo.Binary)
+    m.x = pyo.Var(m.I, m.J, domain=pyo.Binary)
+
+    # ORDO constraints
+    m.assign_once = pyo.Constraint(m.J, rule=lambda _m, j: sum(_m.x[i, j] for i in _m.I) == 1)
+    m.link        = pyo.Constraint(m.I, m.J, rule=lambda _m, i, j: _m.x[i, j] <= _m.y[i])
+    m.num_reps    = pyo.Constraint(rule=lambda _m: sum(_m.y[i] for i in _m.I) == k)
+    m.used_rep    = pyo.Constraint(m.I, rule=lambda _m, i: sum(_m.x[i, j] for j in _m.J) >= _m.y[i])
+
+    # surplus_hat[t]
+    def surplus_hat_rule(_m, t):
+        j = day_of_t[t]
+        return sum(S_dict[(i)] * _m.x[i, j] for i in _m.I)
+    m.surplus_hat = pyo.Expression(m.T, rule=surplus_hat_rule)
+
+    # SoC bounds (crude but finite)
+    UB_soc_raw = 1.1 * max(1e-9, float(np.max(np.abs(soc_ref))))  # guard tiny signals
+
+    # SoC dynamics (over all T to keep the trajectory continuous)
+    m.soc_raw   = pyo.Var(m.T, bounds=(-UB_soc_raw, UB_soc_raw))
+    m.soc_raw_0 = pyo.Constraint(expr=m.soc_raw[0] == a_vec[0] * m.surplus_hat[0])
+
+    def soc_raw_dyn_rule(_m, t):
+        if t == m.T.first():
+            return pyo.Constraint.Skip
+        return _m.soc_raw[t] == _m.soc_raw[t - 1] + a_vec[t] * _m.surplus_hat[t]
+    m.soc_raw_dyn = pyo.Constraint(m.T, rule=soc_raw_dyn_rule)
+
+    m.soc_end     = pyo.Var(bounds=(-UB_soc_raw, UB_soc_raw))
+    m.soc_end_def = pyo.Constraint(expr=m.soc_end == m.soc_raw[T - 1])
+
+    # L1 residuals ONLY on active set Tz
+    def _z_bounds(_m, t):
+        return (0.0, UB_soc_raw + abs(float(soc_ref[t])))
+
+    m.socdiff = pyo.Var(m.Tz)  # free
+    m.z       = pyo.Var(m.Tz, domain=pyo.NonNegativeReals, bounds=_z_bounds)
+
+    m.soc_def = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.socdiff[t] == soc_ref[t] - _m.soc_raw[t])
+    m.z_pos   = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.z[t] >=  _m.socdiff[t])
+    m.z_neg   = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
+
+    # Objective (scaled to O(1)); proxy only over Tz, scaled by avg active bias
+    dist_scale = max(1e-12, float(np.mean(D)))
+    prox_scale = max(1e-12, float(np.mean(np.abs(soc_ref)))) * b_avg
+
+    # Need bias values aligned to m.Tz iteration order
+    b_for_Tz = {t: float(b_full[t]) for t in T_pos}
+
+    def obj(_m):
+        dist = (1 - lambda_soc) * (sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale)
+        prox = 0.0
+        if len(T_pos):
+            prox = lambda_soc * (sum(b_for_Tz[int(t)] * _m.z[t] for t in _m.Tz) / prox_scale)
+        return dist + prox
+
+    m.obj = pyo.Objective(rule=obj, sense=pyo.minimize)
+
+    # ---------- Solve ----------
+    if solver == "gurobi":
+        opt = pyo.SolverFactory("gurobi_persistent")
+        opt.set_instance(m)
+
+        opt.set_gurobi_param('MIPGap', MIPGap)
+        if threads is not None: opt.set_gurobi_param('Threads', int(threads))
+        opt.set_gurobi_param('LogToConsole', int(verbose))
+        opt.set_gurobi_param('TimeLimit', int(timelimit))
+        opt.set_gurobi_param('Presolve', 2)
+        opt.set_gurobi_param('Aggregate', 2)
+        if root_lp == "barrier":
+            opt.set_gurobi_param('Method', 2)
+            opt.set_gurobi_param('Crossover', 0)
+        elif root_lp == "dual":
+            opt.set_gurobi_param('Method', 1)
+
+        res = opt.solve(tee=verbose)
+    else:
+        res = pyo.SolverFactory(solver).solve(m, tee=verbose, options={
+            'MIPGap': MIPGap, 'TimeLimit': int(timelimit)
+        })
+
+    # ---------- Extract ----------
+    selected_days = [i for i in range(N) if pyo.value(m.y[i]) > 0.5]
+    assignments   = {j: max(range(N), key=lambda i: pyo.value(m.x[i, j])) for j in range(N)}
+
+    return {
+        "selected_days": selected_days,
+        "assignments": assignments,
+        "model": m,
+        "results": res,
+        "biases_used": b_full,          # full vector after rescaling
+        "bias_avg_active": b_avg,       # avg over active T+
+        "proxy_active_timesteps": T_pos # list of indices used in proxy term
+    }
+
 def apply_linear_soc(s_hat: np.ndarray, a: np.ndarray, cyc: bool = True) -> np.ndarray:
     """Apply the linearised SoC operator in O(T) without building L."""
     y = np.cumsum(a * s_hat)  # raw cumulative
@@ -956,13 +1148,13 @@ def solve_ordo_with_endogenous_soc(
         endo_params = dict(
         # detection / smoothing
         normalize_mode="minmax",
-        smooth_window=21,
+        smooth_window=1,
         extrema_window=121,
         min_prominence=0.05,
         # proximity shape
         tau_decay=12,              # tighter halo
         # dominance of key points
-        weight_global_extreme_boost=True, coef_global_extreme=6.0, tau_global_extreme=5.0,
+        weight_global_extreme_boost=True, coef_global_extreme=3.0, tau_global_extreme=5.0,
         weight_endpoints=True,     coef_endpoints=2.0,
         priority_floor_multiplier=1.5,
         # keep only these two structural terms
@@ -994,7 +1186,7 @@ def solve_ordo_with_endogenous_soc(
 
     
 
-    return milp_tsa_endogenous_basic(
+    return milp_tsa_endogenous_with_bias_handling(
         D=D,
         k=k,
         soc_ref=soc_ref,
@@ -1007,8 +1199,6 @@ def solve_ordo_with_endogenous_soc(
         verbose=verbose,
         endogenous_biases = endogenous_biases
     )
-
-
 
 
 def milp_tsa_endogenous_restricted_candidates(

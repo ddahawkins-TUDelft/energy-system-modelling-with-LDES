@@ -68,7 +68,9 @@
                 }
             ]
         },
+        "rr_mode": "soft",
         "resample_to_daily_resolution": true,
-        "distance_matrix_metric": "euclidean"
+        "distance_matrix_metric": "euclidean",
+        "timelimit": 3600
     }
 }

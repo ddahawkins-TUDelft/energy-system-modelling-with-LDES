@@ -708,12 +708,16 @@ def milp_tsa_endogenous_with_bias_handling(
     # Need bias values aligned to m.Tz iteration order
     b_for_Tz = {t: float(b_full[t]) for t in T_pos}
 
+    # Named expressions for later auditing/printing
+    m.dist_term_scaled = pyo.Expression(
+        rule=lambda _m: sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale
+    )
+    m.prox_term_scaled = pyo.Expression(
+        rule=lambda _m: (sum(b_for_Tz[int(t)] * _m.z[t] for t in _m.Tz) / prox_scale) if len(T_pos) else 0.0
+    )
+
     def obj(_m):
-        dist = (1 - lambda_soc) * (sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale)
-        prox = 0.0
-        if len(T_pos):
-            prox = lambda_soc * (sum(b_for_Tz[int(t)] * _m.z[t] for t in _m.Tz) / prox_scale)
-        return dist + prox
+        return (1 - lambda_soc) * _m.dist_term_scaled + lambda_soc * _m.prox_term_scaled
 
     m.obj = pyo.Objective(rule=obj, sense=pyo.minimize)
 
@@ -744,16 +748,40 @@ def milp_tsa_endogenous_with_bias_handling(
     selected_days = [i for i in range(N) if pyo.value(m.y[i]) > 0.5]
     assignments   = {j: max(range(N), key=lambda i: pyo.value(m.x[i, j])) for j in range(N)}
 
+    # ---------- Objective breakdown (print + return) ----------
+    try:
+        obj_val     = float(pyo.value(m.obj))
+        dist_scaled = float(pyo.value(m.dist_term_scaled))
+        prox_scaled = float(pyo.value(m.prox_term_scaled))
+        dist_contrib = (1 - lambda_soc) * dist_scaled
+        prox_contrib =      lambda_soc  * prox_scaled
+        share_dist = (dist_contrib / obj_val) if obj_val else 0.0
+        share_prox = (prox_contrib / obj_val) if obj_val else 0.0
+        print(f"[TSA] [Obj.|unrestricted] total={obj_val:.6g} | "
+              f"dist={dist_contrib:.6g} | prox={prox_contrib:.6g} | "
+              f"shares: dist={share_dist:.3f}, prox={share_prox:.3f}")
+        objective_breakdown = {
+            "obj_total": obj_val,
+            "dist_scaled_term": dist_scaled,
+            "prox_scaled_term": prox_scaled,
+            "dist_contrib": dist_contrib,
+            "prox_contrib": prox_contrib,
+            "share_dist": share_dist,
+            "share_prox": share_prox,
+        }
+    except Exception as _:
+        objective_breakdown = None
+
     return {
         "selected_days": selected_days,
         "assignments": assignments,
         "model": m,
         "results": res,
-        "biases_used": b_full,          # full vector after rescaling
-        "bias_avg_active": b_avg,       # avg over active T+
-        "proxy_active_timesteps": T_pos # list of indices used in proxy term
+        "biases_used": b_full,            # full vector after rescaling
+        "bias_avg_active": b_avg,         # avg over active T+
+        "proxy_active_timesteps": T_pos,  # list of indices used in proxy term
+        "objective_breakdown": objective_breakdown,
     }
-
 def apply_linear_soc(s_hat: np.ndarray, a: np.ndarray, cyc: bool = True) -> np.ndarray:
     """Apply the linearised SoC operator in O(T) without building L."""
     y = np.cumsum(a * s_hat)  # raw cumulative
@@ -784,7 +812,8 @@ def solve_ordo_with_endogenous_soc(
     MIPGap=0.01,
     verbose=True,
     surplus_by_day: np.ndarray | None = None,   
-    use_endogenous_biases: bool = False
+    use_endogenous_biases: bool = False,
+    timelimit: int = 1800
 ):
     print('[TSA] Building cost matrix')
     # 1) D matrix...
@@ -860,7 +889,8 @@ def solve_ordo_with_endogenous_soc(
         MIPGap=MIPGap,           # <- pass through
         threads=min(max_threads-6 if max_threads>8 else 1, 16),
         verbose=verbose,
-        endogenous_biases = endogenous_biases
+        endogenous_biases = endogenous_biases,
+        timelimit=timelimit
     )
 
 

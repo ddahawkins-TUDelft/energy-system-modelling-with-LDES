@@ -69,6 +69,7 @@
             ]
         },
         "resample_to_daily_resolution": true,
-        "distance_matrix_metric": "euclidean"
+        "distance_matrix_metric": "euclidean",
+        "apply_endogenous_biases": true
     }
 }

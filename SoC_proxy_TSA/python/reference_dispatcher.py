@@ -23,7 +23,7 @@ from utility_functions.helper_model_config import standardised_model_config
 # =================== EDIT THESE DEFAULTS ===================
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
-DEFAULT_YEAR_RANGES: List[str] = ["2016-2017"] 
+DEFAULT_YEAR_RANGES: List[str] = ["2015-2017"] 
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.

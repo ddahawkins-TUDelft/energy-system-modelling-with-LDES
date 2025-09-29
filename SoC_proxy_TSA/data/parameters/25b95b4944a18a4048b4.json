@@ -3,7 +3,7 @@
         "type": "cluster",
         "config_yaml_name": "model",
         "date_range": [
-            2016,
+            2015,
             2017
         ],
         "calliope_full_log": [
@@ -69,6 +69,8 @@
             ]
         },
         "resample_to_daily_resolution": true,
-        "distance_matrix_metric": "euclidean"
+        "distance_matrix_metric": "euclidean",
+        "lambda_soc": 0.9,
+        "timelimit": 1800
     }
 }

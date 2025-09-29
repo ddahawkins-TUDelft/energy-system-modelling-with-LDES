@@ -12,7 +12,7 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation' # exogenous_optimisation_baseline   endogenous_optimisation_baseline
 show_soc = True
-date_range = [2015,2019]
+date_range = [2015,2017]
 
 
 
@@ -91,9 +91,6 @@ tsa_params = {
             'proxy': 1,
         },
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
-    # 'resample_to_daily_resolution': True, #optimisation options that should be enabled when running in optimisation mode
-    # 'rr_mode': 'soft',
-    # 'distance_matrix_metric': 'euclidean',
     'name_demand': ['demand_power'],
     'soc_proxy': {
         'use_soc_proxy': False,

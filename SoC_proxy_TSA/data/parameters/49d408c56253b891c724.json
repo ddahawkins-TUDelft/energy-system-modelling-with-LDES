@@ -3,8 +3,8 @@
         "type": "cluster",
         "config_yaml_name": "model",
         "date_range": [
-            2016,
-            2017
+            2015,
+            2019
         ],
         "calliope_full_log": [
             false,
@@ -68,7 +68,9 @@
                 }
             ]
         },
+        "rr_mode": "soft",
         "resample_to_daily_resolution": true,
-        "distance_matrix_metric": "euclidean"
+        "distance_matrix_metric": "euclidean",
+        "timelimit": 1800
     }
 }

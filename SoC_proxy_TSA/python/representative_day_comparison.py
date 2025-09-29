@@ -190,7 +190,7 @@ def plot_heatmap(M: np.ndarray, row_labels: list[str], calendar: pd.DatetimeInde
 
 # -------- Main --------
 
-def main(ids: list = []):
+def main(id_dict: dict = {}):
     root = ROOT
     if not root.exists():
         raise SystemExit(f"Directory not found: {root}")
@@ -204,13 +204,16 @@ def main(ids: list = []):
 
     for p in csv_paths:
 
-        if ids == [] or p.name in ids:
+        if id_dict == {} or p.name in id_dict:
             try:
                 rep_dates, counts = load_rep_counts(p)
                 # basic sanity
                 if len(rep_dates) != len(counts):
                     raise ValueError("rep_dates and counts length mismatch")
-                name = p.stem
+                if id_dict == {}:
+                    name = p.stem
+                else:
+                    name = id_dict[p.name]
                 file_to_repinfo[name] = (rep_dates, counts)
 
                 # Console summary (first few reps)
@@ -234,13 +237,12 @@ def main(ids: list = []):
     print(f"[INFO] Saved figure to: {out_path.resolve()}")
     plt.show()
 
-ids_of_interest = [
-    '285db9f2e3c9adf682e1.csv',
-    'ada45d4411cca605199e.csv',
-    '0d28328e43a56f3627b5.csv',
-    'a766d83deb85a760e367.csv',
-    '6c2c42ffcb54c13dc8fa.csv'
-]
+dict_model_path = {
+    '0d28328e43a56f3627b5.csv':'Endogenous λ=0.5' ,
+    '6bb967b44ea511e8cdc0.csv':'Endogenous λ=1',
+    '285db9f2e3c9adf682e1.csv':'Clustering?',
+    'ada45d4411cca605199e.csv':'Clustering?',
+}
 
 if __name__ == "__main__":
-    main(ids_of_interest)
+    main(dict_model_path)

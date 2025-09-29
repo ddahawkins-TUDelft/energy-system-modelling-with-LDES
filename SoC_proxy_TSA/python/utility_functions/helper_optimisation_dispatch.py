@@ -29,7 +29,7 @@ def optimisation_dispatch(
 
     use_soc_proxy = tsa_config.params['soc_proxy']['use_soc_proxy']
     proxy_inputs = tsa_config.params['soc_proxy']['proxy_inputs_to_consider']
-
+    lambda_soc = float(tsa_config.params.get('lambda_soc', 0.5))
     print('[TSA] Configuring MILP')
 
     # ======================== ENDOGENOUS MODE ======================== 
@@ -92,7 +92,7 @@ def optimisation_dispatch(
             
             eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])
-            lambda_soc = float(tsa_config.params['soc_proxy'].get('lambda_soc', 0.5))
+            
             
             if tsa_config.params['k_periods_optimisation']:
                 k = tsa_config.params['k_periods_optimisation']
@@ -127,7 +127,6 @@ def optimisation_dispatch(
 
             eta_ch  = float(soc_proxy_params['storage_process_losses']['charging_efficiency'])
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])
-            lambda_soc = float(tsa_config.params['soc_proxy'].get('lambda_soc', 0.5)) 
 
             #pull the cached (N_days x 24) surplus directly ---
             # pull surplus (N) from cache, same day order as df_features (daily)
@@ -140,6 +139,8 @@ def optimisation_dispatch(
                 raise RuntimeError("Endogenous-restricted path needs cached hourly surplus (N x 24) aligned with df_features.")
             reference_surplus = S_by_day.reshape(-1)  # (T,)
 
+            use_endogenous_biases = tsa_config.params.get('apply_endogenous_biases', False)
+
             result = opt.solve_ordo_with_endogenous_soc(
                 df_features=tsa_config.df_features,
                 k=tsa_config.params['k_periods'],
@@ -151,8 +152,11 @@ def optimisation_dispatch(
                 reference_surplus=reference_surplus,
                 normalize="minmax_signed",
                 surplus_by_day=S_by_day,
-                use_endogenous_biases= tsa_config.params['apply_endogenous_biases'] if tsa_config.params['apply_endogenous_biases'] else False
+                use_endogenous_biases= use_endogenous_biases,
+                timelimit = tsa_config.params.get('timelimit', 1200)
             )
+        
+        
 
         print('[TSA] Solution Found')
 

@@ -294,7 +294,7 @@ def milp_ordo_restricted_candidates(
         opt.set_gurobi_param('Threads', int(threads) if threads else 12)
         opt.set_gurobi_param('LogToConsole', int(verbose))
         opt.set_gurobi_param('TimeLimit', int(timelimit))
-        opt.set_gurobi_param('Presolve', 2)
+        opt.set_gurobi_param('Presolve', -1)
         opt.set_gurobi_param('Aggregate', 2)
         if lp_method == "barrier":
             opt.set_gurobi_param('Method', 2)
@@ -384,7 +384,6 @@ def save_milp_result_to_cluster_map(
     mapping_df = mapping_df.set_index('timesteps')
     mapping_df.to_csv(output_path)
 
-
 def _exogenous_objective_function(m):
     return sum(m.x[i, j] * m.D[i, j] for i in m.I for j in m.J)
 
@@ -429,7 +428,6 @@ def group_feature_columns(df_features: pd.DataFrame, preferred_features: list[st
 
     return "daily", groups
  
-
 def _minmax_signed(col: np.ndarray) -> np.ndarray:
     cmin = np.nanmin(col)
     cmax = np.nanmax(col)
@@ -702,8 +700,8 @@ def milp_tsa_endogenous_with_bias_handling(
     m.z_neg   = pyo.Constraint(m.Tz, rule=lambda _m, t: _m.z[t] >= -_m.socdiff[t])
 
     # Objective (scaled to O(1)); proxy only over Tz, scaled by avg active bias
-    dist_scale = max(1e-12, float(np.mean(D)))
-    prox_scale = max(1e-12, float(np.mean(np.abs(soc_ref)))) * b_avg
+    dist_scale = max(1e-12, float(np.max(D)))
+    prox_scale = max(1e-12, float(np.max(np.abs(soc_ref)))) * b_avg
 
     # Need bias values aligned to m.Tz iteration order
     b_for_Tz = {t: float(b_full[t]) for t in T_pos}
@@ -730,7 +728,7 @@ def milp_tsa_endogenous_with_bias_handling(
         if threads is not None: opt.set_gurobi_param('Threads', int(threads))
         opt.set_gurobi_param('LogToConsole', int(verbose))
         opt.set_gurobi_param('TimeLimit', int(timelimit))
-        opt.set_gurobi_param('Presolve', 2)
+        opt.set_gurobi_param('Presolve', -1)
         opt.set_gurobi_param('Aggregate', 2)
         if root_lp == "barrier":
             opt.set_gurobi_param('Method', 2)
@@ -1116,7 +1114,7 @@ def milp_tsa_endogenous_restricted_candidates(
         if threads is not None: opt.set_gurobi_param('Threads', int(threads))
         opt.set_gurobi_param('LogToConsole', int(verbose))
         opt.set_gurobi_param('TimeLimit', int(timelimit))
-        opt.set_gurobi_param('Presolve', 2)
+        opt.set_gurobi_param('Presolve', -1)
         opt.set_gurobi_param('Aggregate', 2)
         if lp_method == "barrier":
             opt.set_gurobi_param('Method', 2); opt.set_gurobi_param('Crossover', 0)

@@ -239,7 +239,7 @@ def main(id_dict: dict = {}):
 
 dict_model_path = {
     '0d28328e43a56f3627b5.csv':'Endogenous λ=0.5' ,
-    '6bb967b44ea511e8cdc0.csv':'Endogenous λ=1',
+    '7e39b8e4efe8775e31ad.csv':'Endogenous λ=1',
     '285db9f2e3c9adf682e1.csv':'Clustering?',
     'ada45d4411cca605199e.csv':'Clustering?',
 }

@@ -12,7 +12,7 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation' # exogenous_optimisation_baseline   endogenous_optimisation_baseline
 show_soc = True
-date_range = [2015,2017]
+date_range = [2016,2017]
 
 
 

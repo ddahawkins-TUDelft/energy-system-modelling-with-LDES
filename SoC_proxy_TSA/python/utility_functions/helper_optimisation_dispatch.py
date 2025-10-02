@@ -1,8 +1,12 @@
 from utility_functions.class_tsa_model import tsa
 import pandas as pd
 import numpy as np
-import utility_functions.helper_optimisation_tsa as opt
+import utility_functions.helper_optimisation_tsa_v2 as opt
 from utility_functions.helper_cluster_tsa_with_extremes import ClusterResult
+import multiprocessing
+
+
+max_threads = multiprocessing.cpu_count()
 
 
 def optimisation_dispatch(
@@ -99,27 +103,29 @@ def optimisation_dispatch(
                 print(f'[TSA] Optimisation will select {k} rep days from {tsa_config.params['k_periods']} candidates identified by pre-clustering.')
             else:
                 k = tsa_config.params['k_periods']
-
-            result = opt.solve_ordo_with_endogenous_soc_restricted(
-                df_features=tsa_config.df_features,        # DAILY
-                k=k,
-                feature_weights=feature_weights,
-                preferred_features=target_columns,         # same set as exogenous ORDO
-                candidates=C,                              # GLOBAL ids from precluster
-                fix_reps=fix_reps_flag,                    # True if |C|==k → pure reassignment
-                warm_start_rep_for_day=rep_for_day,        # GLOBAL per-day rep, feasible start
-                eta_ch=eta_ch,
-                eta_dis=eta_dis,
-                lambda_soc=lambda_soc,
-                surplus_by_day=S_by_day,            # (N) or (N, 24) if resample_to_daily_resolution == False
-                normalize="minmax_signed",
-                solver="gurobi",
-                MIPGap=tsa_config.params.get('mipgap', 0.01),
-                threads=10,
-                timelimit=tsa_config.params.get('timelimit', 1200),
-                verbose=True,
-                lp_method="barrier",
-            )
+            
+            raise NotImplementedError('Revisit pre-selection of candidates')
+        
+            # result = opt.solve_ordo_with_endogenous_soc_restricted(
+            #     df_features=tsa_config.df_features,        # DAILY
+            #     k=k,
+            #     feature_weights=feature_weights,
+            #     preferred_features=target_columns,         # same set as exogenous ORDO
+            #     candidates=C,                              # GLOBAL ids from precluster
+            #     fix_reps=fix_reps_flag,                    # True if |C|==k → pure reassignment
+            #     warm_start_rep_for_day=rep_for_day,        # GLOBAL per-day rep, feasible start
+            #     eta_ch=eta_ch,
+            #     eta_dis=eta_dis,
+            #     lambda_soc=lambda_soc,
+            #     surplus_by_day=S_by_day,            # (N) or (N, 24) if resample_to_daily_resolution == False
+            #     normalize="minmax_signed",
+            #     solver="gurobi",
+            #     MIPGap=tsa_config.params.get('mipgap', 0.01),
+            #     threads=10,
+            #     timelimit=tsa_config.params.get('timelimit', 1200),
+            #     verbose=True,
+            #     lp_method="barrier",
+            # )
 
 
         else:
@@ -141,22 +147,38 @@ def optimisation_dispatch(
 
             use_endogenous_biases = tsa_config.params.get('apply_endogenous_biases', False)
 
-            result = opt.solve_ordo_with_endogenous_soc(
-                df_features=tsa_config.df_features,
-                k=tsa_config.params['k_periods'],
-                feature_weights=feature_weights,
-                preferred_features=None,
-                eta_ch=eta_ch,
-                eta_dis=eta_dis,
-                lambda_soc=lambda_soc,
-                reference_surplus=reference_surplus,
-                normalize="minmax_signed",
-                surplus_by_day=S_by_day,
-                use_endogenous_biases= use_endogenous_biases,
-                timelimit = tsa_config.params.get('timelimit', 1200)
+            result = opt.solve_tsa(
+                # --- Required core inputs ---
+                df_features=tsa_config.df_features,           # daily rows (N), feature columns (hourly or daily)
+                k= tsa_config.params['k_periods'],                              # number of representatives
+                feature_weights =feature_weights,
+                preferred_features = None,
+                normalize = "minmax_signed",     # for feature blocks -> D
+                # --- Candidate restriction (None => unrestricted) ---
+                candidates = None,  
+                # --- SoC / endogenous proxy toggle & data ---
+                use_soc_term = True,
+                surplus_by_day = S_by_day,   # shape (N,), daily net surplus (same order as df_features)
+                reference_surplus = reference_surplus,# optional; if None, uses surplus_by_day as the reference
+                eta_ch = eta_ch,  # efficiencies if you re-enable them in _build_a_and_soc_ref
+                lambda_soc = lambda_soc,                    # weight on SoC term when use_soc_term=True
+                # --- Optional endogenous biasing ---
+                use_endogenous_biases = use_endogenous_biases,
+                # biases_params = None,          # params for generate_endogenous_biases(...)
+                # bias_minmax = (0.0, 1.0),
+                # bias_zero_threshold  = 0.25,
+                # --- Optional distance normalization ---
+                normalize_D_to_unit = True,          # if True, scale/clamp D to [0,1] (global)
+                D_unit_method = "p99_clip",
+                # --- Solver knobs ---
+                solver = "gurobi",
+                MIPGap = 0.01,
+                threads = max_threads-4 if max_threads>4 else 2,
+                timelimit = tsa_config.params.get('timelimit', 1200),
+                verbose = True,
+                root_lp = "barrier",
             )
-        
-        
+       
 
         print('[TSA] Solution Found')
 
@@ -204,36 +226,55 @@ def optimisation_dispatch(
         if pre_cluster_result: 
 
             # 1) Extract indices
-            C, rep_for_day, dates_index, rep_dates_kept, missing = precluster_to_row_indices(
-                df_features=tsa_config.df_features,                 # df features
-                representatives=pre_cluster_result.representatives, # DatetimeIndex
-                assignment=pre_cluster_result.assignment,           # Series (optional)
-            )
+            # C, rep_for_day, dates_index, rep_dates_kept, missing = precluster_to_row_indices(
+            #     df_features=tsa_config.df_features,                 # df features
+            #     representatives=pre_cluster_result.representatives, # DatetimeIndex
+            #     assignment=pre_cluster_result.assignment,           # Series (optional)
+            # )
 
-            fix_reps_flag = (len(C) == tsa_config.params['k_periods'])
+            # fix_reps_flag = (len(C) == tsa_config.params['k_periods'])
 
-            result = opt.solve_ordo_from_features_restricted(
-                df_features=tsa_config.df_features,
-                k=tsa_config.params['k_periods'],
-                feature_weights=feature_weights,
-                preferred_features=target_columns,     # as you already use for ORDO
-                normalize="minmax_signed",
-                candidates=C,
-                fix_reps=fix_reps_flag,
-                warm_start_rep_for_day=rep_for_day,    # <- feasible MIP start from clustering
-                lp_method="barrier",
-            )
+            # result = opt.solve_ordo_from_features_restricted(
+            #     df_features=tsa_config.df_features,
+            #     k=tsa_config.params['k_periods'],
+            #     feature_weights=feature_weights,
+            #     preferred_features=target_columns,     # as you already use for ORDO
+            #     normalize="minmax_signed",
+            #     candidates=C,
+            #     fix_reps=fix_reps_flag,
+            #     warm_start_rep_for_day=rep_for_day,    # <- feasible MIP start from clustering
+            #     lp_method="barrier",
+            # )
+
+            raise NotImplementedError('Pre clustering not implemented')
             
         else:
 
             print('[TSA] Solving MILP using exogenous features only')
-            result = opt.solve_ordo_from_features(
-                df_features=tsa_config.df_features,
-                k=tsa_config.params['k_periods'],
-                feature_weights=feature_weights,
-                preferred_features=target_columns,        # or pass a subset like ['demand_power','onshore_wind', ...]
-                normalize="minmax_signed",
+
+            result = opt.solve_tsa(
+                # --- Required core inputs ---
+                df_features=tsa_config.df_features,           # daily rows (N), feature columns (hourly or daily)
+                k= tsa_config.params['k_periods'],                              # number of representatives
+                feature_weights =feature_weights,
+                preferred_features = target_columns,
+                normalize = "minmax_signed",     # for feature blocks -> D
+                # --- Candidate restriction (None => unrestricted) ---
+                candidates = None,  
+                # --- SoC / endogenous proxy toggle & data ---
+                use_soc_term = False,
+                # --- Optional distance normalization ---
+                normalize_D_to_unit = True,          # if True, scale/clamp D to [0,1] (global)
+                D_unit_method = "p99_clip",
+                # --- Solver knobs ---
+                solver = "gurobi",
+                MIPGap = 0.01,
+                threads = max_threads-4 if max_threads>4 else 2,
+                timelimit = tsa_config.params.get('timelimit', 1200),
+                verbose = True,
+                root_lp = "barrier",
             )
+            
         print('[TSA] Solution Found')
 
         #get index for saving

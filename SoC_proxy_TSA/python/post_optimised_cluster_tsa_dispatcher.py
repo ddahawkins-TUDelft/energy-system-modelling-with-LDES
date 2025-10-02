@@ -10,7 +10,7 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 
 
-scenarios = ['endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation' # exogenous_optimisation_baseline   endogenous_optimisation_baseline
+scenarios = ['proxy_baseline','endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation' # exogenous_optimisation_baseline   endogenous_optimisation_baseline
 show_soc = True
 date_range = [2016,2017]
 
@@ -151,7 +151,7 @@ for scenario_name, scenario_batch in batch_config.items():
             })
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
-print(f'> Dispatch: Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc')
+print(f'[Dispatch] Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc')
 #add the reference case
 
 ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc'

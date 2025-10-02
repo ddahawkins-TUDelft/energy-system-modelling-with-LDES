@@ -483,3 +483,162 @@ def solve_ordo_with_endogenous_soc_restricted(
                           lambda_soc=lambda_soc,
                           endogenous_biases=biases, bias_minmax=bias_minmax, bias_zero_threshold=bias_zero_threshold,
                           solver=solver, MIPGap=MIPGap, threads=threads, timelimit=timelimit, verbose=verbose)
+
+def solve_tsa(
+    *,
+    # --- Required core inputs ---
+    df_features: pd.DataFrame,           # daily rows (N), feature columns (hourly or daily)
+    k: int,                               # number of representatives
+    feature_weights: Dict[str, float] | None = None,
+    preferred_features: List[str] | None = None,
+    normalize: str = "minmax_signed",     # for feature blocks -> D
+    # --- Candidate restriction (None => unrestricted) ---
+    candidates: List[int] | None = None,  # global day IDs to restrict the reps to
+    # --- SoC / endogenous proxy toggle & data ---
+    use_soc_term: bool = False,
+    surplus_by_day: np.ndarray | None = None,   # shape (N,), daily net surplus (same order as df_features)
+    reference_surplus: np.ndarray | None = None,# optional; if None, uses surplus_by_day as the reference
+    eta_ch: float = 1.0, eta_dis: float = 1.0,  # efficiencies if you re-enable them in _build_a_and_soc_ref
+    lambda_soc: float = 0.5,                    # weight on SoC term when use_soc_term=True
+    # --- Optional endogenous biasing ---
+    use_endogenous_biases: bool = False,
+    biases_params: Dict | None = None,          # params for generate_endogenous_biases(...)
+    bias_minmax: tuple[float, float] = (0.0, 1.0),
+    bias_zero_threshold: float = 0.25,
+    # --- Optional distance normalization ---
+    normalize_D_to_unit: bool = False,          # if True, scale/clamp D to [0,1] (global)
+    D_unit_method: str = "p99_clip",
+    # --- Solver knobs ---
+    solver: str = "gurobi",
+    MIPGap: float = 0.01,
+    threads: int | None = 12,
+    timelimit: int = 2000,
+    verbose: bool = True,
+    root_lp: str = "barrier",
+) -> dict:
+    """
+    One-stop TSA solver:
+      - If `candidates` is None -> unrestricted reps; else restricted to those global day IDs.
+      - If `use_soc_term` is False -> pure ORDO; SoC variables/constraints are not created.
+      - If `use_endogenous_biases` is True -> weights are generated and applied to the SoC L1 residuals.
+
+    Returns the same dict structure as before (selected_days, assignments, model, results, objective_breakdown, ...).
+    """
+    # --- 1) Build distance matrix from features
+    D_full = _ordo_cost_matrix_from_features(
+        df_features=df_features,
+        preferred_features=preferred_features,
+        feature_weights=feature_weights,
+        normalize=normalize,
+    )
+
+    # Optional: normalize D to [0,1] globally (safe scaling)
+    if normalize_D_to_unit:
+        D_full = _normalize_D_unit(D_full, method=D_unit_method)
+
+    N = len(df_features)
+
+    # --- 2) If SoC term is off, delegate immediately
+    if not use_soc_term:
+        return _milp_tsa_core(
+            D=D_full, k=k, candidates=candidates,
+            use_soc_term=False,
+            solver=solver, MIPGap=MIPGap, threads=threads, timelimit=timelimit, verbose=verbose, root_lp=root_lp,
+        )
+
+    # --- 3) Prepare SoC inputs (only if needed)
+    if surplus_by_day is None:
+        raise ValueError("surplus_by_day must be provided when use_soc_term=True.")
+    if surplus_by_day.shape[0] != N:
+        raise ValueError(f"surplus_by_day length {surplus_by_day.shape[0]} != N {N}")
+
+    # Robust surplus scaling (same recipe you’ve been using)
+    s_scale = max(1.0, float(np.percentile(np.abs(surplus_by_day), 99.5)))
+    S_scaled = surplus_by_day.reshape(-1) / s_scale
+
+    # Reference for building a_t and soc_ref: explicit reference_surplus if given, else use the same surplus
+    ref_surplus = reference_surplus.reshape(-1) / s_scale if reference_surplus is not None else S_scaled
+    a_vec, soc_ref = _build_a_and_soc_ref(ref_surplus, eta_ch=eta_ch, eta_dis=eta_dis, cyc=True)
+
+    # Optional endogenous biases
+    biases = None
+    if use_endogenous_biases:
+        params = dict(
+            normalize_mode="minmax", smooth_window=1, extrema_window=121, min_prominence=0.05,
+            tau_decay=12, weight_global_extreme_boost=True, coef_global_extreme=3.0, tau_global_extreme=5.0,
+            weight_endpoints=True, coef_endpoints=2.0, priority_floor_multiplier=1.5,
+            weight_extremes=True, coef_extremes=0.75, weight_span=True, coef_span=1.25, span_alpha=2.0,
+            weight_tail_softmax=False, weight_ramp=False, weight_curvature=False, weight_rarity=False,
+            plot=False,
+        )
+        if biases_params: params.update(biases_params)
+        # Typical input for biases: a SoC-like proxy; using cumulative surplus here
+        biases = generate_endogenous_biases(pd.Series(np.cumsum(S_scaled)), params=params)
+
+    # Map surplus by GLOBAL row id (the core expects dict[int->float])
+    surplus_map = {int(i): float(S_scaled[int(i)]) for i in range(N)}
+
+    # --- 4) Delegate to the unified core
+    return _milp_tsa_core(
+        D=D_full,
+        k=k,
+        candidates=candidates,           # None => unrestricted; list => restricted
+        use_soc_term=True,
+        a=a_vec,
+        soc_ref=soc_ref,
+        surplus_daily_for_rows=surplus_map,
+        lambda_soc=lambda_soc,
+        endogenous_biases=biases,
+        bias_minmax=bias_minmax,
+        bias_zero_threshold=bias_zero_threshold,
+        solver=solver, MIPGap=MIPGap, threads=threads, timelimit=timelimit, verbose=verbose, root_lp=root_lp,
+    )
+
+
+# ===== Helper: global unit normalization for D =========================
+def _normalize_D_unit(D: np.ndarray, method: str = "p99_clip") -> np.ndarray:
+    """
+    Return D' in [0, 1] using a single global scale.
+    - 'max'      : divide by global max of off-diagonals, clip to 1
+    - 'p99_clip' : divide by 95th percentile of off-diagonals, then clip to 1 (robust)
+    - 'median2'  : divide by 2*median(off-diagonals) (no clip)
+    """
+    D = np.asarray(D, dtype=float)
+    n = D.shape[0]
+    mask = ~np.eye(n, dtype=bool)
+    vals = D[mask]
+    if vals.size == 0:
+        return D
+    if method == "max":
+        s = max(1e-12, float(np.max(vals)))
+        return np.minimum(D / s, 1.0)
+    elif method == "p99_clip":
+        s = max(1e-12, float(np.quantile(vals, 0.99)))
+        return np.minimum(D / s, 1.0)
+    elif method == "median2":
+        s = max(1e-12, 2.0 * float(np.median(vals)))
+        return D / s
+    else:
+        raise ValueError(f"Unknown D unit-normalization method: {method}")
+    
+# =============================================================================
+# Section E: Utilities (unchanged)
+# =============================================================================
+
+def rebuild_from_assignments(df_features: pd.DataFrame, rep_for_day: np.ndarray) -> pd.DataFrame:
+    """Build a synthetic df by copying the representative row chosen for each day."""
+    assert len(rep_for_day) == len(df_features)
+    return df_features.iloc[rep_for_day].reset_index(drop=True)
+
+def save_milp_result_to_cluster_map(result: dict, dates_index: pd.DatetimeIndex, output_path: str):
+    """Save TSA result in Calliope-compatible format (timesteps, PeriodNum)."""
+    if not isinstance(dates_index, pd.DatetimeIndex):
+        raise ValueError("dates_index must be a DatetimeIndex")
+    daily_dates = dates_index.to_list()
+    day_to_rep = {daily_dates[j]: daily_dates[result['assignments'][j]] for j in result['assignments']}
+    mapping_df = pd.DataFrame.from_dict(day_to_rep, orient="index", columns=["PeriodNum"])
+    mapping_df.index.name = "timesteps"
+    mapping_df = mapping_df.reset_index()
+    mapping_df["timesteps"] = mapping_df["timesteps"].dt.strftime("%Y-%m-%d")
+    mapping_df["PeriodNum"] = mapping_df["PeriodNum"].dt.strftime("%Y-%m-%d")
+    mapping_df.set_index('timesteps').to_csv(output_path)

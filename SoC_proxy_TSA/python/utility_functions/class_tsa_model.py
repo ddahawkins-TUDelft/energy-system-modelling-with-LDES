@@ -2,20 +2,15 @@ import pandas as pd
 import calliope
 from typing import Literal
 import copy, json, hashlib, os
-from utility_functions.helper_model_config import clustered_model_config, standardised_model_config
+from utility_functions.helper_model_config import clustered_model_config
 import shutil
 from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import numpy as np
-from utility_functions.helper_optimisation_tsa import distance_matrix, milp_tsa, save_milp_result_to_cluster_map
-from utility_functions.helper_cluster_tsa import cluster_tsa
 from utility_functions.helper_cluster_tsa_with_extremes import cluster_tsa_with_extremes
-from utility_functions.helper_tsam_calliope import apply_tsam_to_calliope, apply_tsam_to_calliope_with_soc_proxy
 import time
-from utility_functions.helper_compare_models import compare_models
-from utility_functions.helper_post_cluster_opt import apply_optimisation_on_cluster
 
-import sys
+
 
 
 DEBUG_MODE = True
@@ -251,9 +246,6 @@ class tsa_model:
             )
             df_timeseries = df_timeseries[original_columns]
 
-            test_surluses = df_timeseries['surplus_LDES'].cumsum().iloc[-1]
-            # if test_surluses != 0:
-            #     raise Exception('DEBUG: Surplus are buggy and need checking')
 
             self.soc_proxy.df = df_timeseries
 

@@ -238,10 +238,8 @@ def main(id_dict: dict = {}):
     plt.show()
 
 dict_model_path = {
-    '0d28328e43a56f3627b5.csv':'Endogenous λ=0.5' ,
-    '7e39b8e4efe8775e31ad.csv':'Endogenous λ=1',
-    '285db9f2e3c9adf682e1.csv':'Clustering?',
-    'ada45d4411cca605199e.csv':'Clustering?',
+    '8befdebf435d46f5f322.csv':'Endogenous oTSA k=37 λ=0.5' ,
+    '2dd52af99384468cdf4c.csv':'cTSA k=37',
 }
 
 if __name__ == "__main__":

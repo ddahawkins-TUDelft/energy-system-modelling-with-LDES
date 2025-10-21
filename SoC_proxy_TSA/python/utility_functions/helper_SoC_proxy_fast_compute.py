@@ -171,7 +171,7 @@ def generate_soc_proxy(
     df: pd.DataFrame, 
     demand_field: str = 'demand_power',
     renewables_fields_and_weights: dict = {'solar': 1, 'onshore_wind': 1, 'offshore_wind': 1},
-    dispatchable_techs: dict = {'known_dispatchable_capacity_portion_mean_demand': 0.25},
+    dispatchable_techs: dict = {'known_dispatchable_capacity': 3300},
     storage_process_losses: dict = {
         'charging_efficiency': 0.65 * 0.99,
         'discharging_efficiency': 0.56 * 0.99
@@ -216,7 +216,7 @@ def generate_soc_proxy(
         raise ValueError(f"Missing fields in dataframe: {missing}")
 
     # Subtract assumed dispatchable baseline capacity from demand
-    df[demand_field] -= dispatchable_techs.get('known_dispatchable_capacity_portion_mean_demand', 0) * df[demand_field].mean()
+    df[demand_field] -= dispatchable_techs.get('known_dispatchable_capacity', 0)
 
     # Raw (unweighted) average capacity factor per technology
     capacity_factors = {

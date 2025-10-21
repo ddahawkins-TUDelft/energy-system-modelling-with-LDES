@@ -238,8 +238,11 @@ def main(id_dict: dict = {}):
     plt.show()
 
 dict_model_path = {
-    '8befdebf435d46f5f322.csv':'Endogenous oTSA k=37 λ=0.5' ,
-    '2dd52af99384468cdf4c.csv':'cTSA k=37',
+    '61f6c54a88f0e7954ff9.csv':'W=0' ,
+    'a452a91aabe8c3239590.csv':'W=1',
+    '36776c7bae4e67309328.csv':'W=10',
+    '216e741ca87e9fac120f.csv':'W=100',
+    'e153dec973f957cf3cbc.csv':'Endo'
 }
 
 if __name__ == "__main__":

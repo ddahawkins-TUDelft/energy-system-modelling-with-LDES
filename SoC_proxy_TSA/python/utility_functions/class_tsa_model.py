@@ -200,8 +200,13 @@ class tsa_model:
                 raise Exception('Calliope model has not been built.')
             print(f'[Calliope] Solving Calliope model: {self.id}')
             self.calliope_model.model.solve()
-            self.calliope_model.status = 'solved'
-            self.calliope_model.model.to_netcdf(self.paths['calliope_model'])
+            if self.calliope_model.model.results.nbytes > 0:
+                self.calliope_model.status = 'solved'
+                self.calliope_model.model.to_netcdf(self.paths['calliope_model'])
+            else:
+                self.calliope_model.status = 'failed'
+                raise Exception('Calliope failed due to error')
+            
             print(f'[Calliope] Solution saved to: {self.paths['calliope_model']}')
 
 

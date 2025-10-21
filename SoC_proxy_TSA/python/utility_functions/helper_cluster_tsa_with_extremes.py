@@ -247,9 +247,18 @@ def cluster_tsa_with_extremes(
     cluster_days.index = pd.to_datetime(cluster_days.index).normalize()
     cluster_days["PeriodNum"] = pd.to_datetime(cluster_days["PeriodNum"]).dt.normalize()
 
+    #ensure columns align
+
+    df_aligned = align_by_third_row(
+    df_new_timeseries_values,
+    calliope_field_headings,
+    header_row_index=2,      # 3rd row
+    keep_extras_at_end=False # or True if you want non-matching columns appended
+)
+
     # Write files (same as before)
-    calliope_field_headings.to_csv(path_to_new_timeseries, index=False, header=False, mode="w")
-    df_new_timeseries_values.to_csv(path_to_new_timeseries, index=True, header=False, mode="a")
+    # calliope_field_headings.to_csv(path_to_new_timeseries, index=False, header=False, mode="w") #TODO: time series saving was weirdly buggy.
+    # df_aligned.to_csv(path_to_new_timeseries, index=True, header=False, mode="a")
     if save_cluster_map:
         cluster_days.to_csv(path_to_cluster_csv)
 
@@ -273,6 +282,51 @@ def cluster_tsa_with_extremes(
 # =========================
 # 
 # =========================
+def align_by_third_row(
+    df_values: pd.DataFrame,
+    df_headings: pd.DataFrame,
+    header_row_index: int = 2,   # 0-based → 3rd row
+    keep_extras_at_end: bool = False
+) -> pd.DataFrame:
+    """
+    Reorder df_values columns to match the column labels found in the given row of df_headings.
+
+    - Strips whitespace in labels.
+    - Drops columns in df_values not present in the target order unless keep_extras_at_end=True.
+    - Adds any missing columns (filled with NaN).
+    """
+
+    # 1) Get target order from the specified row
+    target_order = (
+        df_headings.iloc[header_row_index]
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+
+    target_order.pop(0)
+
+    # Remove obvious junk (NaNs converted to 'nan')
+    target_order = [c for c in target_order if c and c.lower() != "nan"]
+
+    # 2) Normalize current value columns
+    current_cols = df_values.columns.astype(str).str.strip().tolist()
+
+    # 3) Ensure all target columns exist in df_values (add if missing)
+    missing = [c for c in target_order if c not in current_cols]
+    for c in missing:
+        df_values[c] = pd.NA
+
+    # 4) Build final order
+    if keep_extras_at_end:
+        extras = [c for c in df_values.columns if c not in target_order]
+        final_order = target_order + extras
+    else:
+        final_order = target_order
+
+    # 5) Reindex to that order (dropping extras if not kept)
+    return df_values.reindex(columns=final_order)
+
 def _add_requested_soc_features(
     df: pd.DataFrame,
     delta_col: str,

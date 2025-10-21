@@ -229,7 +229,7 @@ techs:
     #   dims: carriers
     lifetime: 25
     cost_flow_cap: #CAPEX cost
-      data: 0.0936000 # €M / MW
+      data: 0.936000 # €M / MW
       index: monetary
       dims: costs
     cost_om_annual: #fixed O&M costs
@@ -241,7 +241,6 @@ techs:
       index: monetary
       dims: costs
       
-
   # ---------------------------------------------------------------------------------------------------------------------------------------------
   #
   #                                     Demand 

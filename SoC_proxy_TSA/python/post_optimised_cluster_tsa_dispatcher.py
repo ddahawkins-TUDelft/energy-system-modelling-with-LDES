@@ -10,11 +10,9 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 
 
-scenarios = ['proxy_baseline','endogenous_optimisation_baseline'] # 'no_proxy', 'proxy_baseline','proxy_weights','soc_features', 'soc_feature_combinations' ,'optimisation_baseline', 'cluster_with_optimisation' # exogenous_optimisation_baseline   endogenous_optimisation_baseline
+scenarios = ['Proxy_w1_k_test'] 
 show_soc = True
-date_range = [2016,2017]
-
-
+date_range = [2015,2019]
 
 
 
@@ -75,7 +73,7 @@ soc_proxy_params = {
             'discharging_efficiency': 0.56 * 0.99 #electrolyser efficiency * ldes injection efficiency
         },
         'dispatchable_techs': {
-            'known_dispatchable_capacity_portion_mean_demand': .25 #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
+            'known_dispatchable_capacity': 3300 #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
         },
         'soc_decomposition': {
             'method': 'fft_lowpass',
@@ -99,7 +97,7 @@ tsa_params = {
         'optimisation_proxy_mode': '' #options: endogenous, exogenous
     },
     'cluster_method': 'hierarchical', #Options: k_medoids, k_means, hierarchical
-    'representation_method': 'distributionRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
+    'representation_method': 'medoidRepresentation',  #Options: medoidRepresentation, meanRepresentation, distributionRepresentation
     'hours_per_period': 24,
     'soc_features': {},
     'extremes_spec': {},

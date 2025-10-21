@@ -98,34 +98,32 @@ def optimisation_dispatch(
             eta_dis = float(soc_proxy_params['storage_process_losses']['discharging_efficiency'])
             
             
-            if tsa_config.params['k_periods_optimisation']:
+            if tsa_config.params.get('k_periods_optimisation',''):
                 k = tsa_config.params['k_periods_optimisation']
                 print(f'[TSA] Optimisation will select {k} rep days from {tsa_config.params['k_periods']} candidates identified by pre-clustering.')
             else:
                 k = tsa_config.params['k_periods']
-            
-            raise NotImplementedError('Revisit pre-selection of candidates')
-        
-            # result = opt.solve_ordo_with_endogenous_soc_restricted(
-            #     df_features=tsa_config.df_features,        # DAILY
-            #     k=k,
-            #     feature_weights=feature_weights,
-            #     preferred_features=target_columns,         # same set as exogenous ORDO
-            #     candidates=C,                              # GLOBAL ids from precluster
-            #     fix_reps=fix_reps_flag,                    # True if |C|==k → pure reassignment
-            #     warm_start_rep_for_day=rep_for_day,        # GLOBAL per-day rep, feasible start
-            #     eta_ch=eta_ch,
-            #     eta_dis=eta_dis,
-            #     lambda_soc=lambda_soc,
-            #     surplus_by_day=S_by_day,            # (N) or (N, 24) if resample_to_daily_resolution == False
-            #     normalize="minmax_signed",
-            #     solver="gurobi",
-            #     MIPGap=tsa_config.params.get('mipgap', 0.01),
-            #     threads=10,
-            #     timelimit=tsa_config.params.get('timelimit', 1200),
-            #     verbose=True,
-            #     lp_method="barrier",
-            # )
+                    
+            result = opt.solve_ordo_with_endogenous_soc_restricted(
+                df_features=tsa_config.df_features,        # DAILY
+                k=k,
+                feature_weights=feature_weights,
+                preferred_features=target_columns,         # same set as exogenous ORDO
+                candidates=C,                              # GLOBAL ids from precluster
+                fix_reps=fix_reps_flag,                    # True if |C|==k → pure reassignment
+                warm_start_rep_for_day=rep_for_day,        # GLOBAL per-day rep, feasible start
+                eta_ch=eta_ch,
+                eta_dis=eta_dis,
+                lambda_soc=lambda_soc,
+                surplus_by_day=S_by_day,            # (N) or (N, 24) if resample_to_daily_resolution == False
+                normalize="minmax_signed",
+                solver="gurobi",
+                MIPGap=tsa_config.params.get('mipgap', 0.01),
+                threads=10,
+                timelimit=tsa_config.params.get('timelimit', 1200),
+                verbose=True,
+                lp_method="barrier",
+            )
 
 
         else:

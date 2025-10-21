@@ -1,124 +1,3 @@
-no_proxy:  
-  Baseline_k=91:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 37
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-
-proxy_baseline:
-  SoC Delta, k=91, Wx=10:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 37
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 10
-      soc_features:
-
-Comparison_k18:
-  Medoid, k=18, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 18
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=18, W=1:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 18
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=18, W=10:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 18
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 10
-      soc_features:
-  Medoid, k=18, W=100:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 18
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 100
-
-Comparison_k30:
-  Medoid, k=30, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 30
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=30, W=1:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 30
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
   # Medoid, k=30, Endogenous Correction:
   #   dispatch_mode: 'cluster_with_optimisation'
   #   calliope_params:
@@ -146,13 +25,17 @@ Comparison_k30:
   #           weight: 1
   #           mode: match
 
-Comparison_k60:
-  Medoid, k=60, No Proxy:
+
+
+
+
+Sensitivity_W_i30:
+  K-Medoid, k=30, No Proxy:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 60
+      k_periods: 30
       soc_proxy: 
           use_soc_proxy: False
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -162,257 +45,7 @@ Comparison_k60:
             demand: 1
             proxy: 1
       soc_features:
-  Medoid, k=60, W=1:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 60
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=60, W=10:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 60
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 10
-      soc_features:
-  Medoid, k=60, W=100:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 60
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 100
-      soc_features:
-  # Medoid, k=60, Endogenous Correction:
-  #   dispatch_mode: 'cluster_with_optimisation'
-  #   calliope_params:
-  #   soc_proxy_params:
-  #   tsa_params:
-  #     k_periods: 60
-  #     # k_periods_optimisation: 30
-  #     resample_to_daily_resolution: True
-  #     distance_matrix_metric: 'euclidean'
-  #     timelimit: 1200
-  #     lambda_soc: 0.5
-  #     soc_proxy: 
-  #         use_soc_proxy: True
-  #         proxy_inputs_to_consider: ['surplus_LDES'] 
-  #         proxy_window: None
-  #         optimisation_proxy_mode: endogenous
-  #     matrix_weights: 
-  #           renewables: 1
-  #           demand: 1
-  #           proxy: 1
-  #     post_cluster_optimisation_params:
-  #       objective:
-  #         - polarity: minimise
-  #           target: soc_proxy_ldes
-  #           weight: 1
-  #           mode: match
-
-Comparison_k90:
-  Medoid, k=90, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 90
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=90, W=1:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 90
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=90, W=10:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 90
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 10
-      soc_features:
-  Medoid, k=90, W=100:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 90
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 100
-      soc_features:
-  # Medoid, k=90, Endogenous Correction:
-  #   dispatch_mode: 'cluster_with_optimisation'
-  #   calliope_params:
-  #   soc_proxy_params:
-  #   tsa_params:
-  #     k_periods: 90
-  #     # k_periods_optimisation: 30
-  #     resample_to_daily_resolution: True
-  #     distance_matrix_metric: 'euclidean'
-  #     timelimit: 1200
-  #     lambda_soc: 0.5
-  #     soc_proxy: 
-  #         use_soc_proxy: True
-  #         proxy_inputs_to_consider: ['surplus_LDES'] 
-  #         proxy_window: None
-  #         optimisation_proxy_mode: endogenous
-  #     matrix_weights: 
-  #           renewables: 1
-  #           demand: 1
-  #           proxy: 1
-  #     post_cluster_optimisation_params:
-  #       objective:
-  #         - polarity: minimise
-  #           target: soc_proxy_ldes
-  #           weight: 1
-  #           mode: match
-
-Comparison_k120:
-  Medoid, k=120, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 120
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=120, W=1:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 120
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=120, W=10:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 120
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 10
-      soc_features:
-  Medoid, k=120, W=100:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 120
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 100
-
-Proxy_w1_k_test:
-  Medoid, k=10:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 10
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-  Medoid, k=20:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 20
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-  Medoid, k=30:
+  K-Medoid, k=30, SocDelta, W=1:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
@@ -426,12 +59,13 @@ Proxy_w1_k_test:
             renewables: 1
             demand: 1
             proxy: 1
-  Medoid, k=40:
+      soc_features:
+  K-Medoid, k=30, SocDelta, W=10:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 40
+      k_periods: 30
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -439,13 +73,14 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  Medoid, k=50:
+            proxy: 10
+      soc_features:
+  K-Medoid, k=30, SocDelta, W=100:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 50
+      k_periods: 30
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -453,13 +88,36 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  Medoid, k=60:
+            proxy: 100
+      soc_features:
+
+
+
+
+
+
+Sensitivity_i_W100:
+  K-Medoid, k=180 (6months), No Proxy:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 60
+      k_periods: 180
+      soc_proxy: 
+          use_soc_proxy: False
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+  K-Medoid, k=7 (1week), SocDelta, W=100:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 7
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -467,13 +125,14 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  Medoid, k=70:
+            proxy: 100
+      soc_features:
+  K-Medoid, k=14 (2Weeks), SocDelta, W=100:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 70
+      k_periods: 14
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -481,13 +140,14 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  Medoid, k=80:
+            proxy: 100
+      soc_features:
+  K-Medoid, k=30 (1month), SocDelta, W=100:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 80
+      k_periods: 30
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -495,8 +155,9 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  Medoid, k=90:
+            proxy: 100
+      soc_features:
+  K-Medoid, k=90 (3months), SocDelta, W=100:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
@@ -509,13 +170,14 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  Medoid, k=100:
+            proxy: 100
+      soc_features:
+  K-Medoid, k=180 (6months), SocDelta, W=100:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
     tsa_params:
-      k_periods: 100
+      k_periods: 180
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -523,89 +185,5 @@ Proxy_w1_k_test:
       matrix_weights: 
             renewables: 1
             demand: 1
-            proxy: 1
-  
-
-comparison:
-  Medoid, k=30, W=1:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      # representation_method: medoidRepresentation
-      k_periods: 30
-      soc_proxy: 
-          use_soc_proxy: True
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-
-initial_test:
-  Medoid, k=30, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      # representation_method: medoidRepresentation
-      k_periods: 30
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=60, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      # representation_method: medoidRepresentation
-      k_periods: 60
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=90, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      # representation_method: medoidRepresentation
-      k_periods: 90
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
-      soc_features:
-  Medoid, k=120, No Proxy:
-    dispatch_mode: 'cluster'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      # representation_method: medoidRepresentation
-      k_periods: 120
-      soc_proxy: 
-          use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-      matrix_weights: 
-            renewables: 1
-            demand: 1
-            proxy: 1
+            proxy: 100
       soc_features:

@@ -10,9 +10,9 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 
 
-scenarios = ['Proxy_w1_k_test'] 
+scenarios = ['Sensitivity_i_W100'] 
 show_soc = True
-date_range = [2015,2019]
+date_range = [2010,2019]
 
 
 

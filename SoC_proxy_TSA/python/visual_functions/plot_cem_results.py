@@ -9,33 +9,89 @@ import calliope
 from netCDF4 import Dataset
 import  yaml
 
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
-# mpl.rcParams["pgf.preamble"] = r""
+mpl.rcParams.update({
+    "text.usetex": True,
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "axes.unicode_minus": False,
+})
+mpl.rcParams["pgf.preamble"] = r""
 
-data = {
+# data = {
+#     'id': [
+#         '2109cf7332b1ea3a0da4',
+#         'bbf3cd4af8938c879500',
+#         'eae28782795d48106d25',
+#         '1fde1fb23ae1a3833840',
+#         '788f5e7bbbe933d3e33a',
+#         '128bd3193cc9c5e26017',
+#         'c2da63c2dcb882131614',
+#         '1dff92aac973a8452fdc',
+#         ],
+#     'model_code': [
+#         'cTSA-5Y-N-30reps',
+#         'cTSA-5Y-EXO-1-30reps',
+#         'cTSA-5Y-EXO-2-30reps',
+#         'cTSA-5Y-EXO-5-30reps',
+#         'cTSA-5Y-EXO-10-30reps',
+#         'cTSA-5Y-EXO-20-30reps',
+#         'cTSA-5Y-EXO-50-30reps',
+#         'cTSA-5Y-EXO-100-30reps',
+#         ],
+#     'x_axis': [
+#         'No Proxy \\ ($W_x=0$)',
+#         '1',
+#         '2',
+#         '5',
+#         '10',
+#         '20',
+#         '50',
+#         '100',
+#         ],
+# }
+
+data1 = {
     'id': [
-        '1dff92aac973a8452fdc',
-        '1fde1fb23ae1a3833840',
-        '788f5e7bbbe933d3e33a',
-        '128bd3193cc9c5e26017',
+        '71f6bd7158cb670f2e0d',
+        '1ab7b1245bf0459d20e3',
+        'b5d0294cc4725e0b5fb3',
         '2109cf7332b1ea3a0da4',
-        'c2da63c2dcb882131614',
+        'a4bc361bbdd602d1f8bf',
+        'cf9e8507a51148b889f5'
         ],
-    'model_code': [
-        'cTSA-5Y-N-30reps',
-        'cTSA-5Y-EXO-2-30reps',
-        'cTSA-5Y-EXO-5-30reps',
-        'cTSA-5Y-EXO-10-30reps',
-        'cTSA-5Y-EXO-20-30reps',
-        'cTSA-5Y-EXO-50-30reps',
+    # 'model_code': [  ],
+    'x_axis': [
+        '7',
+        '14',
+        '21',
+        '30',
+        '90',
+        '180'
         ],
 }
-reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2015_2019_reference.nc'
+
+data2 = {
+    'id': [
+        'b437c28cf906b3e0e339',
+        'e3ee4018d873017ef7f3',
+        'e0b396f4839af82bf3ac',
+        '1dff92aac973a8452fdc',
+        '06711f9352a6f7bf1512',
+        'c396ef70d36ebf8ce5ba'
+        ],
+    # 'model_code': [  ],
+    'x_axis': [
+        '7',
+        '14',
+        '21',
+        '30',
+        '90',
+        '180'
+        ],
+}
+
+
+reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'
 
 colour_1 = '#0D0887'   
 colour_2 = '#CC4778' 
@@ -51,6 +107,8 @@ def cem_results(df, path_reference):
     list_ldes_cap_error = []
 
     for model_id in df['id']:
+        if model_id=='1dff92aac973a8452fdc':
+            print('nothing')
         model_test = read_clustered_netcdf(f"SoC_proxy_TSA/data/calliope_models/{model_id}.nc")
         power_caps_test, energy_caps_test = get_capacities(model_test)
 
@@ -59,7 +117,7 @@ def cem_results(df, path_reference):
         e_storage,_ = relative_error(energy_caps_reference, energy_caps_test)
 
         list_power_cap_mean_errors.append(e_mean_power)
-        list_ldes_cap_error.append(e_storage['h2_salt_cavern'])
+        list_ldes_cap_error.append(np.abs(e_storage['h2_salt_cavern']))
 
     df.insert(0,'macme',list_power_cap_mean_errors)
     df.insert(0,'ldes_error',list_ldes_cap_error)
@@ -124,33 +182,30 @@ def relative_error(df_ref, df_test):
 
 figure_save_path = 'CEM vs W.pdf'
 
-df = pd.DataFrame(data)
+df1 = pd.DataFrame(data1)
+df2 = pd.DataFrame(data2)
 
-df = cem_results(df,reference_model)
+df1 = cem_results(df1,reference_model)
+df2 = cem_results(df2,reference_model)
 
 
 
 
-fig = plt.figure(figsize=(4, 4))  # wide × short
+fig = plt.figure(figsize=(6, 4))  
 ax = fig.add_subplot(1, 1, 1)
 ax.set_axisbelow(True)
 
-# Reference model (same color; solid = actual, dashed = proxy)
-ax.scatter(df['model_code'], df['macme'], label='$\overline{\epsilon^C}$', color=colour_1, linewidth=1.2)
-ax.scatter(df['model_code'], df['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$', color=colour_2, linewidth=1.2)
+ax.scatter(df1['x_axis'], df1['macme'], label='$\overline{\epsilon^C}$, No Proxy', edgecolors=colour_1, linewidth=1.2, facecolors='none')
+ax.scatter(df2['x_axis'], df2['macme'], label='$\overline{\epsilon^C}$, $Wx=100$', color=colour_1, linewidth=1.2)
+ax.scatter(df1['x_axis'], df1['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, No Proxy', edgecolors=colour_2, linewidth=1.2, facecolors='none')
+ax.scatter(df2['x_axis'], df2['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, $Wx=100$', color=colour_2, linewidth=1.2)
 
-
-# # Clustered model (same color; solid = actual, dashed = proxy)
-# ax.plot(soc_clu_actual_d.index, soc_clu_actual_d.values,
-#         label='Clustered: SoC (CEM)', color=colour_clu, linewidth=1.2)
-# ax.plot(soc_clu_proxy_d .index, soc_clu_proxy_d .values,
-#         label='Clustered: SoC Proxy', color=colour_clu, linewidth=1.2, linestyle='dotted')
 
 ax.set_ylabel('Error')
-ax.set_xlabel('Weighting')
+ax.set_xlabel('Number of Representative Periods (Days)')
 
 # vertical grid
-ax.xaxis.grid(True, which='major', linestyle=':', alpha=0.6)
+ax.yaxis.grid(True, which='major', linestyle=':', alpha=0.6)
 
 ax.legend(loc='best', frameon=False)
 fig.tight_layout()

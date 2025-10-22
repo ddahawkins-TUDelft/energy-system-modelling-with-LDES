@@ -10,7 +10,7 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 
 
-scenarios = ['Sensitivity_W_reps30'] 
+scenarios = ['Sensitivity_i_W0vs100'] 
 show_soc = True
 date_range = [2010,2019]
 
@@ -170,7 +170,7 @@ visualise(
     list_model_dict=list_model_dict,
     x_field='Time', #'Time'
     y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-    colour_field='MAGMe',
+    # colour_field='MAGMe',
     # show_tsa_internal_surplus_accumulation=True,
     # save_fig=True
 )

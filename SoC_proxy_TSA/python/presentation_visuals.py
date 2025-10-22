@@ -27,8 +27,7 @@ mpl.rcParams["pgf.preamble"] = r""  # inherit fonts from your Elsevier doc
 # Inputs / Paths
 # ------------------------------
 # cluster_id = '145cfcdba374fdda32e5' #no proxy
-cluster_id = '29df03c4950b09c8f3d9' #proxy
-cluster_id = '9ec0c408756cb81df1ae' #with known capacity weights
+cluster_id = '1dff92aac973a8452fdc' 
 
 # Reference (unclustered/full) model
 reference_nc_path = "SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc"
@@ -40,7 +39,7 @@ cluster_map_csv_path = f"SoC_proxy_TSA/data/cluster_maps/{cluster_id}.csv"      
 clustered_timeseries_csv_path = Path(f"SoC_proxy_TSA/data/timeseries/{cluster_id}.csv")  # <-- set me if different
 
 # Window and tech ids
-ts_window = ['2015-01-01', '2019-12-31']
+ts_window = ['2010-01-01', '2019-12-31']
 storage_tech = "h2_salt_cavern"
 
 # Proxy params (used if not embedded)
@@ -210,7 +209,7 @@ ax.set_axisbelow(True)
 # Reference model (same color; solid = actual, dashed = proxy)
 ax.plot(soc_ref_actual_d.index, soc_ref_actual_d.values,
         label='Reference: SoC (CEM)', color=colour_ref, linewidth=1.2)
-ax.plot(soc_ref_proxy_d .index, soc_ref_proxy_d .values,
+ax.plot(soc_ref_proxy_d .index, soc_ref_proxy_d.values,
         label='Reference: SoC Proxy', color=colour_ref, linewidth=1.2, linestyle='dotted')
 
 # # Clustered model (same color; solid = actual, dashed = proxy)

@@ -10,7 +10,7 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 
 
-scenarios = ['Sensitivity_i_W100'] 
+scenarios = ['Sensitivity_W_reps30'] 
 show_soc = True
 date_range = [2010,2019]
 

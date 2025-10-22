@@ -29,8 +29,8 @@
 
 
 
-Sensitivity_W_i30:
-  K-Medoid, k=30, No Proxy:
+Sensitivity_W_reps30:
+  K-Medoid, reps=30, No Proxy:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
@@ -45,7 +45,7 @@ Sensitivity_W_i30:
             demand: 1
             proxy: 1
       soc_features:
-  K-Medoid, k=30, SocDelta, W=1:
+  K-Medoid, reps=30, SocDelta, W=1:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
@@ -60,7 +60,37 @@ Sensitivity_W_i30:
             demand: 1
             proxy: 1
       soc_features:
-  K-Medoid, k=30, SocDelta, W=10:
+  K-Medoid, reps=30, SocDelta, W=2:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 2
+      soc_features:
+  K-Medoid, reps=30, SocDelta, W=5:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 5
+      soc_features:
+  K-Medoid, reps=30, SocDelta, W=10:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
@@ -75,7 +105,37 @@ Sensitivity_W_i30:
             demand: 1
             proxy: 10
       soc_features:
-  K-Medoid, k=30, SocDelta, W=100:
+  K-Medoid, reps=30, SocDelta, W=20:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 20
+      soc_features:
+  K-Medoid, reps=30, SocDelta, W=50:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 50
+      soc_features:
+  K-Medoid, reps=30, SocDelta, W=100:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:

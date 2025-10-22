@@ -253,3 +253,4 @@ fig.tight_layout()
 plt.savefig(pgf_out)                       # PGF for \input{...}
 plt.savefig(pdf_out, bbox_inches='tight')  # quick preview
 plt.show()
+

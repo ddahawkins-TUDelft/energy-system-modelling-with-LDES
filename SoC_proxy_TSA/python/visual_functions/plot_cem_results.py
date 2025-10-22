@@ -150,6 +150,7 @@ data_10y_W100 = {
         ],
 }
 
+wrong way to do it, better would be to just have two datasets and vary the x_axis field
 
 
 reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'

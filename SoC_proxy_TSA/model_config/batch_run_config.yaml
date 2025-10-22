@@ -25,7 +25,37 @@
   #           weight: 1
   #           mode: match
 
-
+Sensitivity_Horizon:
+  K-Medoid, reps=30, No Proxy:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      soc_proxy: 
+          use_soc_proxy: False
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 1
+      soc_features:
+  K-Medoid, reps=30, SocDelta, W=100:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      matrix_weights: 
+            renewables: 1
+            demand: 1
+            proxy: 100
+      soc_features:
 
 
 

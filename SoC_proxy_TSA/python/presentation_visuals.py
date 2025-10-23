@@ -15,13 +15,13 @@ from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas, ext
 # ------------------------------
 # Matplotlib + LaTeX (PGF)
 # ------------------------------
-mpl.rcParams.update({
-    "text.usetex": True,
-    "pgf.texsystem": "pdflatex",
-    "pgf.rcfonts": False,
-    "axes.unicode_minus": False,
-})
-mpl.rcParams["pgf.preamble"] = r""  # inherit fonts from your Elsevier doc
+# mpl.rcParams.update({
+#     "text.usetex": True,
+#     "pgf.texsystem": "pdflatex",
+#     "pgf.rcfonts": False,
+#     "axes.unicode_minus": False,
+# })
+# mpl.rcParams["pgf.preamble"] = r""  # inherit fonts from your Elsevier doc
 
 # ------------------------------
 # Inputs / Paths

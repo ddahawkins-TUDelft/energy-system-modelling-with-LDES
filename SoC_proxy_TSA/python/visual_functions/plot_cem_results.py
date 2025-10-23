@@ -9,14 +9,15 @@ import calliope
 from netCDF4 import Dataset
 import  yaml
 
-mpl.rcParams.update({
-    "text.usetex": True,
-    "pgf.texsystem": "pdflatex",
-    "pgf.rcfonts": False,
-    "axes.unicode_minus": False,
-})
-mpl.rcParams["pgf.preamble"] = r""
+# mpl.rcParams.update({
+#     "text.usetex": True,
+#     "pgf.texsystem": "pdflatex",
+#     "pgf.rcfonts": False,
+#     "axes.unicode_minus": False,
+# })
+# mpl.rcParams["pgf.preamble"] = r""
 
+#WEIGHTS
 # data = {
 #     'id': [
 #         '2109cf7332b1ea3a0da4',
@@ -50,6 +51,7 @@ mpl.rcParams["pgf.preamble"] = r""
 #         ],
 # }
 
+#REP PERIODS
 # data1 = {
 #     'id': [
 #         '71f6bd7158cb670f2e0d',
@@ -90,67 +92,87 @@ mpl.rcParams["pgf.preamble"] = r""
 #         ],
 # }
 
-data_5y_W0 = {
+#HORIZON
+data_W0 = {
     'id': [
+        '335a40cd19b374f1ed6f',
+        '0f49dc7c37f9d646212d',
+        '83f3c65716fa5b47d9f9',
+        '41de038bec87dd0d8e84',
+        '92b7061598c3f69bb108',
+        'e4417bf9d379a3e356e2',
+        '8ea80cd72bb2392d18d9',
+        '2b88b9fbb4fea53c79eb',
+        '565f355a199f1bb5c2f5',
         'f1e8140151977e99b1fe',
         'fa9a32277b03eabfac1d',
         '36dc45ae7f5c93877888',
         '40a83e7bedc42a78f160',
         'ced28461d126ce84e4eb',
-        '6e89773e98ee102ab1fa'
+        '6e89773e98ee102ab1fa',
+        '2109cf7332b1ea3a0da4'
         ],
     # 'model_code': [  ],
     'x_axis': [
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
         '5',
         '5',
         '5',
         '5',
         '5',
-        '5'
+        '5',
+        '10'
         ],
 }
 
-data_5y_W100 = {
+data_W100 = {
     'id': [
+        'a0bcf289ef6025755e82',
+        'd5fd3fe4ee6854351e22',
+        '474dde81a56edeec554d',
+        '4493f9e8b6bd2cfef43e',
+        'f0cc18e55ec12ea8423d',
+        '1f5fce2c65a9d1e0b441',
+        'ea32ba119af0c67f0759',
+        '7c70d7a35809cf98d19a',
+        '11ff6bf669c7a5d7f31d',
         '517ea7feadacf73d1f1d',
         '4f0b0824a2e3dc838304',
         'e2234a54147b5968c63f',
         '31c2f6660b3e828eb565',
         '903b15aa6bc4d989b145',
-        '823ac03029d0c3b8ad59'
+        '823ac03029d0c3b8ad59',
+        '1dff92aac973a8452fdc'
         ],
     # 'model_code': [  ],
     'x_axis': [
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
+        '2',
         '5',
         '5',
         '5',
         '5',
         '5',
-        '5'
+        '5',
+        '10'
         ],
 }
 
-data_10y_W0 = {
-    'id': [
-        '2109cf7332b1ea3a0da4',
-        ],
-    # 'model_code': [  ],
-    'x_axis': [
-        '10',
-        ],
-}
-
-data_10y_W100 = {
-    'id': [
-        '1dff92aac973a8452fdc',
-        ],
-    # 'model_code': [  ],
-    'x_axis': [
-        '10',
-        ],
-}
-
-wrong way to do it, better would be to just have two datasets and vary the x_axis field
 
 
 reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'
@@ -244,16 +266,13 @@ def relative_error(df_ref, df_test):
 
 figure_save_path = 'CEM vs W.pdf'
 
-df1 = pd.DataFrame(data_10y_W0)
-df2 = pd.DataFrame(data_10y_W100)
-df3 = pd.DataFrame(data_5y_W0)
-df4 = pd.DataFrame(data_5y_W100)
+df1 = pd.DataFrame(data_W0)
+df2 = pd.DataFrame(data_W100)
 
 
 df1 = cem_results(df1,reference_model)
 df2 = cem_results(df2,reference_model)
-df3 = cem_results(df3,reference_model)
-df4 = cem_results(df4,reference_model)
+
 
 
 
@@ -265,13 +284,9 @@ ax.set_axisbelow(True)
 
 ax.scatter(df1['x_axis'], df1['macme'], label='$\overline{\epsilon^C}$, No Proxy', edgecolors=colour_1, linewidth=1.2, facecolors='none')
 ax.scatter(df2['x_axis'], df2['macme'], label='$\overline{\epsilon^C}$, $Wx=100$', color=colour_1, linewidth=1.2)
-ax.scatter(df3['x_axis'], df3['macme'], label='$\overline{\epsilon^C}$, No Proxy', edgecolors=colour_1, linewidth=1.2, facecolors='none')
-ax.scatter(df4['x_axis'], df4['macme'], label='$\overline{\epsilon^C}$, $Wx=100$', color=colour_1, linewidth=1.2)
 
 ax.scatter(df1['x_axis'], df1['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, No Proxy', edgecolors=colour_2, linewidth=1.2, facecolors='none')
 ax.scatter(df2['x_axis'], df2['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, $Wx=100$', color=colour_2, linewidth=1.2)
-ax.scatter(df3['x_axis'], df3['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, No Proxy', edgecolors=colour_2, linewidth=1.2, facecolors='none')
-ax.scatter(df4['x_axis'], df4['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, $Wx=100$', color=colour_2, linewidth=1.2)
 
 
 ax.set_ylabel('Error')

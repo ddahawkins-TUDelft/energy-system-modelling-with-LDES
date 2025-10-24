@@ -26,6 +26,7 @@ import yaml
 from matplotlib.colors import Normalize
 from netCDF4 import Dataset
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import scipy.stats
 
 # --- Utilities from your codebase ---
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
@@ -44,7 +45,7 @@ REFERENCE_TIMESERIES_CSV = Path("SoC_proxy_TSA/data/timeseries/time_varying_para
 RESAMPLE_FREQ: str | None = "D"
 
 # Normalization toggle for segmented RMSE (divide each model's monthly RMSE by its own mean RMSE)
-NORMALIZE_SEGMENT_RMSE: bool = False
+NORMALIZE_SEGMENT_RMSE: bool = True
 
 # Storage tech and proxy settings (copy/paste from your presentation file)
 STORAGE_TECH = "h2_salt_cavern"
@@ -326,24 +327,30 @@ def plot_ldes_vs_socproxy_metrics(
     ax_l.set_title(figtitle)
     ax_l.set_axisbelow(True)
 
-    
-    f_r = np.poly1d(np.polyfit(x, r, 1))
-    f_e = np.poly1d(np.polyfit(x, e, 1))
-    f_e_combined = np.poly1d(np.polyfit(x, e_combined, 1))
+    m_r, b_r, r_r, _, _ = scipy.stats.linregress(x, r)
+    m_e, b_e, r_e, _, _ = scipy.stats.linregress(x, e)
+    m_ec, b_ec, r_ec, _, _ = scipy.stats.linregress(x, e_combined)
+    sorted_x = np.sort(x)
 
     # Left axis: Pearson r and RMSE (two series)
     ax_l.scatter(x, r, label="Pearson r (proxy vs ref)", edgecolors=COLOUR_R, linewidth=1.2)
-    ax_l.plot(x, f_r(r), label="_Pearson r (proxy vs ref)", color=COLOUR_R, linewidth=1.2)
+    ax_l.plot(sorted_x,  m_r*sorted_x + b_r, label="_trend", color=COLOUR_R, linewidth=1.2)
+    ax_l.annotate('r^2: ' + str("{:.2f}".format(r_r**2)), xy=(x.mean(),0.8*r.mean()))
+
     ax_l.scatter(x, e, label="RMSE (proxy vs ref)", color=COLOUR_E, linewidth=1.2)
-    ax_l.plot(x, f_e(e), label="_RMSE (proxy vs ref)", color=COLOUR_E, linewidth=1.2)
+    ax_l.plot(sorted_x,  m_e*sorted_x + b_e, label="_trend", color=COLOUR_E, linewidth=1.2)
+    ax_l.annotate('r^2: ' + str("{:.2f}".format(r_e**2)), xy=(0.5*x.mean(),1.25*e.mean()))
+
     ax_l.scatter(x, e_combined, label="Combined Error", color=COLOUR_EC, linewidth=1.2)
-    ax_l.plot(x, f_e_combined(e_combined), label="_Combined Error", color=COLOUR_EC, linewidth=1.2)
+    ax_l.plot(sorted_x,  m_ec*sorted_x + b_ec, label="_trend", color=COLOUR_EC, linewidth=1.2)
+    ax_l.annotate('r^2: ' + str("{:.2f}".format(r_ec**2)), xy=(1.5*x.mean(),0.75*e_combined.mean()))
 
 
     ax_l.set_ylabel("Metric value")
     ax_l.set_xlabel(x_label)
     ax_l.yaxis.grid(True, which="major", linestyle=":", alpha=0.6)
     ax_l.legend(loc="best", frameon=False)
+    ax_l.legend(loc='lower center', bbox_to_anchor=(0.5, 1))
 
     fig.tight_layout()
     if savepath:
@@ -543,7 +550,7 @@ def plot_month_importance_bar(
 
     fig, ax = plt.subplots(figsize=(12, 3.6))
     ax.axhline(0, color="lightgrey", linewidth=1)
-    ax.stem(x, y, linefmt="-", markerfmt="o", basefmt=" ", use_line_collection=True)
+    ax.stem(x, y, linefmt="-", markerfmt="o", basefmt=" ")
 
     ax.set_ylim(-1.05, 1.05)
     ax.set_ylabel("Pearson r")

@@ -1,8 +1,12 @@
 # plot_signal_results.py
 # Combined signal analyses:
-#   (A) LDES capacity error vs SoC-proxy metrics (Pearson r, RMSE, maxima timing/magnitude)
+#   (A) Ex-ante vs ex-post: LDES capacity error vs SoC-proxy metrics
+#       - Subplot 1: Pearson r & RMSE (trendlines + R^2)
+#       - Subplot 2: Peak timing & magnitude errors
+#       - Subplot 3: Combined error metric (trendline + R^2)
 #   (B) Segmented (monthly) RMSE analysis per model, colored by LDES error
-#   (C) Month-importance analysis: correlation between monthly (normalized) RMSE and LDES error across models
+#   (C) Month-importance analysis: correlation between monthly (normalized) RMSE
+#       AND monthly Pearson r vs LDES error across models, with a mini SoC strip
 #
 # Conventions:
 # - Proxies are built hourly, with optional resampling (mean) AFTER proxy computation (e.g., daily).
@@ -59,9 +63,12 @@ SOC_PROXY_PARAMS: Dict[str, Any] = {
 }
 
 # Colors
-COLOUR_R = "#0D0887"  # Pearson r
-COLOUR_E = "#CC4778"  # RMSE
-COLOUR_EC = '#f89540' # Combined
+COLOUR_R = "#0d0887"   # Pearson r
+COLOUR_E = "#6a00a8"   # RMSE
+COLOUR_EC = "#b12a90"  # Combined
+COLOUR_TM = "#e16462"  # Timing of maxima
+COLOUR_5 = "#fca636"  
+COLOUR_MM = "#f0f921" # Magnitude of maxima
 
 # ------------------------------
 # Path helpers
@@ -305,74 +312,146 @@ def build_results(df_in: pd.DataFrame, resample_freq: str | None = RESAMPLE_FREQ
     return pd.DataFrame(rows)
 
 # ------------------------------
-# Plot (A): LDES error vs proxy metrics
+# Plot (A): Ex-ante vs ex-post metrics in subplots
 # ------------------------------
-def plot_ldes_vs_socproxy_metrics(
+def _trendline(ax, x, y, color, label_for_r2, lw=1.2):
+    """Add a linear trendline + R^2 annotation for (x,y)."""
+    if len(x) < 2 or len(y) < 2:
+        return
+    m, b, r_val, _, _ = scipy.stats.linregress(x, y)
+    x_sorted = np.sort(x)
+    ax.plot(x_sorted, m * x_sorted + b, color=color, linewidth=lw)
+    ax.annotate(
+        f"$R^2$={r_val**2:.2f}",
+        xy=(np.nanmean(x), np.nanmean(y)),
+        xytext=(5, 10),
+        textcoords="offset points",
+        color=color,
+        fontsize=9,
+        bbox=dict(boxstyle="round,pad=0.2", fc="white", ec=color, alpha=0.95),
+    )
+
+def plot_ex_ante_ex_post_subplots(
     df: pd.DataFrame,
-    x_label: str = r"$\epsilon^C_{\mathrm{LDES}}$ (abs. rel. error)",
-    figtitle: str = "SoC Proxy vs LDES Capacity Error",
+    x_label: str = r"$\epsilon^C_{\mathrm{LDES}}$",
+    figtitle: str = "Ex-ante vs Ex-post: Metrics vs LDES capacity error",
     savepath: str | None = None,
+    layout: str = "grid",
 ):
     """
-    Expects columns: 'ldes_error', 'pearson_r', 'rmse', 'e_timing_maxima', 'e_magnitude_maxima', 'e_combined'
+    layout:
+      - "grid": top (r & RMSE), middle (timing & magnitude of maxima), bottom (combined)
+      - "stacked": same content but stacked equally (e.g., for single-column figures)
     """
     x = df["ldes_error"].values
     r = df["pearson_r"].values
     e = df["rmse"].values
-    e_combined = df["e_combined"].values
+    e_tm = df["e_timing_maxima"].values
+    e_mm = df["e_magnitude_maxima"].values
+    e_comb = df["e_combined"].values
 
-    fig = plt.figure(figsize=(7, 4.2))
-    ax_l = fig.add_subplot(1, 1, 1)
+    if layout == "stacked":
+        fig, axes = plt.subplots(3, 1, figsize=(7, 9), sharex=True)
+        (ax1, ax2, ax3) = axes
+    else:
+        # grid layout: top & middle normal height, bottom a bit taller
+        fig = plt.figure(figsize=(7, 9))
+        gs = fig.add_gridspec(3, 1, height_ratios=[1, 1, 1.2], hspace=0.25)
+        ax1 = fig.add_subplot(gs[0, 0])
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax3 = fig.add_subplot(gs[2, 0])
 
-    ax_l.set_title(figtitle)
-    ax_l.set_axisbelow(True)
+    # Subplot 1: Pearson r + RMSE
+    ax1.scatter(x, r, label="Pearson r", color=COLOUR_R, s=28)
+    _trendline(ax1, x, r, COLOUR_R, "Pearson r")
+    ax1.scatter(x, e, label="RMSE", color=COLOUR_E, s=28)
+    _trendline(ax1, x, e, COLOUR_E, "RMSE")
+    ax1.set_ylabel("r, RMSE")
+    leg = ax1.legend(loc="best", frameon=True)
+    leg.get_frame().set_facecolor("white")
+    leg.get_frame().set_alpha(0.9)
+    leg.get_frame().set_edgecolor("black")
+    ax1.yaxis.grid(True, linestyle=":", alpha=0.6)
 
-    m_r, b_r, r_r, _, _ = scipy.stats.linregress(x, r)
-    m_e, b_e, r_e, _, _ = scipy.stats.linregress(x, e)
-    m_ec, b_ec, r_ec, _, _ = scipy.stats.linregress(x, e_combined)
-    sorted_x = np.sort(x)
+    # Subplot 2: Peak timing & magnitude errors
+    ax2.scatter(x, e_tm, label="Peak timing error", color=COLOUR_TM, s=28)
+    ax2.scatter(x, e_mm, label="Peak magnitude error", color=COLOUR_MM, s=28)
 
-    # Left axis: Pearson r and RMSE (two series)
-    ax_l.scatter(x, r, label="Pearson r (proxy vs ref)", edgecolors=COLOUR_R, linewidth=1.2)
-    ax_l.plot(sorted_x,  m_r*sorted_x + b_r, label="_trend", color=COLOUR_R, linewidth=1.2)
-    ax_l.annotate('r^2: ' + str("{:.2f}".format(r_r**2)), xy=(x.mean(),0.8*r.mean()))
+    # --- NEW: combo trendline only (no dots) ---
+    e_peak_combo = 0.5 * (e_tm + e_mm)  # or a weighted combo if you prefer
+    m_c, b_c, r_c, _, _ = scipy.stats.linregress(x, e_peak_combo)
+    x_sorted = np.sort(x)
+    ax2.plot(
+        x_sorted,
+        m_c * x_sorted + b_c,
+        linestyle="--",
+        linewidth=1.6,
+        color=COLOUR_5,
+        label="(timing ⊕ magnitude)"
+    )
+    # R^2 annotation for the combo
+    ax2.annotate(
+        f"$R^2$={r_c**2:.2f}",
+        xy=(np.nanmean(x), np.nanmean(e_peak_combo)),
+        xytext=(6, 8), textcoords="offset points",
+        fontsize=9, color=COLOUR_5,
+        bbox=dict(boxstyle="round,pad=0.2", fc="white", ec=COLOUR_5, lw=0.8, alpha=0.9),
+    )
+    ax2.set_ylabel("Peak errors")
+    leg2 = ax2.legend(loc="best", frameon=True)
+    leg2.get_frame().set_facecolor("white")
+    leg2.get_frame().set_alpha(0.9)
+    leg2.get_frame().set_edgecolor("black")
+    ax2.yaxis.grid(True, linestyle=":", alpha=0.6)
 
-    ax_l.scatter(x, e, label="RMSE (proxy vs ref)", color=COLOUR_E, linewidth=1.2)
-    ax_l.plot(sorted_x,  m_e*sorted_x + b_e, label="_trend", color=COLOUR_E, linewidth=1.2)
-    ax_l.annotate('r^2: ' + str("{:.2f}".format(r_e**2)), xy=(0.5*x.mean(),1.25*e.mean()))
+    # Subplot 3: Combined
+    ax3.scatter(x, e_comb, label="Combined metric", color=COLOUR_EC, s=30)
+    _trendline(ax3, x, e_comb, COLOUR_EC, "Combined")
+    ax3.set_xlabel(x_label)
+    ax3.set_ylabel("Combined")
+    leg3 = ax3.legend(loc="best", frameon=True)
+    leg3.get_frame().set_facecolor("white")
+    leg3.get_frame().set_alpha(0.9)
+    leg3.get_frame().set_edgecolor("black")
+    ax3.yaxis.grid(True, linestyle=":", alpha=0.6)
 
-    ax_l.scatter(x, e_combined, label="Combined Error", color=COLOUR_EC, linewidth=1.2)
-    ax_l.plot(sorted_x,  m_ec*sorted_x + b_ec, label="_trend", color=COLOUR_EC, linewidth=1.2)
-    ax_l.annotate('r^2: ' + str("{:.2f}".format(r_ec**2)), xy=(1.5*x.mean(),0.75*e_combined.mean()))
-
-
-    ax_l.set_ylabel("Metric value")
-    ax_l.set_xlabel(x_label)
-    ax_l.yaxis.grid(True, which="major", linestyle=":", alpha=0.6)
-    ax_l.legend(loc="best", frameon=False)
-    ax_l.legend(loc='lower center', bbox_to_anchor=(0.5, 1))
-
-    fig.tight_layout()
+    # fig.suptitle(figtitle)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
     if savepath:
         plt.savefig(savepath, bbox_inches="tight")
     plt.show()
 
 # ==============================
-# (B) Segmented (monthly) error analysis
+# (B) Segmented (monthly) metrics per model
 # ==============================
-def segmented_rmse_by_month(proxy_test: pd.Series, proxy_ref: pd.Series) -> pd.DataFrame:
+def segmented_metrics_by_month(proxy_test: pd.Series, proxy_ref: pd.Series) -> pd.DataFrame:
     """
-    Compute RMSE per calendar month segment (aligned on intersection).
-    Returns columns: ['month', 'rmse'] where 'month' is a Period('M').
+    Compute per-month metrics on the overlap:
+      - RMSE (per calendar Month)
+      - Pearson r (per calendar Month)
+    Returns columns: ['month', 'rmse', 'pearson_r_m']
     """
     ref_aligned, test_aligned = proxy_ref.align(proxy_test, join="inner")
     if ref_aligned.empty or test_aligned.empty:
-        return pd.DataFrame(columns=["month", "rmse"])
+        return pd.DataFrame(columns=["month", "rmse", "pearson_r_m"])
 
     df = pd.DataFrame({"ref": ref_aligned, "test": test_aligned})
-    df["month"] = df.index.to_period("M")  # calendar-month segmentation
-    grouped = df.groupby("month").apply(lambda g: float(np.sqrt(np.mean((g["ref"] - g["test"]) ** 2))))
-    return grouped.to_frame("rmse").reset_index()
+    df["month"] = df.index.to_period("M")
+
+    def _rmse(g):
+        return float(np.sqrt(np.mean((g["ref"] - g["test"]) ** 2)))
+
+    def _pearson(g):
+        if g["ref"].notna().sum() >= 2 and g["test"].notna().sum() >= 2:
+            return float(g["ref"].corr(g["test"]))
+        return np.nan
+
+    grouped = df.groupby("month").apply(lambda g: pd.Series({
+        "rmse": _rmse(g),
+        "pearson_r_m": _pearson(g)
+    })).reset_index()
+
+    return grouped
 
 def build_segmented_results(
     model_ids: List[str],
@@ -384,11 +463,11 @@ def build_segmented_results(
     """
     For each model id:
       - builds test proxy (hourly) -> optional resample (mean) after proxy
-      - computes monthly RMSE vs resampled reference proxy
+      - computes monthly RMSE & monthly Pearson r vs resampled reference proxy
       - attaches LDES capacity error
       - optionally adds rmse_norm = rmse / mean_rmse_for_that_model
     Returns a tidy DataFrame with:
-      ['model_id','month','rmse','rmse_norm','ldes_error','month_midpoint_ts']
+      ['model_id','month','rmse','rmse_norm','pearson_r_m','ldes_error','month_midpoint_ts']
     """
     all_rows = []
     for mid in model_ids:
@@ -397,20 +476,19 @@ def build_segmented_results(
         soc_test_proxy = _build_proxy(df_test, DEMAND_FIELD, SOC_PROXY_PARAMS)
         soc_test_proxy = _maybe_resample(soc_test_proxy, resample_freq)
 
-        # Monthly RMSE
-        df_m = segmented_rmse_by_month(soc_test_proxy, soc_ref_proxy)
+        # Monthly metrics
+        df_m = segmented_metrics_by_month(soc_test_proxy, soc_ref_proxy)
         if df_m.empty:
             continue
 
-        # Add model id
         df_m["model_id"] = mid
 
-        # Optional per-model normalization
+        # Optional per-model normalization for RMSE
         if normalize_segment_rmse:
             mean_rmse = df_m["rmse"].mean()
             df_m["rmse_norm"] = df_m["rmse"] / mean_rmse if mean_rmse and not np.isnan(mean_rmse) else np.nan
         else:
-            df_m["rmse_norm"] = np.nan  # placeholder for consistent schema
+            df_m["rmse_norm"] = np.nan
 
         # LDES capacity error (scalar per model)
         ldes_err = compute_ldes_error(mid, energy_caps_ref)
@@ -423,7 +501,7 @@ def build_segmented_results(
         all_rows.append(df_m)
 
     if not all_rows:
-        return pd.DataFrame(columns=["model_id", "month", "rmse", "rmse_norm", "ldes_error", "month_midpoint_ts"])
+        return pd.DataFrame(columns=["model_id", "month", "rmse", "rmse_norm", "pearson_r_m", "ldes_error", "month_midpoint_ts"])
     return pd.concat(all_rows, ignore_index=True)
 
 def plot_monthly_rmse_with_ref_proxy(
@@ -433,7 +511,7 @@ def plot_monthly_rmse_with_ref_proxy(
     savepath: str | None = None,
     cmap: str = "plasma",
     show_proxy_strip: bool = True,
-    height_ratios: tuple[int, int] = (4, 1),  # main : strip → strip is 4x smaller than main
+    height_ratios: tuple[int, int] = (4, 1),  # main : strip → strip is ~4x smaller than main
     use_normalized: bool = NORMALIZE_SEGMENT_RMSE,
 ):
     """
@@ -444,10 +522,8 @@ def plot_monthly_rmse_with_ref_proxy(
         print("No segmented data to plot.")
         return
 
-    # Select y column
     y_col = "rmse_norm" if use_normalized and "rmse_norm" in df_seg.columns else "rmse"
 
-    # === Figure & axes (now single y on LEFT; proxy only in strip)
     if show_proxy_strip:
         fig, (ax_main, ax_strip) = plt.subplots(
             2, 1, sharex=True, figsize=(12, 6),
@@ -469,7 +545,7 @@ def plot_monthly_rmse_with_ref_proxy(
     ax_main.set_ylabel("Monthly RMSE" + (" (normalized)" if y_col == "rmse_norm" else ""))
     ax_main.xaxis.set_major_locator(mdates.YearLocator())
     ax_main.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax_main.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=(1, 7)))  # two minor ticks per year
+    ax_main.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=(1, 7)))
     ax_main.grid(True, which="major", axis="x", linestyle=":", alpha=0.5)
 
     # Compact colorbar inset
@@ -479,16 +555,16 @@ def plot_monthly_rmse_with_ref_proxy(
 
     # Strip panel: thin SoC proxy under the main chart
     if show_proxy_strip and ax_strip is not None:
-        ref_series = proxy_ref  # scale if needed for visuals, e.g., /1e6
+        ref_series = proxy_ref  # scale if needed for visuals (e.g., /1e6)
         ax_strip.plot(ref_series.index, ref_series.values, color="grey", linewidth=1.0)
-        ax_strip.set_xlabel("")  # add bottom xlabel if you prefer
+        ax_strip.set_xlabel("")
         ax_strip.yaxis.set_visible(False)
         ax_strip.spines["left"].set_visible(False)
         ax_strip.spines["right"].set_visible(False)
         ax_strip.spines["top"].set_visible(False)
         ax_strip.grid(False)
 
-    fig.suptitle(title)
+    # fig.suptitle(title)
     fig.tight_layout()
     if savepath:
         plt.savefig(savepath, bbox_inches="tight")
@@ -501,65 +577,135 @@ def month_importance_by_corr(
     df_seg: pd.DataFrame, use_normalized: bool = NORMALIZE_SEGMENT_RMSE
 ) -> pd.DataFrame:
     """
-    For each calendar month across models, compute the Pearson correlation between
-    (monthly RMSE or normalized RMSE) and LDES capacity error. Higher |corr| implies
-    that deviations in that month are more associated with larger LDES errors.
+    For each calendar month across models, compute the Pearson correlation between:
+      - (monthly RMSE or normalized RMSE) and LDES capacity error  -> corr_rmse
+      - (monthly Pearson r) and LDES capacity error                -> corr_r
 
     Returns columns:
-      ['month', 'corr', 'n_models', 'month_midpoint_ts']
+      ['month','corr_rmse','corr_r','n_models','month_midpoint_ts']
     """
     if df_seg.empty:
-        return pd.DataFrame(columns=["month", "corr", "n_models", "month_midpoint_ts"])
+        return pd.DataFrame(columns=["month", "corr_rmse", "corr_r", "n_models", "month_midpoint_ts"])
 
-    y_col = "rmse_norm" if use_normalized and "rmse_norm" in df_seg.columns else "rmse"
+    y_rmse_col = "rmse_norm" if use_normalized and "rmse_norm" in df_seg.columns else "rmse"
+    y_r_col = "pearson_r_m"  # from segmented_metrics_by_month
 
-    # group by 'month' (Period) and compute correlation across models
-    def _corr_for_month(g: pd.DataFrame) -> float:
-        if g[y_col].notna().sum() < 3 or g["ldes_error"].notna().sum() < 3:
+    def _safe_corr(a: pd.Series, b: pd.Series) -> float:
+        a, b = a.align(b, join="inner")
+        if a.notna().sum() < 3 or b.notna().sum() < 3:
             return np.nan
         try:
-            return float(pd.Series(g[y_col]).corr(pd.Series(g["ldes_error"])))
+            return float(a.corr(b))
         except Exception:
             return np.nan
 
-    grouped = df_seg.groupby("month").apply(lambda g: pd.Series({
-        "corr": _corr_for_month(g),
-        "n_models": g["model_id"].nunique()
-    })).reset_index()
+    def _agg(g: pd.DataFrame) -> pd.Series:
+        # corr of RMSE (or normalized) vs LDES error across models for this month
+        corr_rmse = _safe_corr(g[y_rmse_col], g["ldes_error"])
+        # corr of monthly Pearson r vs LDES error
+        corr_r = _safe_corr(g[y_r_col], g["ldes_error"])
+        return pd.Series({
+            "corr_rmse": corr_rmse,
+            "corr_r": corr_r,
+            "n_models": g["model_id"].nunique(),
+        })
 
+    grouped = df_seg.groupby("month").apply(_agg).reset_index()
     ts = grouped["month"].dt.to_timestamp(how="start")
-    grouped["month_midpoint_ts"] = ts + np.timedelta64(14,"D")  # ~mid-month
-
+    grouped["month_midpoint_ts"] = ts + pd.to_timedelta(15, unit="D")
     return grouped
 
-def plot_month_importance_bar(
+def plot_month_importance_bar_with_strip(
     df_imp: pd.DataFrame,
-    title: str = "Month importance (corr between monthly RMSE and LDES error across models)",
+    proxy_ref: pd.Series,
+    title: str = "Month importance: correlations across models",
     savepath: str | None = None,
+    colors: Tuple[str, str] = (COLOUR_E, COLOUR_EC),  # RMSE (or nRMSE) and r
+    show_proxy_strip: bool = True,
+    height_ratios: tuple[int, int] = (4, 1),
 ):
     """
-    Simple bar/stem-like chart over time showing correlation per month.
-    X-axis: continuous datetime (year ticks), Y-axis: Pearson correlation ([-1,1]).
+    Upper panel: two stem series over time:
+      - corr_rmse (blue-ish)
+      - corr_r    (red-ish)
+    Lower panel: mini SoC proxy strip (shared x; no y-axis) as context.
     """
     if df_imp.empty:
         print("No month-importance data to plot.")
         return
 
+    # Figure & axes
+    if show_proxy_strip:
+        fig, (ax, ax_strip) = plt.subplots(
+            2, 1, sharex=True, figsize=(12, 6),
+            gridspec_kw={"height_ratios": list(height_ratios), "hspace": 0.05}
+        )
+    else:
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax_strip = None
+
     x = pd.to_datetime(df_imp["month_midpoint_ts"].values)
-    y = df_imp["corr"].values
+    y1 = df_imp["corr_rmse"].values
+    y2 = df_imp["corr_r"].values
 
-    fig, ax = plt.subplots(figsize=(12, 3.6))
+    # Signed colors via two calls to stem (clear & flexible)
+    pos1 = y1 >= 0
+    neg1 = ~pos1
+    c1 = colors[0]
+
+    cont_pos1 = ax.stem(x[pos1], y1[pos1], linefmt='-', markerfmt='o', basefmt=' ')
+    plt.setp(cont_pos1.stemlines, color=c1, linewidth=1.8)
+    plt.setp(cont_pos1.markerline, markerfacecolor=c1, markeredgecolor="white")
+
+    cont_neg1 = ax.stem(x[neg1], y1[neg1], linefmt='-', markerfmt='o', basefmt=' ')
+    plt.setp(cont_neg1.stemlines, color=c1, linewidth=1.0, alpha=0.5)
+    plt.setp(cont_neg1.markerline, markerfacecolor=c1, markeredgecolor="white", alpha=1)
+
+    # # Second series (Pearson r importance)
+    # pos2 = y2 >= 0
+    # neg2 = ~pos2
+    # c2 = colors[1]
+
+    # cont_pos2 = ax.stem(x[pos2], y2[pos2], linefmt='-', markerfmt='s', basefmt=' ')
+    # plt.setp(cont_pos2.stemlines, color=c2, linewidth=1.8)
+    # plt.setp(cont_pos2.markerline, markerfacecolor=c2, markeredgecolor="white")
+
+    # cont_neg2 = ax.stem(x[neg2], y2[neg2], linefmt='-', markerfmt='s', basefmt=' ')
+    # plt.setp(cont_neg2.stemlines, color=c2, linewidth=1.0, alpha=0.5)
+    # plt.setp(cont_neg2.markerline, markerfacecolor=c2, markeredgecolor="white", alpha=0.5)
+
+    # Baseline style
+    cont_pos1.baseline.set_color("lightgrey")
+    cont_pos1.baseline.set_linewidth(0.8)
+
     ax.axhline(0, color="lightgrey", linewidth=1)
-    ax.stem(x, y, linefmt="-", markerfmt="o", basefmt=" ")
-
     ax.set_ylim(-1.05, 1.05)
     ax.set_ylabel("Pearson r")
-    ax.set_title(title)
+    # ax.set_title(title)
 
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=(1, 7)))
     ax.grid(True, which="major", axis="x", linestyle=":", alpha=0.5)
+
+    ax.legend(
+        handles=[
+            plt.Line2D([0], [0], color=c1, marker='o', linestyle='-', label='corr(RMSE, LDES err)'),
+            # plt.Line2D([0], [0], color=c2, marker='s', linestyle='-', label='corr(Pearson r, LDES err)'),
+        ],
+        loc="lower center", bbox_to_anchor=(0.5, 1), ncol=2, frameon=False
+    )
+
+    # Proxy strip
+    if show_proxy_strip and ax_strip is not None:
+        ref_series = proxy_ref
+        ax_strip.plot(ref_series.index, ref_series.values, color="grey", linewidth=1.0)
+        ax_strip.set_xlabel("")
+        ax_strip.yaxis.set_visible(False)
+        ax_strip.spines["left"].set_visible(False)
+        ax_strip.spines["right"].set_visible(False)
+        ax_strip.spines["top"].set_visible(False)
+        ax_strip.grid(False)
 
     fig.tight_layout()
     if savepath:
@@ -586,12 +732,17 @@ if __name__ == "__main__":
     soc_ref_proxy = baselines["soc_ref_proxy"]
     energy_caps_ref = baselines["energy_caps_ref"]
 
-    # 4A) Original overall chart (LDES error vs metrics)
+    # 4A) Metrics vs LDES error (subplots)
     df_in = pd.DataFrame({"id": ids_10y, "x_axis": ids_10y})
     df_overall = build_results(df_in, resample_freq=RESAMPLE_FREQ)
-    plot_ldes_vs_socproxy_metrics(df_overall, savepath="soc_proxy_vs_ldes_error.pdf")
+    plot_ex_ante_ex_post_subplots(
+        df_overall,
+        figtitle="Ex-ante vs Ex-post: Metrics vs LDES capacity error",
+        savepath="exante_expost_metrics_subplots.pdf",
+        layout="grid",  # or "stacked"
+    )
 
-    # 4B) Segmented monthly RMSE pathway (with optional normalization)
+    # 4B) Segmented monthly metrics pathway (with optional normalization for RMSE)
     df_seg = build_segmented_results(
         ids_10y,
         soc_ref_proxy,
@@ -608,12 +759,11 @@ if __name__ == "__main__":
         use_normalized=NORMALIZE_SEGMENT_RMSE,
     )
 
-    # 4C) Month-importance: which months' deviations are most associated with LDES errors?
+    # 4C) Month-importance: RMSE & Pearson r correlations across models (+ SoC strip)
     df_imp = month_importance_by_corr(df_seg, use_normalized=NORMALIZE_SEGMENT_RMSE)
-    plot_month_importance_bar(
+    plot_month_importance_bar_with_strip(
         df_imp,
-        title="Month importance (corr between monthly "
-              + ("normalized " if NORMALIZE_SEGMENT_RMSE else "")
-              + "RMSE and LDES error across models)",
-        savepath="month_importance_corr.pdf",
+        soc_ref_proxy,
+        title="Month importance across models (corr with LDES error): RMSE & Pearson r",
+        savepath="month_importance_corr_with_strip.pdf",
     )

@@ -23,7 +23,7 @@ from utility_functions.helper_model_config import standardised_model_config
 # =================== EDIT THESE DEFAULTS ===================
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
-DEFAULT_YEAR_RANGES: List[str] = ["2010-2011","2011-2012","2012-2013","2013-2014","2014-2015","2015-2016","2017-2018","2018-2019"] 
+DEFAULT_YEAR_RANGES: List[str] = ["2010-2011"] 
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -79,7 +79,13 @@ def main(ranges: List[str] | None = None) -> int:
 
             # Build, solve, save
             model.build()
-            model.solve()
+            model.backend.shadow_prices.activate() #for tracking of duals
+            model.solve(shadow_prices=[
+                "storage_max", # shadow price of energy capacity i.e. increasing storage cap, usually only >0 for 1 time step
+                "storage_balance", # shadow price of storing one unit of energy to the next time step
+                "balance", # shadow price of storing one unit of energy to the next time step
+                "flow_out_max"
+                ])
 
             outfile = OUTPUT_DIR / filename
             outfile.parent.mkdir(parents=True, exist_ok=True)

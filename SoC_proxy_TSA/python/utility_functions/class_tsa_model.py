@@ -186,6 +186,7 @@ class tsa_model:
                 raise Exception('Calliope model has not been configured.')
             print(f'[Calliope] Building Calliope model: {self.id}')
             self.calliope_model.model.build()
+            self.calliope_model.model.backend.shadow_prices.activate() #for tracking of duals
             self.calliope_model.status = 'built'
         
     def solve_and_save_calliope(self):

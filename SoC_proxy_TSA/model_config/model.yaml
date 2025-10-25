@@ -25,9 +25,10 @@ config:
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
     shadow_prices: [
       "storage_max", # shadow price of energy capacity i.e. increasing storage cap, usually only >0 for 1 time step
-      "storage_balance", # shadow price of storing one unit of energy to the next time step
-      "balance", # shadow price of storing one unit of energy to the next time step
-      "flow_out_max"] # shadow price of power capacity i.e. electrolyser and h2 ccgt output
+      "balance_storage", # shadow price of storing one unit of energy to the next time step
+      "flow_out_max", # shadow price of power capacity i.e. electrolyser and h2 ccgt output
+      "flow_in_max",
+      ] 
 # --8<-- [end:config]
 
 # --8<-- [start:parameters]

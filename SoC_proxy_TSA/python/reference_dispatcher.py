@@ -23,7 +23,9 @@ from utility_functions.helper_model_config import standardised_model_config
 # =================== EDIT THESE DEFAULTS ===================
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
-DEFAULT_YEAR_RANGES: List[str] = ["2010-2011"] 
+DEFAULT_YEAR_RANGES: List[str] = ["2010-2019"]  
+shuffled_dir = "SoC_proxy_TSA/data_tables/full_horizon/"
+shuffled_source = "time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06"
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -32,7 +34,7 @@ BASE_PARAMS: Dict[str, Any] = {
     "scenario_name": "standard",
     "calliope_full_log": (True,),          # helper uses [0] / (0)
     # Optionally:
-    # "filename_time_varying_parameters": "time_varying_parameters_2015_2019",
+    "filename_time_varying_parameters": shuffled_dir+shuffled_source+'.csv' if shuffled_source else None,
     # "dict_additional_overrides": {...},
 }
 
@@ -77,16 +79,18 @@ def main(ranges: List[str] | None = None) -> int:
             # Your helper returns (model, filename)
             model, filename = standardised_model_config(params)
 
+            if shuffled_source:
+                filename = shuffled_source+'.nc'
+
             # Build, solve, save
             model.build()
             model.backend.shadow_prices.activate() #for tracking of duals
             model.solve(shadow_prices=[
                 "storage_max", # shadow price of energy capacity i.e. increasing storage cap, usually only >0 for 1 time step
-                "storage_balance", # shadow price of storing one unit of energy to the next time step
-                "balance", # shadow price of storing one unit of energy to the next time step
-                "flow_out_max"
+                "balance_storage", # shadow price of storing one unit of energy to the next time step
+                "flow_out_max", # shadow price of power capacity, for electrolyser (charge) and h2 ccgt (discharge)
+                "flow_in_max" # shadow price of power capacity in, for salt cavern injection
                 ])
-
             outfile = OUTPUT_DIR / filename
             outfile.parent.mkdir(parents=True, exist_ok=True)
 

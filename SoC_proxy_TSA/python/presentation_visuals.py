@@ -30,7 +30,7 @@ from utility_functions.helper_timeseries_tools import calliope_ts_to_pandas, ext
 cluster_id = '1dff92aac973a8452fdc' 
 
 # Reference (unclustered/full) model
-reference_nc_path = "SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc"
+reference_nc_path = "SoC_proxy_TSA/data/calliope_models/standard_2010_2011_reference.nc"
 reference_timeseries_csv_path = Path("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv")
 
 # Clustered model (fill these 3 to match your run artifacts)

@@ -29,7 +29,7 @@ def standardised_model_config(params):
     
     #define tvp source
         if 'filename_time_varying_parameters' in params:
-            calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/{params['filename_time_varying_parameters']}.csv"
+            calliope_override_dictionary['data_tables.time_varying_parameters.data'] = f"../data_tables/full_horizon/{params['filename_time_varying_parameters']}.csv"
     
     #provide option for custom override parameters
         if 'dict_additional_overrides' in params:

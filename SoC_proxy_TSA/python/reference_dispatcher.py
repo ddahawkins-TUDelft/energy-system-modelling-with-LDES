@@ -24,8 +24,10 @@ from utility_functions.helper_model_config import standardised_model_config
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
 DEFAULT_YEAR_RANGES: List[str] = ["2010-2019"]  
-shuffled_dir = "SoC_proxy_TSA/data_tables/full_horizon/"
-shuffled_source = "time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06"
+shuffled_dir = "time_varying_parameters__"
+shuffled_source = ["shuffle_2009-2011-2008-2015-2007-2014-2012-2006-2017-2010__as_2010-2019__05",
+                   "shuffle_2009-2013-2012-2015-2017-2014-2016-2019-2011-2006__as_2010-2019__02",
+                   "shuffle_2015-2014-2012-2009-2018-2019-2008-2013-2007-2017__as_2010-2019__01"]
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -34,7 +36,7 @@ BASE_PARAMS: Dict[str, Any] = {
     "scenario_name": "standard",
     "calliope_full_log": (True,),          # helper uses [0] / (0)
     # Optionally:
-    "filename_time_varying_parameters": shuffled_dir+shuffled_source+'.csv' if shuffled_source else None,
+    "filename_time_varying_parameters": shuffled_dir+shuffled_source if shuffled_source else None,
     # "dict_additional_overrides": {...},
 }
 
@@ -69,38 +71,40 @@ def main(ranges: List[str] | None = None) -> int:
     failures: List[Tuple[Tuple[int, int], Exception]] = []
 
     for start_year, end_year in year_ranges:
-        # Build params for this range (end year inclusive)
-        params = deepcopy(BASE_PARAMS)
-        params["horizon_start"] = f"{start_year}-01-01"
-        params["horizon_end"] = f"{end_year}-12-31"
+        for source in shuffled_source:
+            # Build params for this range (end year inclusive)
+            params = deepcopy(BASE_PARAMS)
+            params["horizon_start"] = f"{start_year}-01-01"
+            params["horizon_end"] = f"{end_year}-12-31"
+            params['filename_time_varying_parameters'] = shuffled_dir+source
 
-        print(f"\n=== Running {start_year}-{end_year} ===")
-        try:
-            # Your helper returns (model, filename)
-            model, filename = standardised_model_config(params)
+            print(f"\n=== Running {start_year}-{end_year}{f' ({source}) ' if source else ' '}===")
+            try:
+                # Your helper returns (model, filename)
+                model, filename = standardised_model_config(params)
 
-            if shuffled_source:
-                filename = shuffled_source+'.nc'
+                if source:
+                    filename = source+'.nc'
 
-            # Build, solve, save
-            model.build()
-            model.backend.shadow_prices.activate() #for tracking of duals
-            model.solve(shadow_prices=[
-                "storage_max", # shadow price of energy capacity i.e. increasing storage cap, usually only >0 for 1 time step
-                "balance_storage", # shadow price of storing one unit of energy to the next time step
-                "flow_out_max", # shadow price of power capacity, for electrolyser (charge) and h2 ccgt (discharge)
-                "flow_in_max" # shadow price of power capacity in, for salt cavern injection
-                ])
-            outfile = OUTPUT_DIR / filename
-            outfile.parent.mkdir(parents=True, exist_ok=True)
+                # Build, solve, save
+                model.build()
+                model.backend.shadow_prices.activate() #for tracking of duals
+                model.solve(shadow_prices=[
+                    "storage_max", # shadow price of energy capacity i.e. increasing storage cap, usually only >0 for 1 time step
+                    "balance_storage", # shadow price of storing one unit of energy to the next time step
+                    "flow_out_max", # shadow price of power capacity, for electrolyser (charge) and h2 ccgt (discharge)
+                    "flow_in_max" # shadow price of power capacity in, for salt cavern injection
+                    ])
+                outfile = OUTPUT_DIR / filename
+                outfile.parent.mkdir(parents=True, exist_ok=True)
 
-            # Save exactly with the filename provided by the helper
-            model.to_netcdf(str(outfile))
-            print(f"  - Saved: {outfile}")
+                # Save exactly with the filename provided by the helper
+                model.to_netcdf(str(outfile))
+                print(f"  - Saved: {outfile}")
 
-        except Exception as e:
-            failures.append(((start_year, end_year), e))
-            print(f"  ! FAILED {start_year}-{end_year}: {e}")
+            except Exception as e:
+                failures.append(((start_year, end_year), e))
+                print(f"  ! FAILED {start_year}-{end_year}: {e}")
 
     if failures:
         print("\nSome runs failed:")

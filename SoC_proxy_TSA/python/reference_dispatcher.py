@@ -25,9 +25,7 @@ from utility_functions.helper_model_config import standardised_model_config
 # You can use "2015-2019", "2010-2014", or single years like "2018"
 DEFAULT_YEAR_RANGES: List[str] = ["2010-2019"]  
 shuffled_dir = "time_varying_parameters__"
-shuffled_source = ["shuffle_2009-2011-2008-2015-2007-2014-2012-2006-2017-2010__as_2010-2019__05",
-                   "shuffle_2009-2013-2012-2015-2017-2014-2016-2019-2011-2006__as_2010-2019__02",
-                   "shuffle_2015-2014-2012-2009-2018-2019-2008-2013-2007-2017__as_2010-2019__01"]
+shuffled_source = ["shuffle_2011-2010-2008-2019-2017-2015-2012-2007-2018-2013__as_2010-2019__03"]
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -36,7 +34,7 @@ BASE_PARAMS: Dict[str, Any] = {
     "scenario_name": "standard",
     "calliope_full_log": (True,),          # helper uses [0] / (0)
     # Optionally:
-    "filename_time_varying_parameters": shuffled_dir+shuffled_source if shuffled_source else None,
+    "filename_time_varying_parameters": shuffled_dir+shuffled_source[0] if shuffled_source else None,
     # "dict_additional_overrides": {...},
 }
 

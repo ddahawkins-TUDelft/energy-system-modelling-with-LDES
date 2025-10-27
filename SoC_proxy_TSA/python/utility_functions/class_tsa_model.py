@@ -1,6 +1,6 @@
 import pandas as pd
 import calliope
-from typing import Literal
+from typing import Literal, Iterable, Dict
 import copy, json, hashlib, os
 from utility_functions.helper_model_config import clustered_model_config
 import shutil
@@ -9,7 +9,7 @@ from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 import numpy as np
 from utility_functions.helper_cluster_tsa_with_extremes import cluster_tsa_with_extremes
 import time
-
+import re
 
 
 
@@ -355,16 +355,34 @@ class tsa_model:
         return result
     
     def _compute_weights_dictionary(self):
-        weightDict = {}
-        for renewable in self.tsa.params['names_renewables']:
-            weightDict[renewable] = self.tsa.params['matrix_weights']['renewables']
-        for demand in self.tsa.params['name_demand']:
-            weightDict[demand] = self.tsa.params['matrix_weights']['demand']
-        if self.tsa.params['soc_proxy']['use_soc_proxy']:
-            for proxy_param in self.tsa.params['soc_proxy']['proxy_inputs_to_consider']:
-                weightDict[proxy_param] = self.tsa.params['matrix_weights']['proxy']
+        λ = self.tsa.params.get("lambda_soc", None)
+        λ = max(0.0, min(1.0, float(λ)))
+
+        names_ren = list(self.tsa.params.get('names_renewables', []))
+        names_dem = list(self.tsa.params.get('name_demand', []))
+        n_series = len(names_ren) + len(names_dem)
+
+        # If there are no demand/renewables:
+        if n_series == 0:
+            if λ == 0.0:
+                # Nothing would have positive weight → fail fast with a helpful error
+                raise ValueError("lambda_proxy=0 but no demand/renewable series found; all weights would be zero.")
+            # Otherwise just put all weight on proxy and move on
+            w_each = 0.0
+        else:
+            w_each = (1.0 - λ) / n_series
+
+        weightDict = {**{r: w_each for r in names_ren}, **{d: w_each for d in names_dem}}
+
+        if self.tsa.params.get('soc_proxy', {}).get('use_soc_proxy', False):
+            proxy_cols = list(self.tsa.params['soc_proxy'].get('proxy_inputs_to_consider', []))
+            if not proxy_cols:
+                raise KeyError("soc_proxy.use_soc_proxy=True but 'proxy_inputs_to_consider' is empty.")
+            for proxy_param in proxy_cols:
+                weightDict[proxy_param] = λ
 
         return weightDict
+
 
     def _build_timeseries(self):
 

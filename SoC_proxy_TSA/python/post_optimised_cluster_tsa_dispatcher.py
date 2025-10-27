@@ -11,12 +11,16 @@ import pandas as pd
 
 
 
-scenarios = ['Sensitivity_Horizon'] 
+scenarios = ['Sensitivity_W_reps30'] 
 show_soc = True
 date_range = [2010,2019]
 multisource = [
-    
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv'
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv',
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2015-2014-2012-2009-2018-2019-2008-2013-2007-2017__as_2010-2019__01.csv',
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2013-2012-2015-2017-2014-2016-2019-2011-2006__as_2010-2019__02.csv',
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2011-2010-2008-2019-2017-2015-2012-2007-2018-2013__as_2010-2019__03.csv',
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2011-2008-2015-2007-2014-2012-2006-2017-2010__as_2010-2019__05.csv',
 ]
 
 
@@ -88,11 +92,12 @@ soc_proxy_params = {
 
 tsa_params = {
     'k_periods': 37,
-    'matrix_weights': {
-            'renewables': 1,
-            'demand': 1,
-            'proxy': 1,
-        },
+    # 'matrix_weights': {  DEPRECRATE
+    #         'renewables': 1,
+    #         'demand': 1,
+    #         'proxy': 1,
+    #     },
+    'lambda_soc': 0.5,
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
     'name_demand': ['demand_power'],
     'soc_proxy': {
@@ -152,7 +157,9 @@ for tvp_source in multisource:
                             soc_proxy_p[key] = value
                 if config['tsa_params']:
                     for key, value in config['tsa_params'].items():
-                        if value:
+                        if key == 'lambda_soc':
+                            print(value)
+                        if value or value==0:
                             tsa_p[key] = value
 
                 dispatch_mode = config['dispatch_mode'] 
@@ -164,7 +171,8 @@ for tvp_source in multisource:
                     'params': {},
                 })
 
-                cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, "id": m.id})
+                cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, 'dates': ','.join(map(str, calliope_p['date_range'])), 'date_range': calliope_p['date_range'][1]-calliope_p['date_range'][0]+1, "id": m.id})
+
 
 df = pd.DataFrame(cases_log)
 df.to_csv("SoC_proxy_TSA/data/notes/log.csv", index=False)    
@@ -189,13 +197,13 @@ list_model_dict.append({
 })
 
 
-print('> Dispatch: Visualising results')
-visualise(
-    list_model_dict=list_model_dict,
-    x_field='Time', #'Time'
-    y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-    # colour_field='MAGMe',
-    # show_tsa_internal_surplus_accumulation=True,
-    # save_fig=True
-)
+# print('> Dispatch: Visualising results')
+# visualise(
+#     list_model_dict=list_model_dict,
+#     x_field='Time', #'Time'
+#     y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
+#     # colour_field='MAGMe',
+#     # show_tsa_internal_surplus_accumulation=True,
+#     # save_fig=True
+# )
 

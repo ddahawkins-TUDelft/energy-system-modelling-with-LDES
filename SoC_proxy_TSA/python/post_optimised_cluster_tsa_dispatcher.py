@@ -11,7 +11,7 @@ import pandas as pd
 
 
 
-scenarios = ['Sensitivity_W_reps30'] 
+scenarios = ['Sensitivity_W_reps7','Sensitivity_W_reps30', 'Sensitivity_W_reps90', 'Sensitivity_W_reps180'] 
 show_soc = True
 date_range = [2010,2019]
 multisource = [

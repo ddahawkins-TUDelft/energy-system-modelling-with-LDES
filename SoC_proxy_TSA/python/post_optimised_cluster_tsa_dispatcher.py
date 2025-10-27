@@ -13,14 +13,17 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 scenarios = ['Sensitivity_Horizon'] 
 show_soc = True
 date_range = [2018,2019]
+multisource = [
+    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv'
+]
 
 
 
-def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
+def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str = None):
 
     #MODEL SETUP FUNCTIONS -------------------------------------------------------------------------------------------------
 
-    m = tsa_model(tsa_type=tsa_type, path_timeseries='SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
+    m = tsa_model(tsa_type=tsa_type, path_timeseries=tvp_source if tvp_source else 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
 
 
     m.soc_proxy.set_params(soc_proxy_params)
@@ -117,36 +120,45 @@ with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
 
 #loop over the model runs, update parameters, and run
 list_model_dict = []
-for scenario_name, scenario_batch in batch_config.items():
-    if scenario_name in scenarios:
-        print(f'> Dispatch: running scenario {scenario_name}')
-        for model_name, config in scenario_batch.items():
-            
-            calliope_p = deepcopy(calliope_params)
-            soc_proxy_p = deepcopy(soc_proxy_params)
-            tsa_p = deepcopy(tsa_params)
 
-            if config['calliope_params']:
-                for key, value in config['calliope_params'].items():
-                    if value:
-                        calliope_p[key] = value
-            if config['soc_proxy_params']:
-                for key, value in config['soc_proxy_params'].items():
-                    if value:
-                        soc_proxy_p[key] = value
-            if config['tsa_params']:
-                for key, value in config['tsa_params'].items():
-                    if value:
-                        tsa_p[key] = value
+if not multisource:
+    multisource=['']
 
-            dispatch_mode = config['dispatch_mode'] 
-            m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type=dispatch_mode)
+for tvp_source in multisource:
+    for scenario_name, scenario_batch in batch_config.items():
+        if scenario_name in scenarios:
+            print(f'> Dispatch: running scenario {scenario_name}')
+            for model_name, config in scenario_batch.items():
+                
+                calliope_p = deepcopy(calliope_params)
+                soc_proxy_p = deepcopy(soc_proxy_params)
+                tsa_p = deepcopy(tsa_params)
 
-            list_model_dict.append({
-                'model': m,
-                'name': f'{model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
-                'params': {},
-            })
+
+
+                if config['calliope_params']:
+                    for key, value in config['calliope_params'].items():
+                        if value:
+                            calliope_p[key] = value
+                if tvp_source:
+                    calliope_p['tvp_source'] = tvp_source
+                if config['soc_proxy_params']:
+                    for key, value in config['soc_proxy_params'].items():
+                        if value:
+                            soc_proxy_p[key] = value
+                if config['tsa_params']:
+                    for key, value in config['tsa_params'].items():
+                        if value:
+                            tsa_p[key] = value
+
+                dispatch_mode = config['dispatch_mode'] 
+                m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type=dispatch_mode, tvp_source=tvp_source if tvp_source else 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
+
+                list_model_dict.append({
+                    'model': m,
+                    'name': f'{model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                    'params': {},
+                })
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 print(f'[Dispatch] Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc')

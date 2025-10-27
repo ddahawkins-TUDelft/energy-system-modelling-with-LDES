@@ -10,7 +10,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type):
 
     #Model FUNCTIONS -------------------------------------------------------------------------------------------------
 
-    m = tsa_model(tsa_type=tsa_type, path_timeseries='SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
+    m = tsa_model(tsa_type=tsa_type, path_timeseries='SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv') update for dynamic tvp
 
 
     m.soc_proxy.set_params(soc_proxy_params)

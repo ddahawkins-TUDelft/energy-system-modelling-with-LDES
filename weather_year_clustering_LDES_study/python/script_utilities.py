@@ -58,7 +58,7 @@ def generate_timeseries(dict_input):
 
     #load the original timeseries data
     df_original_timeseries = pd.read_csv(
-        "simple_weather-year_ldes-model/data_tables/time_varying_parameters.csv",
+        "simple_weather-year_ldes-model/data_tables/time_varying_parameters.csv", update for tvp
         names=["timesteps","var1","var2","var3","var4"]
         )
 

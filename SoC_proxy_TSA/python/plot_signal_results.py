@@ -43,7 +43,7 @@ from utility_functions.helper_timeseries_tools import (
 # Config / paths
 # ------------------------------
 REFERENCE_NC = "SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc"
-REFERENCE_TIMESERIES_CSV = Path("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv")
+REFERENCE_TIMESERIES_CSV = Path("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv") update for dynamic tvp
 
 # Resample AFTER proxy build: 'D' for daily-mean metrics (recommended for LDES), or None for hourly
 RESAMPLE_FREQ: str | None = "D"

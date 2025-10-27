@@ -45,7 +45,7 @@ def clean_data_dirs(
             if not p.is_file():
                 continue
             keep = False
-            if name == "timeseries" and p.name == "time_varying_parameters.csv":
+            if name == "timeseries" and p.name.lower().startswith("time_varying_parameters"):
                 keep = True
             elif name == "calliope_models" and p.name.lower().endswith("reference.nc"):
                 keep = True

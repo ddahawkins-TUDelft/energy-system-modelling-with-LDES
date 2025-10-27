@@ -5,6 +5,7 @@ import calliope
 import yaml
 from copy import deepcopy
 from utility_functions.helper_calliope import read_clustered_netcdf
+import pandas as pd
 
 
 
@@ -12,8 +13,9 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 
 scenarios = ['Sensitivity_Horizon'] 
 show_soc = True
-date_range = [2018,2019]
+date_range = [2010,2019]
 multisource = [
+    
     'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv'
 ]
 
@@ -124,6 +126,8 @@ list_model_dict = []
 if not multisource:
     multisource=['']
 
+cases_log = []
+
 for tvp_source in multisource:
     for scenario_name, scenario_batch in batch_config.items():
         if scenario_name in scenarios:
@@ -160,11 +164,19 @@ for tvp_source in multisource:
                     'params': {},
                 })
 
+                cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, "id": m.id})
+
+df = pd.DataFrame(cases_log)
+df.to_csv("SoC_proxy_TSA/data/notes/log.csv", index=False)    
+
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 print(f'[Dispatch] Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc')
 #add the reference case
 
 ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc'
+if multisource:
+    before, sep, after = multisource[-1].partition('shuffle_')
+    ref_path = f'SoC_proxy_TSA/data/calliope_models/{f'{sep}{after}'.removesuffix('.csv')}.nc' 
 
 list_model_dict.append({
     'model': calliope.read_netcdf(ref_path),

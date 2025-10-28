@@ -42,9 +42,22 @@ from utility_functions.helper_timeseries_tools import (
 # ------------------------------
 # Config / paths
 # ------------------------------
-REFERENCE_NC = "SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc"
-REFERENCE_TIMESERIES_CSV = Path("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv") update for dynamic tvp
-
+def derive_reference_paths_from_tvp(tvp_path: str) -> tuple[str, Path]:
+    """
+    From a TVP string/path, return:
+      - reference .nc path
+      - reference TVP .csv Path
+    Supports both standard and shuffle tags.
+    """
+    m = re.search(r"(?i)(shuffle[^/]*?)(?=\.csv\b)", str(tvp_path))
+    if m:
+        tag = m.group(1)
+        ref_nc  = f"SoC_proxy_TSA/data/calliope_models/{tag}.nc"
+        ref_tvp = Path(f"SoC_proxy_TSA/data/timeseries/time_varying_parameters__{tag}.csv")
+    else:
+        ref_nc  = "SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc"
+        ref_tvp = Path("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv")
+    return ref_nc, ref_tvp
 # Resample AFTER proxy build: 'D' for daily-mean metrics (recommended for LDES), or None for hourly
 RESAMPLE_FREQ: str | None = "D"
 
@@ -244,15 +257,17 @@ def _metrics_vs_reference_proxy(proxy_test: pd.Series, proxy_ref: pd.Series) -> 
 # ------------------------------
 # Core baselines & per-model metrics
 # ------------------------------
-def compute_reference_baselines(resample_freq: str | None = None) -> Dict[str, Any]:
-    """Load reference model + build reference proxy (optionally resampled)."""
-    m_ref = read_clustered_netcdf_with_attr_fix(REFERENCE_NC)
+def compute_reference_baselines(
+    reference_nc: str,
+    reference_tvp_csv: Path,
+    resample_freq: str | None = None,
+) -> Dict[str, Any]:
+    """Load the chosen reference model + build its reference proxy (optional resample)."""
+    m_ref = read_clustered_netcdf_with_attr_fix(reference_nc)
 
     # Reference input TS (hourly) -> build proxy (hourly)
-    df_ref_ts = _load_timeseries_reference(REFERENCE_TIMESERIES_CSV, TS_WINDOW)
+    df_ref_ts = _load_timeseries_reference(reference_tvp_csv, TS_WINDOW)
     soc_ref_proxy = _build_proxy(df_ref_ts, DEMAND_FIELD, SOC_PROXY_PARAMS)
-
-    # Optional resampling AFTER proxy (mean aggregation)
     soc_ref_proxy = _maybe_resample(soc_ref_proxy, resample_freq)
 
     power_caps_ref, energy_caps_ref = _get_capacities(m_ref)
@@ -261,6 +276,7 @@ def compute_reference_baselines(resample_freq: str | None = None) -> Dict[str, A
         "power_caps_ref": power_caps_ref,
         "energy_caps_ref": energy_caps_ref,
     }
+
 
 def compute_ldes_error(model_id: str, energy_caps_ref: pd.Series) -> float:
     """Absolute relative error for LDES energy capacity (h2_salt_cavern)."""
@@ -280,36 +296,47 @@ def compute_proxy_metrics(
 
 def build_results(df_in: pd.DataFrame, resample_freq: str | None = RESAMPLE_FREQ) -> pd.DataFrame:
     """
-    df_in must contain at least:
-      - 'id': list of model ids
-      - 'x_axis': label/value used for plotting
+    df_in must contain:
+      - 'id'         : model ids
+      - 'x_axis'     : value for plotting
+      - 'tvp'        : tvp path string for that model (used to derive its reference)
     """
-    baselines = compute_reference_baselines(resample_freq=resample_freq)
-    soc_ref_proxy = baselines["soc_ref_proxy"]
-    energy_caps_ref = baselines["energy_caps_ref"]
-
     rows = []
-    for model_id, x_val in zip(df_in["id"], df_in["x_axis"]):
+    cache: Dict[str, Dict[str, Any]] = {}  # key = reference_nc path
+
+    for model_id, x_val, tvp in zip(df_in["id"], df_in["x_axis"], df_in["tvp"]):
+        print(f'Extracting results for {model_id}')
+        ref_nc, ref_tvp = derive_reference_paths_from_tvp(tvp)
+
+        # memoize baselines per reference
+        key = ref_nc
+        if key not in cache:
+            cache[key] = compute_reference_baselines(ref_nc, ref_tvp, resample_freq=resample_freq)
+        soc_ref_proxy = cache[key]["soc_ref_proxy"]
+        energy_caps_ref = cache[key]["energy_caps_ref"]
+
         ldes_err = compute_ldes_error(model_id, energy_caps_ref)
         metrics = compute_proxy_metrics(model_id, soc_ref_proxy, resample_freq=resample_freq)
-        rows.append(
-            {
-                "id": model_id,
-                "ldes_error": ldes_err,
-                "pearson_r": metrics["pearson_r"],
-                "rmse": metrics["rmse"],
-                "e_timing_maxima": metrics["e_timing_maxima"],
-                "e_magnitude_maxima": metrics["e_magnitude_maxima"],
-                "e_combined": (
-                    float(metrics["e_magnitude_maxima"])
-                    + float(metrics["e_timing_maxima"])
-                    + float(metrics["rmse"])
-                    + (1.0 - float(metrics["pearson_r"]))
-                )
-                / 4.0,
-            }
-        )
+
+        rows.append({
+            "id": model_id,
+            "ldes_error": float(ldes_err),
+            "pearson_r": float(metrics["pearson_r"]),
+            "rmse": float(metrics["rmse"]),
+            "e_timing_maxima": float(metrics["e_timing_maxima"]),
+            "e_magnitude_maxima": float(metrics["e_magnitude_maxima"]),
+            "e_combined": (
+                float(metrics["e_magnitude_maxima"])
+                + float(metrics["e_timing_maxima"])
+                + float(metrics["rmse"])
+                + (1.0 - float(metrics["pearson_r"]))
+            ) / 4.0,
+            "x_axis": x_val,
+            "reference_nc": ref_nc,
+            "reference_tvp": str(ref_tvp),
+        })
     return pd.DataFrame(rows)
+
 
 # ------------------------------
 # Plot (A): Ex-ante vs ex-post metrics in subplots
@@ -454,23 +481,25 @@ def segmented_metrics_by_month(proxy_test: pd.Series, proxy_ref: pd.Series) -> p
     return grouped
 
 def build_segmented_results(
-    model_ids: List[str],
-    soc_ref_proxy: pd.Series,
-    energy_caps_ref: pd.Series,
+    df_in: pd.DataFrame,
     resample_freq: str | None = RESAMPLE_FREQ,
     normalize_segment_rmse: bool = NORMALIZE_SEGMENT_RMSE,
 ) -> pd.DataFrame:
     """
-    For each model id:
-      - builds test proxy (hourly) -> optional resample (mean) after proxy
-      - computes monthly RMSE & monthly Pearson r vs resampled reference proxy
-      - attaches LDES capacity error
-      - optionally adds rmse_norm = rmse / mean_rmse_for_that_model
-    Returns a tidy DataFrame with:
-      ['model_id','month','rmse','rmse_norm','pearson_r_m','ldes_error','month_midpoint_ts']
+    df_in must contain: 'id', 'tvp'
+    Returns tidy rows with monthly metrics + ldes_error
     """
     all_rows = []
-    for mid in model_ids:
+    cache: Dict[str, Dict[str, Any]] = {}
+
+    for mid, tvp in zip(df_in["id"], df_in["tvp"]):
+        ref_nc, ref_tvp = derive_reference_paths_from_tvp(tvp)
+        key = ref_nc
+        if key not in cache:
+            cache[key] = compute_reference_baselines(ref_nc, ref_tvp, resample_freq=resample_freq)
+        soc_ref_proxy = cache[key]["soc_ref_proxy"]
+        energy_caps_ref = cache[key]["energy_caps_ref"]
+
         # Build test proxy hourly + optional resample AFTER proxy
         df_test = _load_timeseries_clustered(path_cluster_map(mid), path_timeseries(mid))
         soc_test_proxy = _build_proxy(df_test, DEMAND_FIELD, SOC_PROXY_PARAMS)
@@ -482,8 +511,6 @@ def build_segmented_results(
             continue
 
         df_m["model_id"] = mid
-
-        # Optional per-model normalization for RMSE
         if normalize_segment_rmse:
             mean_rmse = df_m["rmse"].mean()
             df_m["rmse_norm"] = df_m["rmse"] / mean_rmse if mean_rmse and not np.isnan(mean_rmse) else np.nan
@@ -494,14 +521,13 @@ def build_segmented_results(
         ldes_err = compute_ldes_error(mid, energy_caps_ref)
         df_m["ldes_error"] = float(ldes_err)
 
-        # Month midpoint timestamps for plotting on a continuous x-axis
         ts = df_m["month"].dt.to_timestamp(how="start")
-        df_m["month_midpoint_ts"] = ts + pd.to_timedelta(15, unit="D")
+        df_m["month_midpoint_ts"] = ts + pd.to_datetime("15D") - pd.Timestamp(0)  # or pd.to_timedelta(15, "D")
 
         all_rows.append(df_m)
 
     if not all_rows:
-        return pd.DataFrame(columns=["model_id", "month", "rmse", "rmse_norm", "pearson_r_m", "ldes_error", "month_midpoint_ts"])
+        return pd.DataFrame(columns=["model_id","month","rmse","rmse_norm","pearson_r_m","ldes_error","month_midpoint_ts"])
     return pd.concat(all_rows, ignore_index=True)
 
 def plot_monthly_rmse_with_ref_proxy(
@@ -724,46 +750,54 @@ if __name__ == "__main__":
         ids_all.extend(fn.removesuffix(".csv") for fn in filenames if fn.endswith(".csv"))
         break
 
-    # 2) Filter to 10-year models (change years here as needed)
+    # 2) Filter to 10-year models
     ids_10y = filter_ids_by_year_span(ids_all, start_year=2010, end_year=2019)
 
-    # 3) Baselining
-    baselines = compute_reference_baselines(resample_freq=RESAMPLE_FREQ)
-    soc_ref_proxy = baselines["soc_ref_proxy"]
-    energy_caps_ref = baselines["energy_caps_ref"]
+    # 3) Bring in per-id tvp (from your notes log)
+    config_src = pd.read_csv("SoC_proxy_TSA/data/notes/log_10_yr_WandKTests.csv")
+    # Keep only needed cols; left-join to ensure we keep our filtered IDs
+    df_ids = pd.DataFrame({"id": ids_10y})
+    df_cfg = config_src[["id", "tvp"]]
+    df_in = df_ids.merge(df_cfg, on="id", how="left")
 
-    # 4A) Metrics vs LDES error (subplots)
-    df_in = pd.DataFrame({"id": ids_10y, "x_axis": ids_10y})
+    # 4A) Overall metrics vs LDES error
+    df_in["x_axis"] = df_in["id"]  # or any x you want
     df_overall = build_results(df_in, resample_freq=RESAMPLE_FREQ)
     plot_ex_ante_ex_post_subplots(
         df_overall,
         figtitle="Ex-ante vs Ex-post: Metrics vs LDES capacity error",
         savepath="exante_expost_metrics_subplots.pdf",
-        layout="grid",  # or "stacked"
+        layout="grid",
     )
 
-    # 4B) Segmented monthly metrics pathway (with optional normalization for RMSE)
+    # 4B) Segmented monthly metrics
     df_seg = build_segmented_results(
-        ids_10y,
-        soc_ref_proxy,
-        energy_caps_ref,
+        df_in,
         resample_freq=RESAMPLE_FREQ,
         normalize_segment_rmse=NORMALIZE_SEGMENT_RMSE,
     )
     plot_monthly_rmse_with_ref_proxy(
         df_seg,
-        soc_ref_proxy,
+        # pass *any* reference for the strip; pick the standard one or the most common
+        proxy_ref=compute_reference_baselines(
+            *derive_reference_paths_from_tvp("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv"),
+            resample_freq=RESAMPLE_FREQ
+        )["soc_ref_proxy"],
         title="Monthly RMSE vs Reference SoC Proxy (colour = LDES capacity error)"
               + (" [normalized]" if NORMALIZE_SEGMENT_RMSE else ""),
         savepath="monthly_rmse_vs_ref_proxy_coloured.pdf",
         use_normalized=NORMALIZE_SEGMENT_RMSE,
     )
 
-    # 4C) Month-importance: RMSE & Pearson r correlations across models (+ SoC strip)
+    # 4C) Month-importance (same df_seg)
     df_imp = month_importance_by_corr(df_seg, use_normalized=NORMALIZE_SEGMENT_RMSE)
     plot_month_importance_bar_with_strip(
         df_imp,
-        soc_ref_proxy,
+        proxy_ref=compute_reference_baselines(
+            *derive_reference_paths_from_tvp("SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv"),
+            resample_freq=RESAMPLE_FREQ
+        )["soc_ref_proxy"],
         title="Month importance across models (corr with LDES error): RMSE & Pearson r",
         savepath="month_importance_corr_with_strip.pdf",
     )
+

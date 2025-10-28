@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any, Tuple, List
 import calliope
 from netCDF4 import Dataset
 import  yaml
+import re
 
 # mpl.rcParams.update({
 #     "text.usetex": True,
@@ -173,27 +174,48 @@ data_W100 = {
         ],
 }
 
+config_src = pd.read_csv('SoC_proxy_TSA/data/notes/log_10_yr_WandKTests.csv')
+config_src['number_reps'] = (
+    config_src["model_name"]
+    .str.extract(r"reps\s*=\s*(\d+)", expand=False)
+    .astype("Int64")   # nullable integer dtype
+)
+config_src["W_proxy"] = (
+    config_src["model_name"]
+    .str.extract(r"W_proxy\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)", expand=False)
+    .astype(float)
+)
+tag = config_src["tvp"].str.extract(r"(?i)(shuffle[^/]*?)(?=\.csv\b)", expand=False)
+ref_tag = tag.fillna("standard_2010_2019_reference")
+config_src["reference_path"] = "SoC_proxy_TSA/data/calliope_models/" + ref_tag + ".nc"
 
+df = config_src[['id','W_proxy','number_reps','reference_path']]
 
-reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'
+#filter and control plot
+df=df[df['number_reps']==90]
+df['x_axis'] = df['W_proxy']
+
+# reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'
 
 colour_1 = '#0D0887'   
 colour_2 = '#CC4778' 
 
-def cem_results(df, path_reference):
+def cem_results(df):
 
     # reference
-    model_reference = calliope.read_netcdf(path_reference)
-    power_caps_reference, energy_caps_reference = get_capacities(model_reference)
+    
 
 
     list_power_cap_mean_errors = []
     list_ldes_cap_error = []
 
-    for model_id in df['id']:
-        if model_id=='1dff92aac973a8452fdc':
-            print('nothing')
-        model_test = read_clustered_netcdf(f"SoC_proxy_TSA/data/calliope_models/{model_id}.nc")
+    for model in df.itertuples(index=True):
+        print(f'Extracting info for {model.id}')
+
+        model_reference = calliope.read_netcdf(model.reference_path)
+        power_caps_reference, energy_caps_reference = get_capacities(model_reference)
+        
+        model_test = read_clustered_netcdf(f"SoC_proxy_TSA/data/calliope_models/{model.id}.nc")
         power_caps_test, energy_caps_test = get_capacities(model_test)
 
         #metrics
@@ -266,40 +288,47 @@ def relative_error(df_ref, df_test):
 
 figure_save_path = 'CEM vs W.pdf'
 
-df1 = pd.DataFrame(data_W0)
-df2 = pd.DataFrame(data_W100)
-
-
-df1 = cem_results(df1,reference_model)
-df2 = cem_results(df2,reference_model)
 
 
 
+df = cem_results(df)
+# df2 = cem_results(df2,reference_model)
 
 
+# 1) mask: True = shuffled/artificial, False = real
+mask_shuffle = df["reference_path"].str.contains(r"shuffle", case=False, na=False)
 
-fig = plt.figure(figsize=(6, 4))  
+# 2) split views
+real    = df[~mask_shuffle]
+shuf    = df[mask_shuffle]
+
+fig = plt.figure(figsize=(6, 4))
 ax = fig.add_subplot(1, 1, 1)
 ax.set_axisbelow(True)
 
-ax.scatter(df1['x_axis'], df1['macme'], label='$\overline{\epsilon^C}$, No Proxy', edgecolors=colour_1, linewidth=1.2, facecolors='none')
-ax.scatter(df2['x_axis'], df2['macme'], label='$\overline{\epsilon^C}$, $Wx=100$', color=colour_1, linewidth=1.2)
+# --- macme series (colour_1) ---
+# real (filled)
+ax.scatter(real["x_axis"], real["macme"],
+           label=r'$\overline{\epsilon^C}$',
+           color=colour_1, linewidth=1.2)
+# shuffled (hollow)
+ax.scatter(shuf["x_axis"], shuf["macme"],
+           label="_nolegend_",                 # avoid duplicate legend entry
+           edgecolors=colour_1, facecolors='none', linewidth=1.2)
 
-ax.scatter(df1['x_axis'], df1['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, No Proxy', edgecolors=colour_2, linewidth=1.2, facecolors='none')
-ax.scatter(df2['x_axis'], df2['ldes_error'], label='$\epsilon^C_\mathrm{LDES}$, $Wx=100$', color=colour_2, linewidth=1.2)
-
+# --- LDES series (colour_2) ---
+# real (filled)
+ax.scatter(real["x_axis"], real["ldes_error"],
+           label=r'$\epsilon^C_{\mathrm{LDES}}$',
+           color=colour_2, linewidth=1.2)
+# shuffled (hollow)
+ax.scatter(shuf["x_axis"], shuf["ldes_error"],
+           label="_nolegend_",
+           edgecolors=colour_2, facecolors='none', linewidth=1.2)
 
 ax.set_ylabel('Error')
 ax.set_xlabel('Horizon (Years)')
-
-# vertical grid
 ax.yaxis.grid(True, which='major', linestyle=':', alpha=0.6)
-
 ax.legend(loc='best', frameon=False)
 fig.tight_layout()
-
-# ------------------------------
-# Save
-# ------------------------------
-# plt.savefig(figure_save_path, bbox_inches='tight')  # quick preview
 plt.show()

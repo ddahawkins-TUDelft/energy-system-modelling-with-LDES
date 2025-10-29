@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import time
 from scipy.signal import convolve
 from numpy.fft import fft, ifft, fftfreq
 
@@ -257,35 +258,61 @@ def generate_soc_proxy(
     weighted_installed_capacity = df[demand_field].sum() / df['mean_capacity_factor'].sum()
 
     storage_cap = 0
-    deficits = np.zeros(df.shape[0])
-    surpluse_caps = np.zeros(df.shape[0])
+    debt = np.zeros(df.shape[0]) 
+    debt[0] = 100000 #initial offset to trigger whileloop
+    
+    lim = df.shape[0]
 
-    for i in range(1,df.shape[0]):
-        t = df.shape[0] - i 
+    #loop metrics
+    loop_count = 0
+    t_start = time.time()
 
-        #use demand and res estimate to compute deficit
-        d = df[demand_field].iloc[t]
-        r = df['mean_capacity_factor'].iloc[t] * weighted_installed_capacity 
-        delta = r-d 
+    list_curtailments = []
+    list_debt_starts = []
 
-        #if there is a deficit
-        if delta < 0:
-            deficits[t] = delta
-        else:
-            surpluse_caps[t] = -delta
-            
-    for i in range(1,df.shape[0]):
-        t = i-1
+
+    # 'exact' solution to produce a curtailment estimate
+    g = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity
+    d = df[demand_field].to_numpy()
+
+    cumG = np.cumsum(g)
+    cumD = np.cumsum(d)
+
+    mask = cumG > 0
+    curtailment_factor = np.max(cumD[mask] / cumG[mask])
+
+    # a redundant whileloop in case the exact solution fails -- ideally this is never executed
+    while debt[0] != 0 and loop_count <= 100 :
+        renewables_net_demand = df['mean_capacity_factor']*weighted_installed_capacity*curtailment_factor-df[demand_field] 
+        for i in range(0,lim):
+            t = lim-(i+1) 
+
+
+            #use demand and res estimate to compute deficit
+            if i == 0:
+                debt[t] = 0 #zero end condition for cyclicality
+            else:
+                if renewables_net_demand.iloc[t] < 0: #deficit
+                    debt[t] = debt[t+1] + renewables_net_demand.iloc[t] #insufficient renewables, so add to energy debt
+                else: #if surplus
+
+                    debt[t] = debt[t+1] + min(-debt[t+1], renewables_net_demand.iloc[t]) #check if there is debt, if so, charge up to necessary amount
+
+        list_curtailments.append(curtailment_factor)
+        list_debt_starts.append(debt[0])
+
+        if debt[0] != 0:
+            curtailment_factor += 0.01
+            loop_count += 1
+
+    print('time: ', time.time() -t_start, 'n_loops: ', loop_count)
+    print('curtailment forecast', f"{1/curtailment_factor:.2%}")
+
+
+    df['surplus'] = np.diff(debt, prepend=debt[0])
         
-    print(storage_cap)
-
-
-
-        
-
-
     # Compute surplus as supply minus demand
-    df['surplus'] = df['mean_capacity_factor'] * weighted_installed_capacity - df[demand_field]
+    # df['surplus'] = df['mean_capacity_factor'] * weighted_installed_capacity*curtailment_factor - df[demand_field]
 
     # Apply decomposition and compute SoC proxies
     df = decompose_surplus(

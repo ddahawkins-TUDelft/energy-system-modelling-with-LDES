@@ -271,45 +271,72 @@ def generate_soc_proxy(
     list_debt_starts = []
 
 
+    curtailment_factor = 2.3
+
     # 'exact' solution to produce a curtailment estimate
-    g = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity
+    g = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity*curtailment_factor
     d = df[demand_field].to_numpy()
+    renewables_net_demand = g-d
 
     cumG = np.cumsum(g)
     cumD = np.cumsum(d)
 
-    mask = cumG > 0
-    curtailment_factor = np.max(cumD[mask] / cumG[mask])
+    accumulator = cumG.copy()
 
-    # a redundant whileloop in case the exact solution fails -- ideally this is never executed
-    while debt[0] != 0 and loop_count <= 100 :
-        renewables_net_demand = df['mean_capacity_factor']*weighted_installed_capacity*curtailment_factor-df[demand_field] 
-        for i in range(0,lim):
-            t = lim-(i+1) 
+    c = np.max(cumD[cumG>0] / cumG[cumG>0]) 
+
+    # curtailment_factor = np.max(cumD[mask] / cumG[mask]) 
+
+    for i in range(0,lim):
+        t = lim-(i+1) 
+
+        #use demand and res estimate to compute deficit
+        if i == 0:
+            debt[t] = 0 #zero end condition for cyclicality
+        else: 
+
+            surplus = g[t] - d[t]
+            if surplus > 0: #then generation = demand, we need no historic generation
+                None
+            else: #we need stored energy
+                s_required = accumulator[t] + surplus  #place a reserve on the historic energy, and remove it from the global pool available to earlier timesteps
+                accumulator[accumulator > s_required] += surplus
+        if accumulator[t] < 0:
+            print('t_value', t)
+            print('done')
+
+    storage_operations = cumG-accumulator
+    df['surplus'] = np.diff(storage_operations, prepend=storage_operations[-1])
+
+    # # a redundant whileloop in case the exact solution fails -- ideally this is never executed
+    # while debt[0] != 0 and loop_count <= 100 :
+    #     renewables_net_demand = df['mean_capacity_factor']*weighted_installed_capacity*curtailment_factor-df[demand_field] 
+    #     for i in range(0,lim):
+    #         t = lim-(i+1) 
 
 
-            #use demand and res estimate to compute deficit
-            if i == 0:
-                debt[t] = 0 #zero end condition for cyclicality
-            else:
-                if renewables_net_demand.iloc[t] < 0: #deficit
-                    debt[t] = debt[t+1] + renewables_net_demand.iloc[t] #insufficient renewables, so add to energy debt
-                else: #if surplus
+    #         #use demand and res estimate to compute deficit
+    #         if i == 0:
+    #             debt[t] = 0 #zero end condition for cyclicality
+    #         else:
+    #             if renewables_net_demand.iloc[t] < 0: #deficit
+    #                 debt[t] = debt[t+1] + renewables_net_demand.iloc[t] #insufficient renewables, so add to energy debt
+    #             else: #if surplus
 
-                    debt[t] = debt[t+1] + min(-debt[t+1], renewables_net_demand.iloc[t]) #check if there is debt, if so, charge up to necessary amount
+    #                 debt[t] = debt[t+1] + min(-debt[t+1], renewables_net_demand.iloc[t]) #check if there is debt, if so, charge up to necessary amount
 
-        list_curtailments.append(curtailment_factor)
-        list_debt_starts.append(debt[0])
+    #     list_curtailments.append(curtailment_factor)
+    #     list_debt_starts.append(debt[0])
 
-        if debt[0] != 0:
-            curtailment_factor += 0.01
-            loop_count += 1
+    #     if debt[0] != 0:
+    #         curtailment_factor += 0.01
+    #         loop_count += 1
 
     print('time: ', time.time() -t_start, 'n_loops: ', loop_count)
     print('curtailment forecast', f"{1/curtailment_factor:.2%}")
 
 
-    df['surplus'] = np.diff(debt, prepend=debt[0])
+    # df['surplus'] = np.diff(debt, prepend=debt[0])
         
     # Compute surplus as supply minus demand
     # df['surplus'] = df['mean_capacity_factor'] * weighted_installed_capacity*curtailment_factor - df[demand_field]

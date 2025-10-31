@@ -272,7 +272,7 @@ def generate_soc_proxy(
     cumD = np.cumsum(d)
     curtailment_factor =1/(np.max(cumD[cumG>0] / cumG[cumG>0]))
 
-    curtailment_factor = 0.99
+    curtailment_factor = 0.72
 
 
     g_curtailed = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity / curtailment_factor
@@ -282,63 +282,84 @@ def generate_soc_proxy(
 
     # --- Backward loop: reserve energy for deficits ---
         # --- Backward loop: reserve energy for deficits (circular, no-future-borrow) ---
+        # --- Fast circular LIFO allocator (O(n)) ---
     lim = len(df)
 
-    pos = np.maximum(rnd, 0.0)                  # per-step raw surplus
-    neg = np.maximum(-rnd, 0.0)                 # per-step raw deficit
+    pos = np.maximum(rnd, 0.0)
+    neg = np.maximum(-rnd, 0.0)
 
-    # Apply process efficiencies to what is *available to allocate*
-    pos_eff = pos * storage_process_losses['charging_efficiency']
-    neg_eff = neg / storage_process_losses['discharging_efficiency']
+    # Stored units (apply efficiencies)
+    eta_ch = storage_process_losses['charging_efficiency']
+    eta_dis = storage_process_losses['discharging_efficiency']
+    pos_eff = pos * eta_ch
+    neg_eff = neg / eta_dis
 
-    charge     = np.zeros(lim)                  # energy reserved/charged at time k (>=0)
-    discharge  = np.zeros(lim)                  # discharge at deficit times (<=0)
-    remaining  = pos_eff.copy()                 # mutable buckets of allocatable surplus (after η_ch)
+    net = pos_eff - neg_eff
 
-    lost_load  = np.zeros(lim)                  # optional: unmet demand after all historic borrowing
+    total_net = net.sum()
+    if total_net < -1e-10:
+        print(f"⚠ Infeasible: total stored surplus < total stored deficit by {-total_net:.6f}")
 
-    # Walk deficits backward in time, allowing wrap-around but never borrowing from future of t
-    for t in range(lim - 1, -1, -1):
-        deficit = neg_eff[t]
-        if deficit <= 1e-12:
-            continue
+    # Find rotation start: index after the minimum prefix sum of net
+    prefix = np.cumsum(net)
+    start = (np.argmin(prefix) + 1) % lim
 
-        # Record discharge at t (negative by your convention)
-        discharge[t] = -deficit
+    # Rotate arrays so that from 'start' onward the running net is as non-negative as possible
+    pos_eff_r = np.roll(pos_eff, -start)
+    neg_eff_r = np.roll(neg_eff, -start)
 
-        # Start searching from the most recent *historical* index (t-1) and wrap backward
-        k = (t - 1) % lim
-        visited = 0
+    # LIFO stack of (idx, remaining_surplus) in rotated coordinates
+    stack_idx = []
+    stack_rem = []
 
-        while deficit > 1e-12 and visited < lim:
-            if k == t:
-                # We've wrapped all the way around to t => would borrow from the future
-                break
+    charge_r    = np.zeros(lim, dtype=np.float64)
+    discharge_r = np.zeros(lim, dtype=np.float64)
+    lost_load_r = np.zeros(lim, dtype=np.float64)
 
-            avail = remaining[k]
-            if avail > 1e-12:
-                take = avail if avail < deficit else deficit
-                charge[k]   += take
-                remaining[k] -= take
-                deficit     -= take
+    for i in range(lim):
+        s = pos_eff_r[i]
+        d = neg_eff_r[i]
 
-            # move left (wrap-around)
-            k = (k - 1) % lim
-            visited += 1
+        # push this step's surplus (if any)
+        if s > 1e-12:
+            stack_idx.append(i)
+            stack_rem.append(s)
 
-        if deficit > 1e-9:
-            # Could not fully cover this deficit with any historic surplus (<= t with wrap)
-            # Keep the unserved portion as lost load; discharge already marked desired level.
-            lost_load[t] = deficit
-            # Clip discharge to what we actually covered (optional; comment out if you prefer to
-            # keep requested discharge as-is and leave surplus sum != 0)
-            covered = neg_eff[t] - deficit
-            discharge[t] = -covered
+        # cover this step's deficit by popping LIFO
+        if d > 1e-12:
+            discharge_r[i] = -d  # desired discharge
+            rem = d
+            while rem > 1e-12 and stack_idx:
+                j = stack_idx[-1]
+                avail = stack_rem[-1]
 
-    df['surplus'] = charge + discharge  # (discharge <= 0)
-    # Optional: surface diagnostics
+                take = avail if avail < rem else rem
+                charge_r[j]  += take
+                avail        -= take
+                rem          -= take
+
+                if avail <= 1e-12:
+                    stack_idx.pop()
+                    stack_rem.pop()
+                else:
+                    stack_rem[-1] = avail
+
+            if rem > 1e-9:
+                # couldn't fully cover the deficit
+                covered = d - rem
+                discharge_r[i] = -covered
+                lost_load_r[i] = rem
+
+    # Un-rotate allocations back to original coordinates
+    charge    = np.roll(charge_r, start)
+    discharge = np.roll(discharge_r, start)
+    lost_load = np.roll(lost_load_r, start)
+
+    df['surplus'] = charge + discharge
+
     if lost_load.sum() > 1e-9:
-        print(f"⚠ Unserved deficit after wrap-around borrowing: {lost_load.sum():.6f} (in post-η_dis units)")
+        print(f"⚠ Unserved deficit after allocation: {lost_load.sum():.6f} (stored units)")
+
 
     print('charge/discharge arrays constructed')
         # Optional: track unmet deficit if supply is insufficient
@@ -395,8 +416,8 @@ def generate_soc_proxy(
     # soc -= np.linspace(soc[0], soc[-1], lim)
 
 
-    print('time: ', time.time() -t_start, 'n_loops: ', loop_count)
-    print('curtailment forecast', f"{1/curtailment_factor:.2%}")
+    print('time: ', f"{round(time.time() -t_start,2)}s", 'n_loops: ', loop_count)
+    print('curtailment forecast', f"{curtailment_factor:.2%}")
 
 
     # df['surplus'] = np.diff(debt, prepend=debt[0])

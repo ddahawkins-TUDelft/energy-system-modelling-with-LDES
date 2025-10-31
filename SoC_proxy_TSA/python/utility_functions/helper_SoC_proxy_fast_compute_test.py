@@ -272,7 +272,7 @@ def generate_soc_proxy(
     cumD = np.cumsum(d)
     curtailment_factor =1/(np.max(cumD[cumG>0] / cumG[cumG>0]))
 
-    curtailment_factor = 0.75
+    curtailment_factor = 0.99
 
 
     g_curtailed = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity / curtailment_factor
@@ -281,52 +281,65 @@ def generate_soc_proxy(
     cum_available_surplus = np.cumsum(np.maximum(rnd, 0)) #represents available historic energy to meet future deficits
 
     # --- Backward loop: reserve energy for deficits ---
+        # --- Backward loop: reserve energy for deficits (circular, no-future-borrow) ---
     lim = len(df)
 
-    pos = np.maximum(rnd, 0.0)                 # surplus per step
-    neg = np.maximum(-rnd, 0.0)                # deficit per step
+    pos = np.maximum(rnd, 0.0)                  # per-step raw surplus
+    neg = np.maximum(-rnd, 0.0)                 # per-step raw deficit
 
-    pos_eff = pos*storage_process_losses['charging_efficiency']
-    neg_eff = neg/storage_process_losses['discharging_efficiency']
+    # Apply process efficiencies to what is *available to allocate*
+    pos_eff = pos * storage_process_losses['charging_efficiency']
+    neg_eff = neg / storage_process_losses['discharging_efficiency']
 
-    charge = np.zeros(lim)                     # energy reserved/charged at time k (LIFO source)
-    discharge = np.zeros(lim)                  # your convention: negative at deficit times
-    remaining = pos_eff.copy()                     # mutable buckets of available surplus
+    charge     = np.zeros(lim)                  # energy reserved/charged at time k (>=0)
+    discharge  = np.zeros(lim)                  # discharge at deficit times (<=0)
+    remaining  = pos_eff.copy()                 # mutable buckets of allocatable surplus (after η_ch)
 
-    k = lim - 1                                # pointer to latest (rightmost) surplus bucket
+    lost_load  = np.zeros(lim)                  # optional: unmet demand after all historic borrowing
 
-    for t in range(lim - 1, -1, -1):           # walk backward in time
+    # Walk deficits backward in time, allowing wrap-around but never borrowing from future of t
+    for t in range(lim - 1, -1, -1):
         deficit = neg_eff[t]
-        if deficit == 0.0:
+        if deficit <= 1e-12:
             continue
 
-        discharge[t] = -deficit                # record discharge (negative by your convention)
+        # Record discharge at t (negative by your convention)
+        discharge[t] = -deficit
 
-        # Do not borrow from the future: clamp k to t
-        if k > t:
-            k = t
+        # Start searching from the most recent *historical* index (t-1) and wrap backward
+        k = (t - 1) % lim
+        visited = 0
 
-        # Consume surplus from k..0 until we cover the deficit (LIFO)
-        while deficit > 1e-12 and k >= 1e-12: #using 1e12 instead of 0 to allow for floating point errors
-            # move k left to next bucket with remaining surplus
-            while k >= 1e-12 and remaining[k] <= 1e-12:
-                k -= 1
-            if k < 1e-12:
+        while deficit > 1e-12 and visited < lim:
+            if k == t:
+                # We've wrapped all the way around to t => would borrow from the future
                 break
 
-            take = remaining[k] if remaining[k] < deficit else deficit
-            charge[k] += take
-            remaining[k] -= take
-            deficit -= take
+            avail = remaining[k]
+            if avail > 1e-12:
+                take = avail if avail < deficit else deficit
+                charge[k]   += take
+                remaining[k] -= take
+                deficit     -= take
 
-            if remaining[k] <= 1e-12:
-                k -= 1
+            # move left (wrap-around)
+            k = (k - 1) % lim
+            visited += 1
 
-        if remaining[0] < 0:
-            print('Insufficient renewables')
+        if deficit > 1e-9:
+            # Could not fully cover this deficit with any historic surplus (<= t with wrap)
+            # Keep the unserved portion as lost load; discharge already marked desired level.
+            lost_load[t] = deficit
+            # Clip discharge to what we actually covered (optional; comment out if you prefer to
+            # keep requested discharge as-is and leave surplus sum != 0)
+            covered = neg_eff[t] - deficit
+            discharge[t] = -covered
 
-    
-    df['surplus'] = charge+discharge
+    df['surplus'] = charge + discharge  # (discharge <= 0)
+    # Optional: surface diagnostics
+    if lost_load.sum() > 1e-9:
+        print(f"⚠ Unserved deficit after wrap-around borrowing: {lost_load.sum():.6f} (in post-η_dis units)")
+
     print('charge/discharge arrays constructed')
         # Optional: track unmet deficit if supply is insufficient
         # if deficit > 0.0:

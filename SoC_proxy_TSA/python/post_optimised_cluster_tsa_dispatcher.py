@@ -16,11 +16,11 @@ show_soc = True
 date_range = [2010,2019]
 multisource = [
     'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv',
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2015-2014-2012-2009-2018-2019-2008-2013-2007-2017__as_2010-2019__01.csv',
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2013-2012-2015-2017-2014-2016-2019-2011-2006__as_2010-2019__02.csv',
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2011-2010-2008-2019-2017-2015-2012-2007-2018-2013__as_2010-2019__03.csv',
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2011-2008-2015-2007-2014-2012-2006-2017-2010__as_2010-2019__05.csv',
+    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv',
+    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2015-2014-2012-2009-2018-2019-2008-2013-2007-2017__as_2010-2019__01.csv',
+    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2013-2012-2015-2017-2014-2016-2019-2011-2006__as_2010-2019__02.csv',
+    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2011-2010-2008-2019-2017-2015-2012-2007-2018-2013__as_2010-2019__03.csv',
+    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2011-2008-2015-2007-2014-2012-2006-2017-2010__as_2010-2019__05.csv',
 ]
 
 

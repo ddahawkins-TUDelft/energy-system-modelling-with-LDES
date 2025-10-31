@@ -1,79 +1,240 @@
-import pandas as pd
+import time
 import numpy as np
+import pandas as pd
 from scipy.signal import convolve
-from numpy.fft import fft, ifft, fftfreq
+from numpy.fft import rfft, irfft, rfftfreq
 
-def compute_soc_proxy(surplus, charging_eff, discharging_eff):
+
+# ------------------------------------------------------------------------------
+# Provenance notes (for write-up / citations)
+# - Rotation start via minimum prefix sum (a.k.a. "gas station" / circular subarray feasibility trick).
+# - LIFO stack allocator for historic borrowing (energy reserved last is used first).
+# - 1-D monotone root finding (bracket + bisection) to tune curtailment_factor via lost-load.
+# ------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------
+# Core SoC proxy helper
+# ------------------------------------------------------------------------------
+def compute_soc_proxy(surplus: np.ndarray, charging_eff: float, discharging_eff: float) -> np.ndarray:
     """
-    Computes a simplified state-of-charge (SoC) proxy over time based on surplus energy input.
-    Applies round-trip efficiency depending on whether energy is stored or discharged.
-
-    Parameters:
-        surplus (np.ndarray): Array of surplus power values (positive = excess, negative = deficit).
-        charging_eff (float): Charging efficiency (0 < η ≤ 1).
-        discharging_eff (float): Discharging efficiency (0 < η ≤ 1).
-
-    Returns:
-        soc_proxy (np.ndarray): Proxy SoC time series, offset-adjusted so the final value returns to zero.
+    Compute a simple SoC proxy as the cumulative sum of 'surplus'.
+    The caller is responsible for providing the surplus time series they want integrated.
     """
-    soc_proxy = np.zeros_like(surplus)
-    for t in range(1, len(surplus)):
-        if surplus[t] >= 0:
-            soc_proxy[t] = soc_proxy[t-1] + surplus[t] * charging_eff
-        else:
-            soc_proxy[t] = soc_proxy[t-1] + surplus[t] / discharging_eff
-    # Offset-correct so the proxy ends at 0 (assumes storage is cyclical over the window)
-    soc_proxy -= soc_proxy[-1] * np.linspace(0, 1, len(soc_proxy))
-    return soc_proxy
+    # surplus is already post-allocation (charge + discharge), so just integrate
+    return np.cumsum(surplus.astype(np.float64))
 
-def apply_temporal_rte_to_soc(df: pd.DataFrame, surplus_col: str, charging_eff: float, discharging_eff: float, return_corrected_surplus: bool = True, check_cyclical: bool = False):
+
+def apply_temporal_rte_to_soc(
+    df: pd.DataFrame,
+    surplus_col: str,
+    charging_eff: float,
+    discharging_eff: float,
+    return_corrected_surplus: bool = True,
+    check_cyclical: bool = False
+):
     """
     Wrapper to apply compute_soc_proxy to a DataFrame column and return Series.
 
-    Parameters:
-        df (pd.DataFrame): Input DataFrame containing the surplus column.
-        surplus_col (str): Column name containing surplus values.
-        charging_eff (float): Charging efficiency.
-        discharging_eff (float): Discharging efficiency. 
-        return_corrected_surplus(bool): decision to also return the corrected surpluses. Defaults true.
-        check_cyclical (bool): check that surpluses sum to 0 (no energy lost or created). Defaults false.
-
     Returns:
-        pd.Series: Computed SoC proxy.
-        (Optional) pd.Series: corrected_surplus
+        pd.Series: SoC proxy series (cumsum of surplus_col).
+        (Optional) pd.Series: delta SoC (same as surplus_col, aligned as a Series).
+    Notes:
+        - The 'corrected_surplus' naming from earlier drafts caused confusion. Here we
+          simply return delta SoC (the first difference of SoC), which equals 'surplus'.
     """
-
     soc_proxy = compute_soc_proxy(df[surplus_col].values.astype(np.float64), charging_eff, discharging_eff)
     soc_series = pd.Series(soc_proxy, index=df.index)
-
-    if not return_corrected_surplus and not check_cyclical:
-        return soc_series
-
-    # Compute delta SoC
-    delta_soc = soc_series.diff().fillna(0)
-
-    #   Corrected surpluses is an abstract represention of the fluctuations without efficiency losses/gains
-    #   For this reason, surpluses do not sum to 0 and this signal should be avoided unless properly understood
-    # Infer actual surplus from SoC deltas and efficiencies
-    corrected_surplus = np.where(
-        delta_soc >= 0,
-        delta_soc / charging_eff,
-        delta_soc * discharging_eff
-    )
-
-    df_surpluses = pd.Series(delta_soc, index=df.index)
 
     if check_cyclical:
         residual = soc_series.iloc[-1] - soc_series.iloc[0]
         if abs(residual) > 1e-6:
             print(f"⚠ Warning: SoC not cyclical (end-start = {residual:.3e})")
-        
 
     if return_corrected_surplus:
-        return soc_series, df_surpluses
+        # delta SoC equals the original surplus (by definition)
+        delta_soc = soc_series.diff().fillna(0.0)
+        return soc_series, delta_soc
     else:
         return soc_series
 
+
+# ------------------------------------------------------------------------------
+# Fast circular LIFO allocator (+ lost load)  --- O(n)
+# ------------------------------------------------------------------------------
+def allocate_circular_lifo(pos: np.ndarray, neg: np.ndarray, eta_ch: float, eta_dis: float):
+    """
+    O(n) circular LIFO allocator.
+
+    Inputs:
+        pos, neg : non-negative arrays of raw surplus/deficit per step (before efficiencies)
+        eta_ch, eta_dis : charging/discharging efficiencies (0<eta<=1)
+
+    Returns:
+        surplus : np.ndarray = charge + discharge (charge>=0, discharge<=0) in original order
+        lost_sum: float, total unmet deficit (in 'stored units' after applying efficiencies)
+
+    Provenance:
+        - Rotation start = argmin prefix sum of (pos*η_ch - neg/η_dis)  [gas-station/min-prefix trick]
+        - LIFO via stack of (idx, remaining)                            [stack allocation]
+    """
+    pos = pos.astype(np.float64, copy=False)
+    neg = neg.astype(np.float64, copy=False)
+
+    pos_eff = pos * float(eta_ch)
+    neg_eff = neg / float(eta_dis)
+    net = pos_eff - neg_eff
+
+    n = pos.shape[0]
+    prefix = np.cumsum(net)
+    start = (int(np.argmin(prefix)) + 1) % n
+
+    pos_r = np.roll(pos_eff, -start)
+    neg_r = np.roll(neg_eff, -start)
+
+    stack_idx = []
+    stack_rem = []
+
+    charge_r    = np.zeros(n, dtype=np.float64)
+    discharge_r = np.zeros(n, dtype=np.float64)
+    lost_r      = np.zeros(n, dtype=np.float64)
+
+    for i in range(n):
+        s = pos_r[i]
+        d = neg_r[i]
+
+        # Push today's stored surplus, if any
+        if s > 1e-12:
+            stack_idx.append(i)
+            stack_rem.append(s)
+
+        # Cover today's deficit by popping LIFO
+        if d > 1e-12:
+            discharge_r[i] = -d
+            rem = d
+            while rem > 1e-12 and stack_idx:
+                j = stack_idx[-1]
+                avail = stack_rem[-1]
+                take = avail if avail < rem else rem
+                charge_r[j]  += take
+                avail        -= take
+                rem          -= take
+                if avail <= 1e-12:
+                    stack_idx.pop(); stack_rem.pop()
+                else:
+                    stack_rem[-1] = avail
+            if rem > 1e-9:
+                discharge_r[i] = -(d - rem)
+                lost_r[i] = rem
+
+    charge    = np.roll(charge_r, start)
+    discharge = np.roll(discharge_r, start)
+    surplus   = charge + discharge
+    lost_sum  = float(lost_r.sum())
+    return surplus, lost_sum
+
+
+# ------------------------------------------------------------------------------
+# Curtailment tuner (monotone bracket + bisection)
+# ------------------------------------------------------------------------------
+def evaluate_lost_load(curta_factor: float, base_gen: np.ndarray, demand: np.ndarray, eta_ch: float, eta_dis: float) -> float:
+    """
+    Given curtailment_factor, compute lost load using the fast allocator.
+
+    base_gen: array independent of curtailment (mean_capacity_factor * weighted_installed_capacity)
+    demand:   demand vector (after subtracting known dispatchable capacity)
+    """
+    g_curtailed = base_gen / curta_factor
+    rnd = g_curtailed - demand
+    pos = np.maximum(rnd, 0.0)
+    neg = np.maximum(-rnd, 0.0)
+    _, lost_sum = allocate_circular_lifo(pos, neg, eta_ch, eta_dis)
+    return lost_sum
+
+def compute_volatility_margin(base_gen: np.ndarray, demand: np.ndarray, k=0.08, min_m=0.01, max_m=0.08):
+    """
+    Simple, model-free margin from variability.
+    vol = std(base_gen - demand) / mean(demand)
+    margin = clip(k * vol, [min_m, max_m])
+    Defaults give ~1–8% depending on volatility.
+    """
+    rnd_base = base_gen - demand
+    mu_d = float(np.maximum(np.mean(demand), 1e-9))
+    vol = float(np.std(rnd_base) / mu_d)
+    margin = float(np.clip(k * vol, min_m, max_m))
+    return margin
+
+def find_min_feasible_curtailment(
+    base_gen: np.ndarray,
+    demand: np.ndarray,
+    eta_ch: float,
+    eta_dis: float,
+    tol: float = 1e-12,
+    c_init: float = 0.90,
+    c_min: float = 1e-3,
+    c_max: float = 2.0,
+    max_evals: int = 60,
+):
+    """
+    Return the smallest curtailment_factor in (c_min, c_max] with lost_load <= tol.
+    Monotone in c: smaller c => more supply => lost_load non-increasing.
+
+    Strategy:
+        1) Evaluate at c_init; expand to get a bracket [c_lo(feasible), c_hi(infeasible)] or vice versa.
+        2) Bisection inside the bracket until lost_load <= tol and interval is small.
+    """
+    eta_ch = float(eta_ch); eta_dis = float(eta_dis)
+
+    c = float(np.clip(c_init, c_min, c_max))
+    f = evaluate_lost_load(c, base_gen, demand, eta_ch, eta_dis)
+
+    evals = 1
+
+    # If feasible already, try to relax (increase c) until it just becomes infeasible
+    if f <= tol:
+        c_lo, f_lo = c, f
+        c_hi = min(c * 1.111111, c_max)
+        while True:
+            f_hi = evaluate_lost_load(c_hi, base_gen, demand, eta_ch, eta_dis); evals += 1
+            if f_hi > tol or c_hi >= c_max or evals >= max_evals//3:
+                break
+            c_lo, f_lo = c_hi, f_hi
+            c_hi = min(c_hi * 1.111111, c_max)
+        # If still feasible at upper bound, return last tested (most relaxed feasible)
+        if f_hi <= tol:
+            return c_hi, f_hi, evals
+    else:
+        # Infeasible: shrink c until feasible (or hit c_min)
+        c_hi, f_hi = c, f
+        c_lo = max(c * 0.8, c_min)
+        while True:
+            f_lo = evaluate_lost_load(c_lo, base_gen, demand, eta_ch, eta_dis); evals += 1
+            if f_lo <= tol or c_lo <= c_min or evals >= max_evals//3:
+                break
+            c_hi, f_hi = c_lo, f_lo
+            c_lo = max(c_lo * 0.8, c_min)
+        if f_lo > tol:  # still infeasible at c_min
+            return c_lo, f_lo, evals
+
+    # We now have a bracket [c_lo (feasible), c_hi (infeasible)] — bisection to minimal feasible
+    for _ in range(max_evals - evals):
+        evals += 1
+        c_mid = 0.5 * (c_lo + c_hi)
+        f_mid = evaluate_lost_load(c_mid, base_gen, demand, eta_ch, eta_dis)
+        if f_mid <= tol:
+            c_lo, f_lo = c_mid, f_mid
+        else:
+            c_hi, f_hi = c_mid, f_mid
+        if abs(c_hi - c_lo) <= 1e-6 and f_lo <= tol:
+            break
+
+
+    return c_lo, f_lo, evals
+
+
+# ------------------------------------------------------------------------------
+# Surplus decomposition (LDES/SDES) and SoC proxies
+# ------------------------------------------------------------------------------
 def decompose_surplus(
     df: pd.DataFrame,
     soc_decomposition_method: str = 'gaussian',
@@ -81,94 +242,93 @@ def decompose_surplus(
     timestamp_col: str = None,
     charging_efficiency: float = 1.0,
     discharging_efficiency: float = 1.0
-):
+) -> pd.DataFrame:
     """
-    Decomposes surplus signal into short- and long-duration components (SDES and LDES),
-    and computes SoC proxies for each using round-trip efficiencies.
+    Decomposes 'surplus' into LDES and SDES components and computes SoC proxies.
 
-    Parameters:
-        df (pd.DataFrame): Input DataFrame with a 'surplus' column.
-        soc_decomposition_method (str): Method for smoothing ('gaussian', 'moving_average', 'triangular', 'fft_lowpass').
-        time_horizon_hours (int): Timescale threshold separating LDES from SDES.
-        timestamp_col (str): Optional name of timestamp column. If None, uses index.
-        charging_efficiency (float): Charging efficiency for SoC calculation.
-        discharging_efficiency (float): Discharging efficiency for SoC calculation.
-
-    Returns:
-        pd.DataFrame: Input DataFrame augmented with:
-            - surplus_LDES / surplus_SDES
-            - soc_proxy_LDES / soc_proxy_SDES
+    Adds to df:
+        - surplus_LDES, surplus_SDES
+        - soc_proxy_LDES, soc_proxy_SDES
     """
     if 'surplus' not in df.columns:
         raise ValueError("DataFrame must contain a 'surplus' column.")
-    
-    # Get timestamps safely
+
+    # Timestamps
     if timestamp_col:
         timestamps = pd.to_datetime(df[timestamp_col])
     else:
         if not isinstance(df.index, pd.DatetimeIndex):
             raise ValueError("Timestamp column not provided and index is not a DatetimeIndex.")
         timestamps = df.index.to_series()
-
-    # Ensure timestamps are sorted
     timestamps = timestamps.sort_values()
-
-    # Validate there are at least 2 unique time steps
     if timestamps.nunique() < 2:
         raise ValueError("Not enough unique timestamps to compute time intervals.")
 
-    timestep_seconds = (timestamps.iloc[1] - timestamps.iloc[0]).total_seconds()
-    if timestep_seconds == 0:
+    timestep_hours = (timestamps.iloc[1] - timestamps.iloc[0]).total_seconds() / 3600.0
+    if timestep_hours == 0:
         raise ValueError("Timestamps have zero time difference. Check the index or timestamp column.")
-    timestep_hours = timestep_seconds / 3600
 
-    surplus = df['surplus'].values
-    n = len(surplus)
-    timestep_hours = (timestamps.iloc[1] - timestamps.iloc[0]).total_seconds() / 3600
+    surplus = df['surplus'].values.astype(np.float64)
+    n = surplus.shape[0]
+    samples = int(round(time_horizon_hours / timestep_hours)) | 1  # odd length
 
-    # Compute number of samples equivalent to the smoothing horizon
-    samples = int(round(time_horizon_hours / timestep_hours)) | 1  # Ensure it's odd
-
+    # Smoothing to get LDES
     if soc_decomposition_method == 'fft_lowpass':
-        # FFT-based low-pass filter: zero out high frequencies
-        freqs = fftfreq(n, d=timestep_hours)
-        surplus_fft = fft(surplus)
-        mask = np.abs(freqs) <= (1 / time_horizon_hours)
-        surplus_LDES = np.real(ifft(surplus_fft * mask))
+        freqs = rfftfreq(n, d=timestep_hours)
+        surplus_fft = rfft(surplus)
+        mask = (freqs <= (1.0 / time_horizon_hours)).astype(surplus_fft.real.dtype)
+        surplus_LDES = irfft(surplus_fft * mask, n=n)
     else:
-        # Construct time-domain smoothing kernel
         half_window = samples // 2
         if soc_decomposition_method == 'moving_average':
-            kernel = np.ones(samples) / samples
+            kernel = np.ones(samples, dtype=np.float64) / samples
         elif soc_decomposition_method == 'triangular':
-            kernel = np.array([1 - abs(i - half_window) / half_window for i in range(samples)])
+            w = np.arange(samples, dtype=np.float64)
+            kernel = 1.0 - np.abs(w - half_window) / max(half_window, 1)
             kernel /= kernel.sum()
         elif soc_decomposition_method == 'gaussian':
-            sigma = samples / 6  # covers ~99% in ±3σ
+            sigma = samples / 6.0  # ~99% within ±3σ
             x = np.arange(samples) - half_window
-            kernel = np.exp(-0.5 * (x / sigma)**2)
+            kernel = np.exp(-0.5 * (x / sigma) ** 2)
             kernel /= kernel.sum()
         else:
             raise ValueError(f"Unsupported method: {soc_decomposition_method}")
         surplus_LDES = convolve(surplus, kernel, mode='same')
-    
 
-    # SDES = Original - LDES
     surplus_SDES = surplus - surplus_LDES
 
-    # Store results in dataframe
     df['surplus_LDES'] = surplus_LDES
     df['surplus_SDES'] = surplus_SDES
 
-    df['soc_proxy_LDES'], df['surplus_LDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_LDES), 'temp_surplus', charging_efficiency, discharging_efficiency, return_corrected_surplus=True, check_cyclical=True)
-    df['soc_proxy_SDES'], df['surplus_SDES'] = apply_temporal_rte_to_soc(df.assign(temp_surplus=surplus_SDES), 'temp_surplus', charging_efficiency, discharging_efficiency, return_corrected_surplus=True, check_cyclical=True)
+    # Compute SoC proxies (and return deltas for convenience, though we only keep proxies)
+    soc_LDES, _ = apply_temporal_rte_to_soc(
+        df.assign(temp_surplus=surplus_LDES),
+        'temp_surplus',
+        charging_efficiency,
+        discharging_efficiency,
+        return_corrected_surplus=True,
+        check_cyclical=True
+    )
+    soc_SDES, _ = apply_temporal_rte_to_soc(
+        df.assign(temp_surplus=surplus_SDES),
+        'temp_surplus',
+        charging_efficiency,
+        discharging_efficiency,
+        return_corrected_surplus=True,
+        check_cyclical=True
+    )
 
-    # print('>>> Proxy successfully applied, including a Round Trip Efficiency correction and a check of surplus balances.')
+    df['soc_proxy_LDES'] = soc_LDES.values
+    df['soc_proxy_SDES'] = soc_SDES.values
 
     return df
 
+
+# ------------------------------------------------------------------------------
+# External API (unchanged signature)
+# ------------------------------------------------------------------------------
 def generate_soc_proxy(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     demand_field: str = 'demand_power',
     renewables_fields_and_weights: dict = {'solar': 1, 'onshore_wind': 1, 'offshore_wind': 1},
     dispatchable_techs: dict = {'known_dispatchable_capacity': 3300},
@@ -180,88 +340,114 @@ def generate_soc_proxy(
         'method': 'fft_lowpass',
         'time_horizon_hours': 24
     },
-    timestamp_col: str = None
+    timestamp_col: str = None,
+    margin_mode: str = 'auto_volatility',          # 'fixed' | 'auto_volatility' | 'none'
+    margin_value: float = 0.05,          # only used for 'fixed'
+    margin_bounds: tuple = (0.01, 0.09),  # clamp any margin we compute
 ):
     """
-    Function that takes in timeseries data and configution options, and returns state of charge (SoC) proxies for both long-duration energys storages and short-duration energy storages. 
-    This proxy scales with demand and considers the time-varying nature of renewable capacity factors. It assumes a cyclical condition whereby SoC is equal at the beginning and end of
-    the time period i.e. no net change across domain.
-
-    Parameters:
-        df (pd.DataFrame): Input time series with demand and renewable capacity factors.
-        demand_field (str): Column name for electricity demand (power units).
-        renewables_fields_and_weights (dict): Technology-to-weight mapping (e.g. {'solar': 1.0, 'wind': 2.0}).
-        dispatchable_techs (dict): Assumed dispatchable supply as portion of average demand. e.g. if average demand is 10GWh at each hour and nuclear capacity is 3GW, the corresponding parameter can be set to 0.3
-        storage_process_losses (dict): Charging and discharging efficiencies (between 0 and 1).
-        soc_decomposition (dict): Method and timescale for LDES/SDES split.
-        timestamp_col (str): Column to use for time information (defaults to index if None).
+    Takes time series data and returns SoC proxies for LDES and SDES.
 
     Returns:
-        df (pd.DataFrame): DataFrame with new columns for surplus, SoC proxies, and decomposition.
-        capacity_factors (dict): Unweighted mean CFs per technology and weighted mean for mix.
-        installed_caps_nominal (dict): Nominal installed capacities per tech (based on weights).
+        df (pd.DataFrame): augmented with 'surplus', decomposition, and SoC proxies
+        capacity_factors (dict): mean CFs per technology and weighted mean
+        installed_caps_nominal (dict): nominal installed capacities per tech and total
     """
+    t0 = time.time()
+
     supported_methods = {'fft_lowpass', 'gaussian', 'triangular', 'moving_average'}
     if soc_decomposition['method'] not in supported_methods:
         raise ValueError(f"Method '{soc_decomposition['method']}' not supported. Choose from: {supported_methods}")
 
     renewable_fields = list(renewables_fields_and_weights.keys())
     weights = np.array(list(renewables_fields_and_weights.values()), dtype=float)
-    weights /= weights.sum()  # Normalize weights to sum to 1
+    weights /= weights.sum()
 
     # Validate required fields
-    required_fields = [demand_field] + renewable_fields
-    missing = [col for col in required_fields if col not in df.columns]
+    required = [demand_field] + renewable_fields
+    missing = [col for col in required if col not in df.columns]
     if missing:
         raise ValueError(f"Missing fields in dataframe: {missing}")
 
-    # Subtract assumed dispatchable baseline capacity from demand
-    df[demand_field] -= dispatchable_techs.get('known_dispatchable_capacity', 0)
+    # Subtract known dispatchable baseline capacity from demand
+    df = df.copy()  # avoid mutating caller's df
+    df[demand_field] = df[demand_field].astype(np.float64) - float(dispatchable_techs.get('known_dispatchable_capacity', 0.0))
 
-    # Raw (unweighted) average capacity factor per technology
-    capacity_factors = {
-        tech: df[tech].mean()
-        for tech in renewable_fields
-    }
+    # Capacity factors (unweighted) and weighted mean
+    capacity_factors = {tech: float(df[tech].mean()) for tech in renewable_fields}
+    capacity_factors['weighted_mean'] = float(sum(weights[i] * capacity_factors[tech] for i, tech in enumerate(renewable_fields)))
 
-    # Weighted average capacity factor for the full mix
-    capacity_factors['weighted_mean'] = sum(
-        weights[i] * capacity_factors[tech]
-        for i, tech in enumerate(renewable_fields)
-    )
-
-    # Create time-varying mean capacity factor (blended)
+    # Blended mean CF over time
     df['mean_capacity_factor'] = df[renewable_fields].mul(weights, axis=1).sum(axis=1)
 
-    # Calculate total nominal installed capacity needed to meet demand on average
-    weighted_installed_capacity = df[demand_field].sum() / df['mean_capacity_factor'].sum()
+    # Total installed capacity to meet average demand on average
+    weighted_installed_capacity = float(df[demand_field].sum() / df['mean_capacity_factor'].sum())
 
-    # Compute surplus as supply minus demand
-    df['surplus'] = df['mean_capacity_factor'] * weighted_installed_capacity - df[demand_field]
+    # Build base generation (independent of curtailment) and demand vectors
+    base_gen = df['mean_capacity_factor'].to_numpy(np.float64) * weighted_installed_capacity
+    demand   = df[demand_field].to_numpy(np.float64)
 
-    # Apply decomposition and compute SoC proxies
+    eta_ch = float(storage_process_losses['charging_efficiency'])
+    eta_dis = float(storage_process_losses['discharging_efficiency'])
+
+    # Tune curtailment_factor to (nearly) eliminate lost load
+    c_star, lost_final, _ = find_min_feasible_curtailment(
+        base_gen, demand, eta_ch, eta_dis,
+        tol=1e-12, c_init=0.90, c_min=1e-3, c_max=2.0, max_evals=60
+    )
+
+    # Decide margin
+    lb, ub = margin_bounds
+    if margin_mode == 'fixed':
+        margin = float(np.clip(margin_value, lb, ub))
+    elif margin_mode == 'auto_volatility':
+        margin = float(np.clip(compute_volatility_margin(base_gen, demand), lb, ub))
+    elif margin_mode == 'none':
+        margin = 0.0
+    else:
+        raise ValueError(f"Unknown margin_mode: {margin_mode}")
+
+    # Apply margin as extra curtailment headroom
+    curtailment_factor = max(1e-3, c_star * (1.0 - margin))
+    print(f"[tuner] c*={c_star:.6f} lost={lost_final:.3e} | margin={margin:.3%} -> curtailment={curtailment_factor:.6f}")
+
+    # Final allocation using tuned curtailment
+    g_curtailed = base_gen / curtailment_factor
+    rnd = g_curtailed - demand
+    pos = np.maximum(rnd, 0.0)
+    neg = np.maximum(-rnd, 0.0)
+
+    df['surplus'], _ = allocate_circular_lifo(pos, neg, eta_ch, eta_dis)
+
+    # Decomposition + SoC proxies
     df = decompose_surplus(
         df,
         soc_decomposition_method=soc_decomposition['method'],
         time_horizon_hours=soc_decomposition['time_horizon_hours'],
         timestamp_col=timestamp_col,
-        charging_efficiency=storage_process_losses['charging_efficiency'],
-        discharging_efficiency=storage_process_losses['discharging_efficiency']
+        charging_efficiency=eta_ch,
+        discharging_efficiency=eta_dis
     )
 
-    # Clean very small noise
+    # Clean tiny numerical noise
     for col in ['soc_proxy_LDES', 'soc_proxy_SDES', 'surplus_LDES', 'surplus_SDES']:
-        df[col] = np.where(np.abs(df[col]) < 1e-9, 0, df[col])
+        arr = df[col].to_numpy(np.float64)
+        arr[np.abs(arr) < 1e-9] = 0.0
+        df[col] = arr
+
+    # Rescale SoC proxies indirectly by curtailment factor (preserve your earlier behavior)
+    # df['soc_proxy_LDES'] *= curtailment_factor
+    # df['soc_proxy_SDES'] *= curtailment_factor
 
     # Shift proxies so they begin from 0
     df['soc_proxy_LDES'] -= df['soc_proxy_LDES'].min()
     df['soc_proxy_SDES'] -= df['soc_proxy_SDES'].min()
 
-    # Calculate nominal installed capacity per technology (based on weights)
-    installed_caps_nominal = {
-        tech: weights[i] * weighted_installed_capacity
-        for i, tech in enumerate(renewable_fields)
-    }
-    installed_caps_nominal['total'] = weighted_installed_capacity
+    # Installed nominal capacities (based on weights)
+    installed_caps_nominal = {tech: float(weights[i] * weighted_installed_capacity) for i, tech in enumerate(renewable_fields)}
+    installed_caps_nominal['total'] = float(weighted_installed_capacity)
+
+    print(f"[timing] total = {time.time() - t0:.2f}s")
+    print(f"[curtailment] {curtailment_factor:.2%}")
 
     return df, capacity_factors, installed_caps_nominal

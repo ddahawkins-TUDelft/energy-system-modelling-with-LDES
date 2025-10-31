@@ -6,44 +6,35 @@ from numpy.fft import fft, ifft, fftfreq
 
 def compute_soc_proxy(surplus, charging_eff, discharging_eff):
     """
-    Computes a simplified state-of-charge (SoC) proxy over time based on surplus energy input.
-    Applies round-trip efficiency depending on whether energy is stored or discharged.
-
-    Parameters:
-        surplus (np.ndarray): Array of surplus power values (positive = excess, negative = deficit).
-        charging_eff (float): Charging efficiency (0 < η ≤ 1).
-        discharging_eff (float): Discharging efficiency (0 < η ≤ 1).
-
-    Returns:
-        soc_proxy (np.ndarray): Proxy SoC time series, offset-adjusted so the final value returns to zero.
+    Returns surplus_corr and soc_proxy_corr (cumsum) with an end–middle–end cosine correction.
+    - frac    : fraction of the series length used at EACH end for the taper (0<frac<=0.5)
+    - cushion : >=0. Adds some correction to BOTH ends (so the end window isn't zeroed).
+                cushion=0 uses only the start lobe; larger values put some mass on the end too.
     """
-    #ORIGINAL 1
-    # soc_proxy = np.zeros_like(surplus)
-    # for t in range(1, len(surplus)):
-    #     if surplus[t] >= 0:
-    #         soc_proxy[t] = soc_proxy[t-1] + surplus[t] * charging_eff
-    #     else:
-    #         soc_proxy[t] = soc_proxy[t-1] + surplus[t] / discharging_eff
 
+    soc_proxy = np.cumsum(surplus)
+
+    # mag_mismatch = (soc_proxy[0] - soc_proxy[-1])*0.5
+
+    # soc_proxy -= mag_mismatch
     
-    # # Offset-correct so the proxy ends at 0 (assumes storage is cyclical over the window)
-    # soc_proxy -= soc_proxy[-1] * np.linspace(0, 1, len(soc_proxy))
+    # FRAC = 0.01
+    # n = soc_proxy.size
 
-    #SIMPLE 2
-    soc_proxy = np.cumsum(surplus) 
+    # # length of each end taper
+    # L = max(1, min(n // 2, int(round(FRAC * n))))
 
-    #method 3
+    # # half-Hann (cosine) window
+    # t = np.arange(L, dtype=float)
+    # l_linspace = np.linspace(0,1, L)
+    # r_linspace = np.linspace(1,0, L)
+    # if FRAC<0.5:
+    #     scalar_vector= np.concatenate((l_linspace, np.ones(n-2*L), r_linspace)) 
+    # else:
+    #     scalar_vector= np.concatenate((l_linspace, r_linspace)) 
 
-
-    # c = np.maximum(0, surplus)
-    # d = np.maximum(0, -surplus)
-
-    # f = charging_eff*c - d/discharging_eff
-    # f_mean  = f.mean()
-    # f -= f_mean
-    # soc = np.cumsum(f)
-
-    # soc_proxy = soc #- soc[0]
+    # soc_proxy*= scalar_vector
+    # soc_proxy+= mag_mismatch
 
     return soc_proxy
 
@@ -235,7 +226,7 @@ def generate_soc_proxy(
     missing = [col for col in required_fields if col not in df.columns]
     if missing:
         raise ValueError(f"Missing fields in dataframe: {missing}")
-
+    
     # Subtract assumed dispatchable baseline capacity from demand
     df[demand_field] -= dispatchable_techs.get('known_dispatchable_capacity', 0)
 
@@ -271,66 +262,125 @@ def generate_soc_proxy(
     list_debt_starts = []
 
 
-    curtailment_factor = 2.3
+    
+    
 
-    # 'exact' solution to produce a curtailment estimate
-    g = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity*curtailment_factor
+    # --- Setup ---
     d = df[demand_field].to_numpy()
-    renewables_net_demand = g-d
-
-    cumG = np.cumsum(g)
+    
+    cumG = np.cumsum(df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity * 1)
     cumD = np.cumsum(d)
+    curtailment_factor =1/(np.max(cumD[cumG>0] / cumG[cumG>0]))
 
-    accumulator = cumG.copy()
-
-    c = np.max(cumD[cumG>0] / cumG[cumG>0]) 
-
-    # curtailment_factor = np.max(cumD[mask] / cumG[mask]) 
-
-    for i in range(0,lim):
-        t = lim-(i+1) 
-
-        #use demand and res estimate to compute deficit
-        if i == 0:
-            debt[t] = 0 #zero end condition for cyclicality
-        else: 
-
-            surplus = g[t] - d[t]
-            if surplus > 0: #then generation = demand, we need no historic generation
-                None
-            else: #we need stored energy
-                s_required = accumulator[t] + surplus  #place a reserve on the historic energy, and remove it from the global pool available to earlier timesteps
-                accumulator[accumulator > s_required] += surplus
-        if accumulator[t] < 0:
-            print('t_value', t)
-            print('done')
-
-    storage_operations = cumG-accumulator
-    df['surplus'] = np.diff(storage_operations, prepend=storage_operations[-1])
-
-    # # a redundant whileloop in case the exact solution fails -- ideally this is never executed
-    # while debt[0] != 0 and loop_count <= 100 :
-    #     renewables_net_demand = df['mean_capacity_factor']*weighted_installed_capacity*curtailment_factor-df[demand_field] 
-    #     for i in range(0,lim):
-    #         t = lim-(i+1) 
+    curtailment_factor = 0.75
 
 
-    #         #use demand and res estimate to compute deficit
-    #         if i == 0:
-    #             debt[t] = 0 #zero end condition for cyclicality
-    #         else:
-    #             if renewables_net_demand.iloc[t] < 0: #deficit
-    #                 debt[t] = debt[t+1] + renewables_net_demand.iloc[t] #insufficient renewables, so add to energy debt
-    #             else: #if surplus
+    g_curtailed = df['mean_capacity_factor'].to_numpy() * weighted_installed_capacity / curtailment_factor
+    cumG = np.cumsum(g_curtailed)
+    rnd = g_curtailed-d
+    cum_available_surplus = np.cumsum(np.maximum(rnd, 0)) #represents available historic energy to meet future deficits
 
-    #                 debt[t] = debt[t+1] + min(-debt[t+1], renewables_net_demand.iloc[t]) #check if there is debt, if so, charge up to necessary amount
+    # --- Backward loop: reserve energy for deficits ---
+    lim = len(df)
 
-    #     list_curtailments.append(curtailment_factor)
-    #     list_debt_starts.append(debt[0])
+    pos = np.maximum(rnd, 0.0)                 # surplus per step
+    neg = np.maximum(-rnd, 0.0)                # deficit per step
 
-    #     if debt[0] != 0:
-    #         curtailment_factor += 0.01
-    #         loop_count += 1
+    pos_eff = pos*storage_process_losses['charging_efficiency']
+    neg_eff = neg/storage_process_losses['discharging_efficiency']
+
+    charge = np.zeros(lim)                     # energy reserved/charged at time k (LIFO source)
+    discharge = np.zeros(lim)                  # your convention: negative at deficit times
+    remaining = pos_eff.copy()                     # mutable buckets of available surplus
+
+    k = lim - 1                                # pointer to latest (rightmost) surplus bucket
+
+    for t in range(lim - 1, -1, -1):           # walk backward in time
+        deficit = neg_eff[t]
+        if deficit == 0.0:
+            continue
+
+        discharge[t] = -deficit                # record discharge (negative by your convention)
+
+        # Do not borrow from the future: clamp k to t
+        if k > t:
+            k = t
+
+        # Consume surplus from k..0 until we cover the deficit (LIFO)
+        while deficit > 1e-12 and k >= 1e-12: #using 1e12 instead of 0 to allow for floating point errors
+            # move k left to next bucket with remaining surplus
+            while k >= 1e-12 and remaining[k] <= 1e-12:
+                k -= 1
+            if k < 1e-12:
+                break
+
+            take = remaining[k] if remaining[k] < deficit else deficit
+            charge[k] += take
+            remaining[k] -= take
+            deficit -= take
+
+            if remaining[k] <= 1e-12:
+                k -= 1
+
+        if remaining[0] < 0:
+            print('Insufficient renewables')
+
+    
+    df['surplus'] = charge+discharge
+    print('charge/discharge arrays constructed')
+        # Optional: track unmet deficit if supply is insufficient
+        # if deficit > 0.0:
+        #     lost_load[t] = deficit
+
+
+    # for i in range(0, lim):
+    #     t = lim - (i + 1)
+    #     if i == 0:
+    #         charge[t] = 0
+    #         discharge[t] = 0  # end condition for cyclicality
+    #         continue
+
+    #     surplus = rnd[t]
+    #     # if surplus > 0:
+    #     #     charge[t] = surplus
+    #         #discharge remains 0 @ t
+        
+    #     if surplus < 0:
+    #         #discharge
+    #         discharge[t] = surplus
+    #         #now look back through time, and instruct the storage to reserve energy at relevant t values (i.e. assign values for charge)
+    #         rnd_threshold = cum_available_surplus[t] + surplus
+            
+            
+    #         #charge instructions, should align with required energy for deficit at t, LIFO
+    #         #get ids of events above thresholds
+    #         idx = np.where(cum_available_surplus[:t+1] >= rnd_threshold)[0]
+    #         #get the available energy, note we use idx-1 because with cumsum everything gets shifted
+    #         charge[idx] = np.maximum(0,rnd[idx]-np.maximum(0,rnd_threshold-cum_available_surplus[idx-1]))
+    #         cum_available_surplus[idx-1] -= charge[idx]
+
+
+    #         # next steps:
+    #         # allocate deficit across t values backwards, has to be a loop unfortunately
+    #         # update the rnd and cumRND values for those timesteps so we dont borrow against the same step twice
+    #         #     ...etc.
+            
+            
+
+
+    #         cumRND[:t][cumRND[:t] >= s_required] = s_required
+
+    #     if cumRND[t] < 0: 
+    #         print('t_value', t) 
+    #         print('done')
+            
+    # # --- Construct surplus and SoC proxy ---
+    # surplus = charge - discharge
+    # soc = np.cumsum(surplus)
+
+    # Enforce cyclic SoC (SoC[0] = SoC[T])
+    # soc -= np.linspace(soc[0], soc[-1], lim)
+
 
     print('time: ', time.time() -t_start, 'n_loops: ', loop_count)
     print('curtailment forecast', f"{1/curtailment_factor:.2%}")
@@ -354,6 +404,10 @@ def generate_soc_proxy(
     # Clean very small noise
     for col in ['soc_proxy_LDES', 'soc_proxy_SDES', 'surplus_LDES', 'surplus_SDES']:
         df[col] = np.where(np.abs(df[col]) < 1e-9, 0, df[col])
+
+    # rescale indirectly proportionally to the RES overinvestment factor applied before
+    df['soc_proxy_LDES'] *= curtailment_factor
+    df['soc_proxy_SDES'] *= curtailment_factor
 
     # Shift proxies so they begin from 0
     df['soc_proxy_LDES'] -= df['soc_proxy_LDES'].min()

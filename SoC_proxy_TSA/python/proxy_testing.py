@@ -7,7 +7,7 @@ from plot_signal_results import _load_timeseries_reference
 
 
 ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc', ["2010-01-01", "2019-12-31"] #'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc'
-ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
+# ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
 
 
 tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'

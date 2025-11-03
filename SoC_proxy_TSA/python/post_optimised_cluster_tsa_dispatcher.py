@@ -11,9 +11,9 @@ import pandas as pd
 
 
 
-scenarios = ['Sensitivity_W_reps7','Sensitivity_W_reps30', 'Sensitivity_W_reps90', 'Sensitivity_W_reps180'] 
+scenarios = ['Sensitivity_W_reps7','Sensitivity_W_reps14','Sensitivity_W_reps21','Sensitivity_W_reps30','Sensitivity_W_reps90','Sensitivity_W_reps180'] 
 show_soc = True
-date_range = [2010,2019]
+date_range = [2006,2015]
 multisource = [
     'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
     # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv',
@@ -36,6 +36,8 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str 
     m.tsa.set_params(tsa_params)
     m.calliope_model.set_params(calliope_params)
     m.compute_id()
+    print( f' -----      {m.id}      ----- ')
+    print( ' ------------------------------------------------------- ')
     m.assign_paths(directory='SoC_proxy_TSA/data')
     m.save_params()
 
@@ -136,8 +138,15 @@ cases_log = []
 for tvp_source in multisource:
     for scenario_name, scenario_batch in batch_config.items():
         if scenario_name in scenarios:
-            print(f'> Dispatch: running scenario {scenario_name}')
+            print( ' ------------------------------------------------------- ')
+            print( '  ')
+            print(f'[Dispatch] running scenario {scenario_name}')
+            print( '   ')
+            print( ' ------------------------------------------------------- ')
             for model_name, config in scenario_batch.items():
+                
+                print( ' ------------------------------------------------------- ')
+                print( f' ----- {model_name}  -----')
                 
                 calliope_p = deepcopy(calliope_params)
                 soc_proxy_p = deepcopy(soc_proxy_params)
@@ -157,8 +166,6 @@ for tvp_source in multisource:
                             soc_proxy_p[key] = value
                 if config['tsa_params']:
                     for key, value in config['tsa_params'].items():
-                        if key == 'lambda_soc':
-                            print(value)
                         if value or value==0:
                             tsa_p[key] = value
 
@@ -182,9 +189,9 @@ print(f'[Dispatch] Loading reference standard_{calliope_params['date_range'][0]}
 #add the reference case
 
 ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc'
-if multisource:
-    before, sep, after = multisource[-1].partition('shuffle_')
-    ref_path = f'SoC_proxy_TSA/data/calliope_models/{f'{sep}{after}'.removesuffix('.csv')}.nc' 
+# if multisource:
+#     before, sep, after = multisource[-1].partition('shuffle_')
+#     ref_path = f'SoC_proxy_TSA/data/calliope_models/{f'{sep}{after}'.removesuffix('.csv')}.nc' 
 
 list_model_dict.append({
     'model': calliope.read_netcdf(ref_path),
@@ -197,7 +204,7 @@ list_model_dict.append({
 })
 
 
-# print('> Dispatch: Visualising results')
+print('> Dispatch: Visualising results')
 # visualise(
 #     list_model_dict=list_model_dict,
 #     x_field='Time', #'Time'

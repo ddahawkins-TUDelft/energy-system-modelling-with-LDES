@@ -754,7 +754,7 @@ if __name__ == "__main__":
     ids_10y = filter_ids_by_year_span(ids_all, start_year=2010, end_year=2019)
 
     # 3) Bring in per-id tvp (from your notes log)
-    config_src = pd.read_csv("SoC_proxy_TSA/data/notes/log_10_yr_WandKTests.csv")
+    config_src = pd.read_csv("SoC_proxy_TSA/data/notes/log.csv")
     # Keep only needed cols; left-join to ensure we keep our filtered IDs
     df_ids = pd.DataFrame({"id": ids_10y})
     df_cfg = config_src[["id", "tvp"]]

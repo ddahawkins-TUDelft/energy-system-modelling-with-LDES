@@ -49,7 +49,7 @@ def apply_temporal_rte_to_soc(
     if check_cyclical:
         residual = soc_series.iloc[-1] - soc_series.iloc[0]
         if abs(residual) > 1e-6:
-            print(f"⚠ Warning: SoC not cyclical (end-start = {residual:.3e})")
+            print(f"[SoC Proxy] ⚠ Warning: SoC not cyclical (end-start = {residual:.3e})")
 
     if return_corrected_surplus:
         # delta SoC equals the original surplus (by definition)
@@ -151,7 +151,7 @@ def evaluate_lost_load(curta_factor: float, base_gen: np.ndarray, demand: np.nda
     _, lost_sum = allocate_circular_lifo(pos, neg, eta_ch, eta_dis)
     return lost_sum
 
-def compute_volatility_margin(base_gen: np.ndarray, demand: np.ndarray, k=0.08, min_m=0.01, max_m=0.08):
+def compute_volatility_margin(base_gen: np.ndarray, demand: np.ndarray, k=7.5e-2, min_m=3e-2, max_m=7e-2):
     """
     Simple, model-free margin from variability.
     vol = std(base_gen - demand) / mean(demand)
@@ -315,7 +315,7 @@ def decompose_surplus(
         charging_efficiency,
         discharging_efficiency,
         return_corrected_surplus=True,
-        check_cyclical=True
+        check_cyclical=False
     )
 
     df['soc_proxy_LDES'] = soc_LDES.values
@@ -409,7 +409,7 @@ def generate_soc_proxy(
 
     # Apply margin as extra curtailment headroom
     curtailment_factor = max(1e-3, c_star * (1.0 - margin))
-    print(f"[tuner] c*={c_star:.6f} lost={lost_final:.3e} | margin={margin:.3%} -> curtailment={curtailment_factor:.6f}")
+    print(f"[SoC Proxy] Tuner: c*={c_star:.6f} lost={lost_final:.3e} | margin={margin:.3%} -> curtailment={curtailment_factor:.6f}")
 
     # Final allocation using tuned curtailment
     g_curtailed = base_gen / curtailment_factor
@@ -447,7 +447,7 @@ def generate_soc_proxy(
     installed_caps_nominal = {tech: float(weights[i] * weighted_installed_capacity) for i, tech in enumerate(renewable_fields)}
     installed_caps_nominal['total'] = float(weighted_installed_capacity)
 
-    print(f"[timing] total = {time.time() - t0:.2f}s")
-    print(f"[curtailment] {curtailment_factor:.2%}")
+    # print(f"[timing] total = {time.time() - t0:.2f}s")
+    print(f"[SoC Proxy] curtailment forecast: {curtailment_factor:.2%}")
 
     return df, capacity_factors, installed_caps_nominal

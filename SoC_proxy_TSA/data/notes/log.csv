@@ -1,2 +1,6 @@
 tvp,scenario_name,model_name,dates,date_range,id
-SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,endo_test,"Medoid, k=30, Endogenous Correction","2010,2019",10,147a582c66b1931dbe1a
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2010,2019",10,20620bf17b74ea9e29f2
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2010,2019",10,a2ca0b5e9b22600076b6
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2010,2019",10,fac1dc4415be33f21fb4
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2010,2019",10,e9fd3d370fffcaa8f01d
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2010,2019",10,85dd8561a6684f7978d8

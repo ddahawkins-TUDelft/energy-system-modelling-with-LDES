@@ -23,9 +23,9 @@ from utility_functions.helper_model_config import standardised_model_config
 # =================== EDIT THESE DEFAULTS ===================
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
-DEFAULT_YEAR_RANGES: List[str] = ["2010-2019"]  
+DEFAULT_YEAR_RANGES: List[str] = ["2015-2024"]  
 shuffled_dir = "time_varying_parameters__"
-shuffled_source = ["shuffle_2011-2010-2008-2019-2017-2015-2012-2007-2018-2013__as_2010-2019__03"]
+shuffled_source = []
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -34,7 +34,7 @@ BASE_PARAMS: Dict[str, Any] = {
     "scenario_name": "standard",
     "calliope_full_log": (True,),          # helper uses [0] / (0)
     # Optionally:
-    "filename_time_varying_parameters": shuffled_dir+shuffled_source[0] if shuffled_source else None,
+    # "filename_time_varying_parameters": shuffled_dir+shuffled_source[0] if shuffled_source else None,
     # "dict_additional_overrides": {...},
 }
 
@@ -69,20 +69,17 @@ def main(ranges: List[str] | None = None) -> int:
     failures: List[Tuple[Tuple[int, int], Exception]] = []
 
     for start_year, end_year in year_ranges:
-        for source in shuffled_source:
+        # for source in shuffled_source:
             # Build params for this range (end year inclusive)
             params = deepcopy(BASE_PARAMS)
             params["horizon_start"] = f"{start_year}-01-01"
             params["horizon_end"] = f"{end_year}-12-31"
-            params['filename_time_varying_parameters'] = shuffled_dir+source
+            # params['filename_time_varying_parameters'] = shuffled_dir+source
 
-            print(f"\n=== Running {start_year}-{end_year}{f' ({source}) ' if source else ' '}===")
+            print(f"\n=== Running {start_year}-{end_year}===")
             try:
                 # Your helper returns (model, filename)
                 model, filename = standardised_model_config(params)
-
-                if source:
-                    filename = source+'.nc'
 
                 # Build, solve, save
                 model.build()

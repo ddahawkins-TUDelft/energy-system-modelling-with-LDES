@@ -33,7 +33,7 @@ def optimisation_dispatch(
 
     use_soc_proxy = tsa_config.params['soc_proxy']['use_soc_proxy']
     proxy_inputs = tsa_config.params['soc_proxy']['proxy_inputs_to_consider']
-    lambda_soc = float(tsa_config.params.get('lambda_soc', 0.5))
+    lambda_soc = float(tsa_config.params.get('lambda_soc', 0.5)['optimisation'])
     print('[TSA] Configuring MILP')
 
     # ======================== ENDOGENOUS MODE ======================== 

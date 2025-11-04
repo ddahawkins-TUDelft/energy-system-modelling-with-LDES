@@ -11,7 +11,7 @@ import pandas as pd
 
 
 
-scenarios = ['endo_test'] 
+scenarios = ['Sensitivity_W_reps30'] 
 show_soc = True
 date_range = [2010,2019]
 multisource = [
@@ -99,7 +99,10 @@ tsa_params = {
     #         'demand': 1,
     #         'proxy': 1,
     #     },
-    'lambda_soc': 0.5,
+    'lambda_soc': {
+        'cluster': None,
+        'optimisation': None
+    },
     'names_renewables': list(soc_proxy_params['capacity_weights'].keys()),
     'name_demand': ['demand_power'],
     'soc_proxy': {

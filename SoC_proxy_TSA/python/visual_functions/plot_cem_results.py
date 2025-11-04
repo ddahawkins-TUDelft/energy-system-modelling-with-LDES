@@ -174,7 +174,7 @@ data_W100 = {
         ],
 }
 
-config_src = pd.read_csv('SoC_proxy_TSA/data/notes/log.csv')
+config_src = pd.read_csv('SoC_proxy_TSA/data/notes/log_2010-2019.csv')
 config_src['number_reps'] = (
     config_src["model_name"]
     .str.extract(r"reps\s*=\s*(\d+)", expand=False)
@@ -186,14 +186,14 @@ config_src["W_proxy"] = (
     .astype(float)
 )
 tag = config_src["tvp"].str.extract(r"(?i)(shuffle[^/]*?)(?=\.csv\b)", expand=False)
-ref_tag = tag.fillna("standard_2006_2015_reference")
+ref_tag = tag.fillna("standard_2010_2019_reference")
 config_src["reference_path"] = "SoC_proxy_TSA/data/calliope_models/" + ref_tag + ".nc"
 
 df = config_src[['id','W_proxy','number_reps','reference_path']]
 
 #filter and control plot
-df=df[df['W_proxy']==0]
-df['x_axis'] = df['number_reps']
+# df=df[df['number_reps']==30]
+df['x_axis'] = df['W_proxy']
 
 # reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'
 

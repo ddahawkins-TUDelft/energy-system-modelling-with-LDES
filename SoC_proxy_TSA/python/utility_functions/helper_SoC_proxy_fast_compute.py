@@ -22,8 +22,10 @@ def compute_soc_proxy(surplus: np.ndarray, charging_eff: float, discharging_eff:
     The caller is responsible for providing the surplus time series they want integrated.
     """
     # surplus is already post-allocation (charge + discharge), so just integrate
-    return np.cumsum(surplus.astype(np.float64))
 
+    x = np.cumsum(surplus.astype(np.float64))
+
+    return  x
 
 def apply_temporal_rte_to_soc(
     df: pd.DataFrame,
@@ -48,8 +50,8 @@ def apply_temporal_rte_to_soc(
 
     if check_cyclical:
         residual = soc_series.iloc[-1] - soc_series.iloc[0]
-        if abs(residual) > 1e-6:
-            print(f"[SoC Proxy] ⚠ Warning: SoC not cyclical (end-start = {residual:.3e})")
+        if abs(residual) > 1e4:
+            print(f"[SoC Proxy] ⚠ Warning: SoC Proxy severely non-cyclical (end-start = {residual:.3e})")
 
     if return_corrected_surplus:
         # delta SoC equals the original surplus (by definition)
@@ -151,7 +153,7 @@ def evaluate_lost_load(curta_factor: float, base_gen: np.ndarray, demand: np.nda
     _, lost_sum = allocate_circular_lifo(pos, neg, eta_ch, eta_dis)
     return lost_sum
 
-def compute_volatility_margin(base_gen: np.ndarray, demand: np.ndarray, k=7.5e-2, min_m=3e-2, max_m=7e-2):
+def compute_volatility_margin(base_gen: np.ndarray, demand: np.ndarray, k=5e-2, min_m=2e-2, max_m=7e-2):
     """
     Simple, model-free margin from variability.
     vol = std(base_gen - demand) / mean(demand)
@@ -343,7 +345,7 @@ def generate_soc_proxy(
     timestamp_col: str = None,
     margin_mode: str = 'auto_volatility',          # 'fixed' | 'auto_volatility' | 'none'
     margin_value: float = 0.05,          # only used for 'fixed'
-    margin_bounds: tuple = (0.01, 0.09),  # clamp any margin we compute
+    margin_bounds: tuple = (0.02, 0.07),  # clamp any margin we compute
 ):
     """
     Takes time series data and returns SoC proxies for LDES and SDES.

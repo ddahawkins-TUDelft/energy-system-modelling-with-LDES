@@ -2,7 +2,7 @@ import calliope
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from utility_functions.helper_SoC_proxy_fast_compute_test import generate_soc_proxy
+from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
 

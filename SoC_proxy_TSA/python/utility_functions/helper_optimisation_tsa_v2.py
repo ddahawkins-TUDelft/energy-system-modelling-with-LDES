@@ -364,7 +364,10 @@ def _milp_tsa_core(
     m.dist_term_scaled = pyo.Expression(
         rule=lambda _m: sum(_m.x[i, j] * _m.D[i, j] for i in _m.I for j in _m.J) / dist_scale
     )
-
+    if verbose:
+        print(f'[TSA] Optimisation Lambda-SoC set to {lambda_soc}') 
+        #TODO would be so much better with a dynamic lambda, given that we are less confident in the soc near 0, 
+        # we could encourage the model to focus on timeseries errors here rather than the proxy
     if use_soc:
         prox_scale = max(1e-12, float(np.max(np.abs(soc_ref)))) * b_avg
         b_for_Tz = {int(t): float(b_full[int(t)]) for t in T_pos}

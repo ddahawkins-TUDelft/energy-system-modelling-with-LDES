@@ -355,8 +355,9 @@ class tsa_model:
         return result
     
     def _compute_weights_dictionary(self):
-        λ = self.tsa.params.get("lambda_soc", None)
-        λ = max(0.0, min(1.0, float(λ)))
+        λ_dict = self.tsa.params.get("lambda_soc", None)
+
+        λ = max(0.0, min(1.0, float(λ_dict['cluster'])))
 
         names_ren = list(self.tsa.params.get('names_renewables', []))
         names_dem = list(self.tsa.params.get('name_demand', []))

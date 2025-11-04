@@ -11,9 +11,9 @@ import pandas as pd
 
 
 
-scenarios = ['Sensitivity_W_reps7','Sensitivity_W_reps14','Sensitivity_W_reps21','Sensitivity_W_reps30','Sensitivity_W_reps90','Sensitivity_W_reps180'] 
+scenarios = ['endo_test'] 
 show_soc = True
-date_range = [2006,2015]
+date_range = [2010,2019]
 multisource = [
     'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
     # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv',
@@ -205,12 +205,12 @@ list_model_dict.append({
 
 
 print('> Dispatch: Visualising results')
-# visualise(
-#     list_model_dict=list_model_dict,
-#     x_field='Time', #'Time'
-#     y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-#     # colour_field='MAGMe',
-#     # show_tsa_internal_surplus_accumulation=True,
-#     # save_fig=True
-# )
+visualise(
+    list_model_dict=list_model_dict,
+    x_field='Time', #'Time'
+    y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
+    # colour_field='MAGMe',
+    # show_tsa_internal_surplus_accumulation=True,
+    # save_fig=True
+)
 

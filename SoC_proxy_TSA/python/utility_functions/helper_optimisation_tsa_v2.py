@@ -641,4 +641,6 @@ def save_milp_result_to_cluster_map(result: dict, dates_index: pd.DatetimeIndex,
     mapping_df = mapping_df.reset_index()
     mapping_df["timesteps"] = mapping_df["timesteps"].dt.strftime("%Y-%m-%d")
     mapping_df["PeriodNum"] = mapping_df["PeriodNum"].dt.strftime("%Y-%m-%d")
-    mapping_df.set_index('timesteps').to_csv(output_path)
+    mapping_df.set_index('timesteps', inplace=True)
+    mapping_df.to_csv(output_path)
+    print('[TSA] Saved Cluster Map')

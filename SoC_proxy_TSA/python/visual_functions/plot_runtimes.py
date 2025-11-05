@@ -165,4 +165,5 @@ ax.spines["right"].set_visible(False)
 ax.legend(title="Clustering", frameon=False, bbox_to_anchor=(1.02, 1), loc="upper left")
 
 fig.tight_layout()
+fig.savefig("runtimes.pdf", dpi=600, bbox_inches="tight")
 plt.show()

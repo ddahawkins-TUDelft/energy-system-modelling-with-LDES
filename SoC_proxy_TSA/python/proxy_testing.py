@@ -1,14 +1,22 @@
 import calliope
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import numpy as np
 
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
 
-ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc', ["2010-01-01", "2019-12-31"] #'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc'
-# ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
+ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc', ["2010-01-01", "2019-12-31"]
 
+mpl.rcParams.update({
+    "text.usetex": True,
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "axes.unicode_minus": False,
+})
+mpl.rcParams["pgf.preamble"] = r""
 
 tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'
 DEMAND_FIELD = "demand_power"
@@ -23,12 +31,9 @@ SOC_PROXY_PARAMS = {
 ref_model = calliope.read_netcdf(ref_path)
 
 # Colors
-COLOUR_R = "#0d0887"   # Pearson r
-COLOUR_E = "#6a00a8"   # RMSE
-COLOUR_EC = "#b12a90"  # Combined
-COLOUR_TM = "#e16462"  # Timing of maxima
-COLOUR_5 = "#fca636"  
-COLOUR_MM = "#f0f921" # Magnitude of maxima
+COLOUR_R = "#0d0887"   # CEM
+COLOUR_EC = "#b12a90"  # proxy
+ANNOT_COLOUR = "0.2"   # dark grey
 
 def _build_proxy(df: pd.DataFrame, demand_field: str, params) -> pd.Series:
     df_proxy, _, _ = generate_soc_proxy(
@@ -42,34 +47,103 @@ def _build_proxy(df: pd.DataFrame, demand_field: str, params) -> pd.Series:
     )
     return df_proxy["soc_proxy_LDES"].rename("soc_proxy_LDES")
 
+# load tvp + proxy
 df_ref_ts = _load_timeseries_reference(tvp_csv, TS_WINDOW)
 soc_ref_proxy = _build_proxy(df_ref_ts, DEMAND_FIELD, SOC_PROXY_PARAMS)
-
 df_ref_ts['soc_proxy_LDES'] = soc_ref_proxy
 
+# load CEM storage
 df_storage = (
-        ref_model.results["storage"].fillna(0).to_series().dropna().to_frame("soc").reset_index()
-        .drop(columns=["nodes"], errors="ignore")
-    )
-
-df_storage=df_storage[df_storage['techs']=='h2_salt_cavern']
+    ref_model.results["storage"]
+    .fillna(0)
+    .to_series()
+    .dropna()
+    .to_frame("soc")
+    .reset_index()
+    .drop(columns=["nodes"], errors="ignore")
+)
+df_storage = df_storage[df_storage['techs'] == 'h2_salt_cavern']
 df_storage.set_index('timesteps', inplace=True)
 
+# scale to TWh
+cem_soc = (df_storage["soc"] * 1e-7).rename("cem_soc")
+proxy_soc = (df_ref_ts["soc_proxy_LDES"] * 1e-7).rename("proxy_soc")
 
-fig = plt.figure(figsize=(12, 6))
+fig = plt.figure(figsize=(12, 4))
 ax = fig.add_subplot(1, 1, 1)
 ax.set_axisbelow(True)
 
-ax.plot(df_ref_ts.index, df_ref_ts["soc_proxy_LDES"],
-           label="proxy",
-           color=COLOUR_TM, linewidth=1.2)
-ax.plot(df_storage.index, df_storage["soc"],
-           label="soc",
-           color=COLOUR_R, linewidth=1.2)
+ax.plot(cem_soc.index, cem_soc,
+        label="SoC (CEM)",
+        color=COLOUR_R, linewidth=1.2)
+ax.plot(proxy_soc.index, proxy_soc,
+        label="SoC Proxy",
+        color=COLOUR_EC, linewidth=1.2, linestyle='dashed')
 
-ax.set_ylabel('SoC')
+ax.set_ylabel('State of Charge (TWh)')
 ax.set_xlabel('Time')
-ax.yaxis.grid(True, which='major', linestyle=':', alpha=0.6)
+ax.xaxis.grid(True, which='major', linestyle=':', alpha=0.6)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
 ax.legend(loc='best', frameon=False)
+
+# ------------------------
+# 1) peak annotations
+# ------------------------
+# CEM peak
+cem_peak_ts = cem_soc.idxmax()
+cem_peak_val = cem_soc.max()
+
+ax.annotate(
+    f"SoC (CEM)\nmax={cem_peak_val:.2f} TWh\n{cem_peak_ts.date()}",
+    xy=(cem_peak_ts, cem_peak_val),
+    xytext=(30, 0),  
+    textcoords="offset points",
+    ha="left",
+    va="center",
+    bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=ANNOT_COLOUR, lw=0.8),
+    arrowprops=dict(arrowstyle="->", color=ANNOT_COLOUR, lw=0.8),
+    color=ANNOT_COLOUR,
+)
+
+# Proxy peak
+proxy_peak_ts = proxy_soc.idxmax()
+proxy_peak_val = proxy_soc.max()
+
+ax.annotate(
+    f"SoC Proxy\nmax={proxy_peak_val:.2f} TWh\n{proxy_peak_ts.date()}",
+    xy=(proxy_peak_ts, proxy_peak_val),
+    xytext=(30, 0), 
+    textcoords="offset points",
+    ha="left",
+    va="center",
+    bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=ANNOT_COLOUR, lw=0.8),
+    arrowprops=dict(arrowstyle="->", color=ANNOT_COLOUR, lw=0.8),
+    color=ANNOT_COLOUR,
+)
+
+# ------------------------
+# 2) RMSE and Pearson r
+# ------------------------
+# align on common index
+aligned = pd.concat([cem_soc, proxy_soc], axis=1).dropna()
+rmse = np.sqrt(((aligned["cem_soc"] - aligned["proxy_soc"]) ** 2).mean())
+pearson_r = aligned["cem_soc"].corr(aligned["proxy_soc"])
+
+# ymax = ax.get_ylim()[1]
+text_x = pd.to_datetime("2010-01-01") - pd.DateOffset(months=4)
+text_y = 0
+
+ax.text(
+    text_x,
+    text_y,
+    f"RMSE = {rmse:.3f} TWh\nPearon R = {pearson_r:.3f}",
+    ha="left",
+    va="bottom",
+    color=ANNOT_COLOUR,
+    bbox=dict(boxstyle="round,pad=0.3", fc="white", ec='white', lw=0.8),
+)
+
 fig.tight_layout()
 plt.show()
+fig.savefig('soc_proxy_comparison.pdf', dpi=600, bbox_inches="tight")

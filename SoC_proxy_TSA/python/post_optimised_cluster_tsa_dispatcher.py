@@ -9,21 +9,28 @@ import pandas as pd
 
 
 
+# -------------------------------------------------------------------------------------------
+# ----------------------------------- CONFIGURE ----------------------------------------------
 
-
-scenarios = ['Sensitivity_W_reps30'] 
 show_soc = True
-date_range = [2010,2019]
-multisource = [
-    'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
-    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2006-2010-2012-2018-2019-2017-2016-2009-2007-2013__as_2010-2019__06.csv',
-    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2015-2014-2012-2009-2018-2019-2008-2013-2007-2017__as_2010-2019__01.csv',
-    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2013-2012-2015-2017-2014-2016-2019-2011-2006__as_2010-2019__02.csv',
-    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2011-2010-2008-2019-2017-2015-2012-2007-2018-2013__as_2010-2019__03.csv',
-    # 'SoC_proxy_TSA/data/timeseries/time_varying_parameters__shuffle_2009-2011-2008-2015-2007-2014-2012-2006-2017-2010__as_2010-2019__05.csv',
+show_visual = False
+
+scenarios = ['Sensitivity_W_reps30','Sensitivity_W_reps45','Sensitivity_W_reps60'] 
+dispatch_config = [
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
 ]
 
+# for running the shorter horizon models too
+for i in range(2006,2021,1):
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
+for i in range(2006,2024,1):
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
 
+
+# -------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
 
 def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str = None):
 
@@ -69,7 +76,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str 
 calliope_params = {
         'type': 'cluster',
         'config_yaml_name': 'model',
-        'date_range': date_range,
+        'date_range': 'error',
         'calliope_full_log': [False, False],
 }
 
@@ -133,12 +140,13 @@ with open('SoC_proxy_TSA/model_config/batch_run_config.yaml','r') as f:
 #loop over the model runs, update parameters, and run
 list_model_dict = []
 
-if not multisource:
-    multisource=['']
-
 cases_log = []
 
-for tvp_source in multisource:
+for dispatch in dispatch_config:
+
+    tvp_source = dispatch[0]
+    date_range = dispatch[1]
+
     for scenario_name, scenario_batch in batch_config.items():
         if scenario_name in scenarios:
             print( ' ------------------------------------------------------- ')
@@ -155,7 +163,7 @@ for tvp_source in multisource:
                 soc_proxy_p = deepcopy(soc_proxy_params)
                 tsa_p = deepcopy(tsa_params)
 
-
+                calliope_p['date_range']= date_range
 
                 if config['calliope_params']:
                     for key, value in config['calliope_params'].items():
@@ -188,32 +196,34 @@ df = pd.DataFrame(cases_log)
 df.to_csv("SoC_proxy_TSA/data/notes/log.csv", index=False)    
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
-print(f'[Dispatch] Loading reference standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc')
+
 #add the reference case
 
-ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{calliope_params['date_range'][0]}_{calliope_params['date_range'][-1]}_reference.nc'
-# if multisource:
-#     before, sep, after = multisource[-1].partition('shuffle_')
-#     ref_path = f'SoC_proxy_TSA/data/calliope_models/{f'{sep}{after}'.removesuffix('.csv')}.nc' 
+if len(dispatch_config)<=1:
+    
+    print(f'[Dispatch] Loading reference standard_{date_range[0]}_{date_range[-1]}_reference.nc')
+    ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{date_range[0]}_{date_range[-1]}_reference.nc'
 
-list_model_dict.append({
-    'model': calliope.read_netcdf(ref_path),
-    'name': 'reference',
-    'params': {
-        'date_range': calliope_params['date_range'],
-        'path_timeseries': 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
-        'soc_proxy_params': soc_proxy_params
-    },
-})
+    list_model_dict.append({
+        'model': calliope.read_netcdf(ref_path),
+        'name': 'reference',
+        'params': {
+            'date_range': date_range,
+            'path_timeseries': 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
+            'soc_proxy_params': soc_proxy_params
+        },
+    })
 
 
-print('> Dispatch: Visualising results')
-visualise(
-    list_model_dict=list_model_dict,
-    x_field='Time', #'Time'
-    y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-    # colour_field='MAGMe',
-    # show_tsa_internal_surplus_accumulation=True,
-    # save_fig=True
-)
+
+if show_visual:
+    print('> Dispatch: Visualising results')
+    visualise(
+        list_model_dict=list_model_dict,
+        x_field='Time', #'Time'
+        y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
+        # colour_field='MAGMe',
+        # show_tsa_internal_surplus_accumulation=True,
+        # save_fig=True
+    )
 

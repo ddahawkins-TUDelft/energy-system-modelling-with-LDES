@@ -12,7 +12,7 @@ def _format_standard_calliope_ts(df: pd.DataFrame):
 
 def calliope_ts_to_pandas(source: str, date_range_lower_bound: str="", date_range_upper_bound: str=""):
     # import timeseries
-    df_timeseries = pd.read_csv(source)
+    df_timeseries = pd.read_csv(source, low_memory=False)
     # reformat
     index_header = df_timeseries[df_timeseries.iloc[:,0].str.contains('techs')].index[0] #identify row containing new header
     df_timeseries.iloc[index_header,0]='timesteps'

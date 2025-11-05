@@ -9,210 +9,39 @@ import calliope
 from netCDF4 import Dataset
 import  yaml
 import re
+import matplotlib.ticker as mtick
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
 
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
-# mpl.rcParams["pgf.preamble"] = r""
 
-#WEIGHTS
-# data = {
-#     'id': [
-#         '2109cf7332b1ea3a0da4',
-#         'bbf3cd4af8938c879500',
-#         'eae28782795d48106d25',
-#         '1fde1fb23ae1a3833840',
-#         '788f5e7bbbe933d3e33a',
-#         '128bd3193cc9c5e26017',
-#         'c2da63c2dcb882131614',
-#         '1dff92aac973a8452fdc',
-#         ],
-#     'model_code': [
-#         'cTSA-5Y-N-30reps',
-#         'cTSA-5Y-EXO-1-30reps',
-#         'cTSA-5Y-EXO-2-30reps',
-#         'cTSA-5Y-EXO-5-30reps',
-#         'cTSA-5Y-EXO-10-30reps',
-#         'cTSA-5Y-EXO-20-30reps',
-#         'cTSA-5Y-EXO-50-30reps',
-#         'cTSA-5Y-EXO-100-30reps',
-#         ],
-#     'x_axis': [
-#         'No Proxy \\ ($W_x=0$)',
-#         '1',
-#         '2',
-#         '5',
-#         '10',
-#         '20',
-#         '50',
-#         '100',
-#         ],
-# }
-
-#REP PERIODS
-# data1 = {
-#     'id': [
-#         '71f6bd7158cb670f2e0d',
-#         '1ab7b1245bf0459d20e3',
-#         'b5d0294cc4725e0b5fb3',
-#         '2109cf7332b1ea3a0da4',
-#         'a4bc361bbdd602d1f8bf',
-#         'cf9e8507a51148b889f5'
-#         ],
-#     # 'model_code': [  ],
-#     'x_axis': [
-#         '7',
-#         '14',
-#         '21',
-#         '30',
-#         '90',
-#         '180'
-#         ],
-# }
-
-# data2 = {
-#     'id': [
-#         'b437c28cf906b3e0e339',
-#         'e3ee4018d873017ef7f3',
-#         'e0b396f4839af82bf3ac',
-#         '1dff92aac973a8452fdc',
-#         '06711f9352a6f7bf1512',
-#         'c396ef70d36ebf8ce5ba'
-#         ],
-#     # 'model_code': [  ],
-#     'x_axis': [
-#         '7',
-#         '14',
-#         '21',
-#         '30',
-#         '90',
-#         '180'
-#         ],
-# }
-
-#HORIZON
-data_W0 = {
-    'id': [
-        '335a40cd19b374f1ed6f',
-        '0f49dc7c37f9d646212d',
-        '83f3c65716fa5b47d9f9',
-        '41de038bec87dd0d8e84',
-        '92b7061598c3f69bb108',
-        'e4417bf9d379a3e356e2',
-        '8ea80cd72bb2392d18d9',
-        '2b88b9fbb4fea53c79eb',
-        '565f355a199f1bb5c2f5',
-        'f1e8140151977e99b1fe',
-        'fa9a32277b03eabfac1d',
-        '36dc45ae7f5c93877888',
-        '40a83e7bedc42a78f160',
-        'ced28461d126ce84e4eb',
-        '6e89773e98ee102ab1fa',
-        '2109cf7332b1ea3a0da4'
-        ],
-    # 'model_code': [  ],
-    'x_axis': [
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '5',
-        '5',
-        '5',
-        '5',
-        '5',
-        '5',
-        '10'
-        ],
-}
-
-data_W100 = {
-    'id': [
-        'a0bcf289ef6025755e82',
-        'd5fd3fe4ee6854351e22',
-        '474dde81a56edeec554d',
-        '4493f9e8b6bd2cfef43e',
-        'f0cc18e55ec12ea8423d',
-        '1f5fce2c65a9d1e0b441',
-        'ea32ba119af0c67f0759',
-        '7c70d7a35809cf98d19a',
-        '11ff6bf669c7a5d7f31d',
-        '517ea7feadacf73d1f1d',
-        '4f0b0824a2e3dc838304',
-        'e2234a54147b5968c63f',
-        '31c2f6660b3e828eb565',
-        '903b15aa6bc4d989b145',
-        '823ac03029d0c3b8ad59',
-        '1dff92aac973a8452fdc'
-        ],
-    # 'model_code': [  ],
-    'x_axis': [
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '2',
-        '5',
-        '5',
-        '5',
-        '5',
-        '5',
-        '5',
-        '10'
-        ],
-}
-
-config_src = pd.read_csv('SoC_proxy_TSA/data/notes/log_2010-2019.csv')
-config_src['number_reps'] = (
-    config_src["model_name"]
-    .str.extract(r"reps\s*=\s*(\d+)", expand=False)
-    .astype("Int64")   # nullable integer dtype
-)
-config_src["W_proxy"] = (
-    config_src["model_name"]
-    .str.extract(r"W_proxy\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)", expand=False)
-    .astype(float)
-)
-tag = config_src["tvp"].str.extract(r"(?i)(shuffle[^/]*?)(?=\.csv\b)", expand=False)
-ref_tag = tag.fillna("standard_2010_2019_reference")
-config_src["reference_path"] = "SoC_proxy_TSA/data/calliope_models/" + ref_tag + ".nc"
-
-df = config_src[['id','W_proxy','number_reps','reference_path']]
-
-#filter and control plot
-# df=df[df['number_reps']==30]
-df['x_axis'] = df['W_proxy']
-
-# reference_model = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc'
+mpl.rcParams.update({
+    "text.usetex": True,
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "axes.unicode_minus": False,
+})
+mpl.rcParams["pgf.preamble"] = r""
 
 colour_1 = '#0D0887'   
-colour_2 = '#CC4778' 
+colour_2 = '#CC4778'
+colour_3 = '#fdb42f'
 
 def cem_results(df):
 
-    # reference
     
-
-
+ 
     list_power_cap_mean_errors = []
     list_ldes_cap_error = []
 
     for model in df.itertuples(index=True):
-        print(f'Extracting info for {model.id}')
+        
 
-        model_reference = calliope.read_netcdf(model.reference_path)
+        # reference
+        start_year, end_year = model.dates.split(",")
+        ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{start_year}_{end_year}_reference.nc'
+
+        model_reference = calliope.read_netcdf(ref_path)
         power_caps_reference, energy_caps_reference = get_capacities(model_reference)
         
         model_test = read_clustered_netcdf(f"SoC_proxy_TSA/data/calliope_models/{model.id}.nc")
@@ -222,11 +51,14 @@ def cem_results(df):
         _, e_mean_power = relative_error(power_caps_reference, power_caps_test)
         e_storage,_ = relative_error(energy_caps_reference, energy_caps_test)
 
+        print(f'Extracted info for {model.id}, ldes_e={e_storage['h2_salt_cavern']}, macme={e_mean_power}')
+
         list_power_cap_mean_errors.append(e_mean_power)
-        list_ldes_cap_error.append(np.abs(e_storage['h2_salt_cavern']))
+        list_ldes_cap_error.append(e_storage['h2_salt_cavern'])
 
     df.insert(0,'macme',list_power_cap_mean_errors)
     df.insert(0,'ldes_error',list_ldes_cap_error)
+
     return df
 
 def read_clustered_netcdf(path):
@@ -286,49 +118,280 @@ def relative_error(df_ref, df_test):
     return e, e_mean_abs
 
 
-figure_save_path = 'CEM vs W.pdf'
+config_src = pd.read_csv('SoC_proxy_TSA/data/notes/log.csv')
+config_src['number_reps'] = (
+    config_src["model_name"]
+    .str.extract(r"reps\s*=\s*(\d+)", expand=False)
+    .astype("Int64")   # nullable integer dtype
+)
+config_src["W_proxy"] = (
+    config_src["model_name"]
+    .str.extract(r"W_proxy\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)", expand=False)
+    .astype(float)
+)
+# tag = config_src["tvp"].str.extract(r"(?i)(shuffle[^/]*?)(?=\.csv\b)", expand=False)
+# ref_tag = tag.fillna("standard_2010_2019_reference")
+# config_src["reference_path"] = "SoC_proxy_TSA/data/calliope_models/" + ref_tag + ".nc"
 
+df = config_src[['id','dates','W_proxy','number_reps']]
+x_axis ='W_proxy'
 
+#filter and control plot
+# df=df[df['number_reps']==30]
 
 
 df = cem_results(df)
-# df2 = cem_results(df2,reference_model)
+
+df_plot = df[(df["W_proxy"] >= 0.5) & (df["number_reps"] >= 30)].copy()
+
+# 1. get unique x values in order of appearance
+x_vals = df_plot[x_axis].unique().tolist()
+x_map = {val: i for i, val in enumerate(x_vals)}
+
+# 2. make a numeric x column
+df_plot["x_num"] = df_plot[x_axis].map(x_map)
+
+# 3. jitter
+jitter_width = 0.12
+df_plot["_jitter"] = 0.0
+for xnum in df_plot["x_num"].unique():
+    mask = df_plot["x_num"] == xnum
+    n = mask.sum()
+    if n == 1:
+        offsets = np.array([0.0])
+    else:
+        offsets = np.linspace(-jitter_width, jitter_width, n)
+    df_plot.loc[mask, "_jitter"] = offsets
+
+x_plot = df_plot["x_num"] + df_plot["_jitter"]
+
+fig, ax = plt.subplots(figsize=(6, 4))
 
 
-# 1) mask: True = shuffled/artificial, False = real
-mask_shuffle = df["reference_path"].str.contains(r"shuffle", case=False, na=False)
 
-# 2) split views
-real    = df[~mask_shuffle]
-shuf    = df[mask_shuffle]
+ax.scatter(
+    x_plot,
+    df_plot["macme"],
+    color=colour_1,
+    label=r'MACME, $\overline{\epsilon^C}$',
+    alpha=0.8,
+    edgecolor="white",
+    linewidth=0.0,
+)
+ax.scatter(
+    x_plot,
+    df_plot["ldes_error"],
+    color=colour_2,
+    label=r'LDES Cap. Error, $\epsilon^C_{\mathrm{LDES}}$',
+    alpha=0.8,
+    edgecolor="white",
+    linewidth=0.0,
+)
 
-fig = plt.figure(figsize=(6, 4))
-ax = fig.add_subplot(1, 1, 1)
-ax.set_axisbelow(True)
+mean_line_width = 0.2
+grouped = df_plot.groupby(x_axis)
+for label, g in grouped:
+    xnum = x_map[label]
+    macme_mean = g["macme"].mean()
+    ldes_mean = g["ldes_error"].mean()
 
-# --- macme series (colour_1) ---
-# real (filled)
-ax.scatter(real["x_axis"], real["macme"],
-           label=r'$\overline{\epsilon^C}$',
-           color=colour_1, linewidth=1.2)
-# shuffled (hollow)
-ax.scatter(shuf["x_axis"], shuf["macme"],
-           label="_nolegend_",                 # avoid duplicate legend entry
-           edgecolors=colour_1, facecolors='none', linewidth=1.2)
+    ax.hlines(macme_mean, xnum - mean_line_width, xnum + mean_line_width,
+              colors=colour_1, linewidth=2)
+    ax.hlines(ldes_mean, xnum - mean_line_width, xnum + mean_line_width,
+              colors=colour_2, linewidth=2)
 
-# --- LDES series (colour_2) ---
-# real (filled)
-ax.scatter(real["x_axis"], real["ldes_error"],
-           label=r'$\epsilon^C_{\mathrm{LDES}}$',
-           color=colour_2, linewidth=1.2)
-# shuffled (hollow)
-ax.scatter(shuf["x_axis"], shuf["ldes_error"],
-           label="_nolegend_",
-           edgecolors=colour_2, facecolors='none', linewidth=1.2)
+# ticks from filtered x_vals
+ax.set_xticks(range(len(x_vals)))
+ax.set_xticklabels([rf'${v}$ Days' for v in x_vals])
 
-ax.set_ylabel('Error')
-ax.set_xlabel('Horizon (Years)')
-ax.yaxis.grid(True, which='major', linestyle=':', alpha=0.6)
-ax.legend(loc='best', frameon=False)
+# y limits based on filtered data
+ymax = max(df_plot["macme"].max(), df_plot["ldes_error"].max())
+ymin = min(df_plot["macme"].min(), df_plot["ldes_error"].min())
+ymax_rounded = np.ceil(ymax * 10) / 10.0
+ymin_rounded = np.floor(ymin * 10) / 10.0
+ax.set_ylim(ymin_rounded, ymax_rounded)
+
+ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
+ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+
+ax.set_xlabel('Proxy Weight' if x_axis == 'W_proxy' else 'Number of Representative Days')
+ax.set_ylabel("Error")
+ax.legend(frameon=False)
+ax.grid(axis="y", linestyle=":", alpha=0.6)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
 fig.tight_layout()
 plt.show()
+
+# fig, ax = plt.subplots(figsize=(6, 4))
+
+# # mask for W_proxy == 0
+# mask_zero = df_plot["W_proxy"] == 0
+# mask_nonzero = ~mask_zero
+
+# # base coords
+# x_all = x_plot
+# y_macme = df_plot["macme"]
+# y_ldes = df_plot["ldes_error"]
+
+# # 1) MACME, nonzero W -> filled
+# ax.scatter(
+#     x_all[mask_nonzero],
+#     y_macme[mask_nonzero],
+#     color=colour_1,
+#     alpha=0.8,
+#     edgecolor="white",
+#     linewidth=0.0,
+# )
+
+# # 2) MACME, W == 0 -> hollow, blue edge
+# ax.scatter(
+#     x_all[mask_zero],
+#     y_macme[mask_zero],
+#     facecolors="white",
+#     edgecolors=colour_1,
+#     linewidth=1.0,
+# )
+
+# # 3) LDES, nonzero W -> filled
+# ax.scatter(
+#     x_all[mask_nonzero],
+#     y_ldes[mask_nonzero],
+#     color=colour_2,
+#     alpha=0.8,
+#     edgecolor="white",
+#     linewidth=0.0,
+# )
+
+# # 4) LDES, W == 0 -> hollow, magenta edge
+# ax.scatter(
+#     x_all[mask_zero],
+#     y_ldes[mask_zero],
+#     facecolors="white",
+#     edgecolors=colour_2,
+#     linewidth=1.0,
+# )
+
+# # means (same as before)
+# mean_line_width = 0.2
+# grouped = df_plot.groupby(x_axis)
+# for label, g in grouped:
+#     xnum = x_map[label]
+#     macme_mean = g["macme"].mean()
+#     ldes_mean = g["ldes_error"].mean()
+
+#     ax.hlines(macme_mean, xnum - mean_line_width, xnum + mean_line_width,
+#               colors=colour_1, linewidth=2)
+#     ax.hlines(ldes_mean, xnum - mean_line_width, xnum + mean_line_width,
+#               colors=colour_2, linewidth=2)
+
+# # x-ticks
+# ax.set_xticks(range(len(x_vals)))
+# ax.set_xticklabels([rf'${v}$ Days' for v in x_vals])
+
+# # y-lims
+# ymax = max(df_plot["macme"].max(), df_plot["ldes_error"].max())
+# ymin = min(df_plot["macme"].min(), df_plot["ldes_error"].min())
+# ymax_rounded = np.ceil(ymax * 10) / 10.0
+# ymin_rounded = np.floor(ymin * 10) / 10.0
+# ax.set_ylim(ymin_rounded, ymax_rounded)
+
+# ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
+# ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+
+# ax.set_xlabel('Proxy Weight')
+# ax.set_ylabel("Error")
+
+# # ---- manual legend ----
+# legend_handles = [
+#     Line2D([0], [0], marker='o', color='none', markerfacecolor=colour_1,
+#            markeredgecolor='white', label=r'MACME, $\overline{\epsilon^C}$'),
+#     Line2D([0], [0], marker='o', color='none', markerfacecolor=colour_2,
+#            markeredgecolor='white', label=r'LDES Cap. Error, $\epsilon^C_{\mathrm{LDES}}$'),
+#     Line2D([0], [0], marker='o', color='none', markerfacecolor='white',
+#            markeredgecolor='grey', label=r'$W_x = 0$'),
+# ]
+# ax.legend(handles=legend_handles, frameon=False)
+
+# ax.grid(axis="y", linestyle=":", alpha=0.6)
+# ax.spines['top'].set_visible(False)
+# ax.spines['right'].set_visible(False)
+# fig.tight_layout()
+# plt.show()
+
+# fig.savefig('CEM_vs_K_masks.pdf', dpi=600, bbox_inches="tight")
+
+# ---- HEATMAP OF LDES ERROR ----
+
+# 1. absolute error
+df["ldes_abs"] = df["ldes_error"].abs()
+
+# 2. pivot: rows = number_reps, cols = W_proxy
+# you can sort to keep it tidy
+pivot = (
+    df.pivot_table(
+        index="number_reps",
+        columns="W_proxy",
+        values="ldes_abs",
+        aggfunc="mean"
+    )
+    .sort_index(axis=0)   # sort number_reps
+    .sort_index(axis=1)   # sort W_proxy
+)
+
+# pivot already defined above
+data = pivot.values
+
+# 1) pick bin step (5% = 0.05)
+step = 0.05
+
+# 2) find max and round up to nearest step
+data_max = np.nanmax(data)
+max_rounded = np.ceil(data_max / step) * step  # e.g. 0.49 -> 0.50
+
+# 3) build boundaries: 0, 0.05, 0.10, ... max_rounded
+boundaries = np.arange(0, max_rounded + step, step)
+
+# 4) get plasma and sample as many colors as bins-1
+plasma = plt.get_cmap("plasma")
+n_colors = len(boundaries) - 1
+colors = plasma(np.linspace(0, 1, n_colors))
+cmap_discrete = mcolors.ListedColormap(colors)
+
+# 5) norm that maps data into these bins
+norm = mcolors.BoundaryNorm(boundaries, ncolors=cmap_discrete.N)
+
+fig_h, ax_h = plt.subplots(figsize=(6, 4))
+
+im = ax_h.imshow(
+    data,
+    cmap=cmap_discrete,
+    norm=norm,
+    origin="lower",
+    aspect="auto",
+)
+
+# ticks & labels
+x_vals = pivot.columns.tolist()
+y_vals = pivot.index.tolist()
+ax_h.set_xticks(range(len(x_vals)))
+ax_h.set_xticklabels([rf'$W_x={x}$' for x in x_vals])
+ax_h.set_yticks(range(len(y_vals)))
+ax_h.set_yticklabels([f"{y} days" for y in y_vals])
+
+# hide tick lines
+ax_h.tick_params(axis="x", length=0)
+ax_h.tick_params(axis="y", length=0)
+
+ax_h.set_xlabel("Proxy weight")
+ax_h.set_ylabel("Number of Representative Days")
+
+# 6) discrete colorbar
+cbar = fig_h.colorbar(im, ax=ax_h, boundaries=boundaries, ticks=boundaries)
+cbar.ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+cbar.set_label("Absolute LDES Capacity Error", rotation=90, labelpad=10)
+
+fig_h.tight_layout()
+plt.show()
+
+fig_h.savefig("LDES_heatmap.pdf", dpi=600, bbox_inches="tight")

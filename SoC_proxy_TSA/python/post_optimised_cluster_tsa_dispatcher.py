@@ -13,20 +13,20 @@ import pandas as pd
 # ----------------------------------- CONFIGURE ----------------------------------------------
 
 show_soc = True
-show_visual = False
+show_visual = True
 
-scenarios = ['Sensitivity_W_reps30','Sensitivity_W_reps45','Sensitivity_W_reps60'] 
+scenarios = ['exo_test'] 
 dispatch_config = [
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
 ]
 
 # for running the shorter horizon models too
-for i in range(2006,2021,1):
-    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
-for i in range(2006,2024,1):
-    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
+# for i in range(2006,2021,1):
+#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
+# for i in range(2006,2024,1):
+#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
 
 
 # -------------------------------------------------------------------------------------------

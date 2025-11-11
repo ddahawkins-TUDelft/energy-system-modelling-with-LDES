@@ -113,17 +113,17 @@ class tsa_model:
         self.paths['parameters'] = f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}/{self.id}.json"
         
         #here we copy the source timeseries data into the model's directory and reassign the path id
-        ts_dir = f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}"
-        if not os.path.exists(ts_dir):
-            os.makedirs(ts_dir)
-        dest = f"{ts_dir}/{self.id}.csv"
-        if not os.path.exists(dest):
-            shutil.copy2(self.paths['timeseries'], dest)
-        else:
-            if not os.path.exists(self.paths['cluster_map']):
-                print('[Dispatch] timeseries file was overwritten as clustermap does not exist yet.')
+        # ts_dir = f"{self.paths['directory']}/{self.paths['subdirectories']['timeseries']}"
+        # if not os.path.exists(ts_dir):
+        #     os.makedirs(ts_dir)
+        # dest = f"{ts_dir}/{self.id}.csv"
+        # if not os.path.exists(dest):
+        #     shutil.copy2(self.paths['timeseries'], dest)
+        # else:
+        #     if not os.path.exists(self.paths['cluster_map']):
+        #         print('[Dispatch] timeseries file was overwritten as clustermap does not exist yet.')
 
-        self.paths['timeseries'] = dest
+        # self.paths['timeseries'] = dest
         
 
     #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------

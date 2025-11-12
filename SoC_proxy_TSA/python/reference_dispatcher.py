@@ -24,18 +24,14 @@ from utility_functions.helper_model_config import standardised_model_config
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
 DEFAULT_YEAR_RANGES: List[str] = [
-    "2006-2010",
-    "2007-2011",
-    "2008-2012",
-    "2009-2013",
-    "2016-2020",
-    "2017-2021",
-    "2018-2022",
-    "2019-2023",
-    "2020-2024"
+    # "2001-2010",
+    # "2010-2019",
+    "2006-2015",
+    "2015-2024",
     ]  
 shuffled_dir = "time_varying_parameters__"
 shuffled_source = []
+tvp_source = 'time_varying_parameters_GB'
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -84,12 +80,23 @@ def main(ranges: List[str] | None = None) -> int:
             params = deepcopy(BASE_PARAMS)
             params["horizon_start"] = f"{start_year}-01-01"
             params["horizon_end"] = f"{end_year}-12-31"
-            # params['filename_time_varying_parameters'] = shuffled_dir+source
+            params['filename_time_varying_parameters'] = tvp_source
 
             print(f"\n=== Running {start_year}-{end_year}===")
             try:
                 # Your helper returns (model, filename)
                 model, filename = standardised_model_config(params)
+
+                if tvp_source == 'time_varying_parameters_GB':
+                    filename = f'standard_{start_year}_{end_year}_GB_reference.nc'
+
+                solver_options = {
+                    # "BarHomogeneous": 1,
+                    # "DualReductions": 0,
+                    # Optional, if it still complains:
+                    # "NumericFocus": 3,
+                    # "ScaleFlag": 2,
+                }
 
                 # Build, solve, save
                 model.build()
@@ -99,7 +106,7 @@ def main(ranges: List[str] | None = None) -> int:
                     "balance_storage", # shadow price of storing one unit of energy to the next time step
                     "flow_out_max", # shadow price of power capacity, for electrolyser (charge) and h2 ccgt (discharge)
                     "flow_in_max" # shadow price of power capacity in, for salt cavern injection
-                    ])
+                    ], solver_options=solver_options)
                 outfile = OUTPUT_DIR / filename
                 outfile.parent.mkdir(parents=True, exist_ok=True)
 

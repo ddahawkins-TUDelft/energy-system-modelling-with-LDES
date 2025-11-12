@@ -6,6 +6,7 @@ import yaml
 from copy import deepcopy
 from utility_functions.helper_calliope import read_clustered_netcdf
 import pandas as pd
+import time
 
 
 
@@ -15,15 +16,15 @@ import pandas as pd
 show_soc = True
 show_visual = True
 
-scenarios = ['exo_test'] 
+scenarios = ['optimisation_test'] 
 dispatch_config = [
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2019]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2020,2024]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2014]]
 ]
 
 # for running the shorter horizon models too
-# for i in range(2006,2021,1):
+# for i in range(2006,2021,2):
 #     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
 # for i in range(2006,2024,1):
 #     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
@@ -181,15 +182,16 @@ for dispatch in dispatch_config:
                             tsa_p[key] = value
 
                 dispatch_mode = config['dispatch_mode'] 
+                t_start = time.time()
                 m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type=dispatch_mode, tvp_source=tvp_source if tvp_source else 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
-
+                t_end = time.time()
                 list_model_dict.append({
                     'model': m,
                     'name': f'{model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
                     'params': {},
                 })
 
-                cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, 'dates': ','.join(map(str, calliope_p['date_range'])), 'date_range': calliope_p['date_range'][1]-calliope_p['date_range'][0]+1, "id": m.id})
+                cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, 'dates': ','.join(map(str, calliope_p['date_range'])), 'date_range': calliope_p['date_range'][1]-calliope_p['date_range'][0]+1, "id": m.id, 'runtime': t_end-t_start})
 
 
 df = pd.DataFrame(cases_log)
@@ -222,7 +224,7 @@ if show_visual:
         list_model_dict=list_model_dict,
         x_field='Time', #'Time'
         y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-        # colour_field='MAGMe',
+        colour_field='MAGMe',
         # show_tsa_internal_surplus_accumulation=True,
         # save_fig=True
     )

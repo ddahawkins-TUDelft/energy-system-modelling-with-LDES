@@ -1,5 +1,5 @@
 endo_test:
-  Medoid, k=30, Endogenous Correction:
+  Medoid, k=30, Endogenous Correction, L=0/0:
     dispatch_mode: 'cluster_with_optimisation'
     calliope_params:
     soc_proxy_params:
@@ -8,9 +8,160 @@ endo_test:
       # k_periods_optimisation: 30
       resample_to_daily_resolution: True
       distance_matrix_metric: 'euclidean'
-      timelimit: 120
+      mipgap: 0.01
+      timelimit: 1200
+      lambda_soc: 
+        cluster: 0.000001
+        optimisation: 0.000001
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: endogenous
+      post_cluster_optimisation_params:
+        objective:
+          - polarity: minimise
+            target: soc_proxy_ldes
+            weight: 1
+            mode: match
+  Medoid, k=30, Endogenous Correction, L=0.5/0.5:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      # k_periods_optimisation: 30
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      mipgap: 0.5
+      timelimit: 1200
       lambda_soc: 
         cluster: 0.5
+        optimisation: 0.01
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: endogenous
+      post_cluster_optimisation_params:
+        objective:
+          - polarity: minimise
+            target: soc_proxy_ldes
+            weight: 1
+            mode: match
+  Medoid, k=30, Endogenous Correction, L=1/1:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      # k_periods_optimisation: 30
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      mipgap: 0.01
+      timelimit: 1200
+      lambda_soc: 
+        cluster: 1
+        optimisation: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: endogenous
+      post_cluster_optimisation_params:
+        objective:
+          - polarity: minimise
+            target: soc_proxy_ldes
+            weight: 1
+            mode: match
+  Medoid, k=30, Endogenous Correction, L=0/1:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      # k_periods_optimisation: 30
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      mipgap: 0.01
+      timelimit: 1200
+      lambda_soc: 
+        cluster: 0.000001
+        optimisation: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: endogenous
+      post_cluster_optimisation_params:
+        objective:
+          - polarity: minimise
+            target: soc_proxy_ldes
+            weight: 1
+            mode: match
+  Medoid, k=30, Endogenous Correction, L=0/1:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      # k_periods_optimisation: 30
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      mipgap: 0.01
+      timelimit: 1200
+      lambda_soc: 
+        cluster: 1
+        optimisation: 0.000001
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: endogenous
+      post_cluster_optimisation_params:
+        objective:
+          - polarity: minimise
+            target: soc_proxy_ldes
+            weight: 1
+            mode: match
+  Medoid, k=30, Endogenous Correction, L=0.75/0.75:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      # k_periods_optimisation: 30
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      mipgap: 0.01
+      timelimit: 1200
+      lambda_soc: 
+        cluster: 0.75
+        optimisation: 0.75
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+          optimisation_proxy_mode: endogenous
+      post_cluster_optimisation_params:
+        objective:
+          - polarity: minimise
+            target: soc_proxy_ldes
+            weight: 1
+            mode: match
+  Medoid, k=30, Endogenous Correction, L=0.75/1:
+    dispatch_mode: 'cluster_with_optimisation'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 30
+      # k_periods_optimisation: 30
+      resample_to_daily_resolution: True
+      distance_matrix_metric: 'euclidean'
+      mipgap: 0.01
+      timelimit: 1200
+      lambda_soc: 
+        cluster: 0.75
         optimisation: 1
       soc_proxy: 
           use_soc_proxy: True
@@ -24,7 +175,8 @@ endo_test:
             weight: 1
             mode: match
 
-exo_test:
+
+optimisation_test:
   Exogenous, k=30, λ=0:
     dispatch_mode: 'optimisation'
     calliope_params:
@@ -34,36 +186,12 @@ exo_test:
       # k_periods_optimisation: 30
       resample_to_daily_resolution: True
       distance_matrix_metric: 'euclidean'
-      timelimit: 1200
+      timelimit: 3600
       lambda_soc: 
         cluster: 0
         optimisation: 0
       soc_proxy: 
           use_soc_proxy: False
-          proxy_inputs_to_consider: ['surplus_LDES'] 
-          proxy_window: None
-          optimisation_proxy_mode: exogenous
-      post_cluster_optimisation_params:
-        objective:
-          - polarity: minimise
-            target: soc_proxy_ldes
-            weight: 1
-            mode: match
-  Exogenous, k=30, λ=0.5:
-    dispatch_mode: 'optimisation'
-    calliope_params:
-    soc_proxy_params:
-    tsa_params:
-      k_periods: 30
-      # k_periods_optimisation: 30
-      resample_to_daily_resolution: True
-      distance_matrix_metric: 'euclidean'
-      timelimit: 1200
-      lambda_soc: 
-        cluster: 0.5
-        optimisation: 0.5
-      soc_proxy: 
-          use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
           proxy_window: None
           optimisation_proxy_mode: exogenous
@@ -82,10 +210,10 @@ exo_test:
       # k_periods_optimisation: 30
       resample_to_daily_resolution: True
       distance_matrix_metric: 'euclidean'
-      timelimit: 1200
+      timelimit: 3600
       lambda_soc: 
-        cluster: 0.5
-        optimisation: 0.5
+        cluster: 1
+        optimisation: 1
       soc_proxy: 
           use_soc_proxy: True
           proxy_inputs_to_consider: ['surplus_LDES'] 
@@ -97,6 +225,78 @@ exo_test:
             target: soc_proxy_ldes
             weight: 1
             mode: match
+  # Exogenous, k=30, λ=1:
+  #   dispatch_mode: 'optimisation'
+  #   calliope_params:
+  #   soc_proxy_params:
+  #   tsa_params:
+  #     k_periods: 30
+  #     # k_periods_optimisation: 30
+  #     resample_to_daily_resolution: True
+  #     distance_matrix_metric: 'euclidean'
+  #     timelimit: 3600
+  #     lambda_soc: 
+  #       cluster: 1
+  #       optimisation: 1
+  #     soc_proxy: 
+  #         use_soc_proxy: True
+  #         proxy_inputs_to_consider: ['surplus_LDES'] 
+  #         proxy_window: None
+  #         optimisation_proxy_mode: exogenous
+  #     post_cluster_optimisation_params:
+  #       objective:
+  #         - polarity: minimise
+  #           target: soc_proxy_ldes
+  #           weight: 1
+  #           mode: match
+  # Endogenous, k=30, λ=0.5:
+  #   dispatch_mode: 'optimisation'
+  #   calliope_params:
+  #   soc_proxy_params:
+  #   tsa_params:
+  #     k_periods: 30
+  #     # k_periods_optimisation: 30
+  #     resample_to_daily_resolution: True
+  #     distance_matrix_metric: 'euclidean'
+  #     timelimit: 3600
+  #     lambda_soc: 
+  #       cluster: 0.5
+  #       optimisation: 0.5
+  #     soc_proxy: 
+  #         use_soc_proxy: True
+  #         proxy_inputs_to_consider: ['surplus_LDES'] 
+  #         proxy_window: None
+  #         optimisation_proxy_mode: endogenous
+  #     post_cluster_optimisation_params:
+  #       objective:
+  #         - polarity: minimise
+  #           target: soc_proxy_ldes
+  #           weight: 1
+  #           mode: match
+  # Endogenous, k=30, λ=1:
+  #   dispatch_mode: 'optimisation'
+  #   calliope_params:
+  #   soc_proxy_params:
+  #   tsa_params:
+  #     k_periods: 30
+  #     # k_periods_optimisation: 30
+  #     resample_to_daily_resolution: True
+  #     distance_matrix_metric: 'euclidean'
+  #     timelimit: 3600
+  #     lambda_soc: 
+  #       cluster: 1
+  #       optimisation: 1
+  #     soc_proxy: 
+  #         use_soc_proxy: True
+  #         proxy_inputs_to_consider: ['surplus_LDES'] 
+  #         proxy_window: None
+  #         optimisation_proxy_mode: endogenous
+  #     post_cluster_optimisation_params:
+  #       objective:
+  #         - polarity: minimise
+  #           target: soc_proxy_ldes
+  #           weight: 1
+  #           mode: match
 
 
 Sensitivity_W_reps14:

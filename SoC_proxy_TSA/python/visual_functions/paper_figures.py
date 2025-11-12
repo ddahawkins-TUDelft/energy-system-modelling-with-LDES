@@ -58,7 +58,7 @@ mpl.rcParams["pgf.preamble"] = r""
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_10_years.csv")]
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_10yr_runs.csv")]
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_horizon.csv")]
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
@@ -103,7 +103,7 @@ def _parse_single_log(log_path: Path) -> pd.DataFrame:
     df = pd.read_csv(log_path)
 
     # base columns presence
-    required_cols = {"id", "dates", "date_range", "model_name"}
+    required_cols = {"id", "dates", "date_range", "model_name", "tvp"}
     missing = required_cols - set(df.columns)
     if missing:
         # Allow some logs to be missing columns; fill with NaN
@@ -140,7 +140,7 @@ def _parse_single_log(log_path: Path) -> pd.DataFrame:
 
     df["W_proxy"] = pd.to_numeric(w_direct, errors="coerce").fillna(w_from_L)
 
-    keep = ["id", "dates", "horizon", "number_reps", "W_proxy", "model_name", "runtime"]
+    keep = ["id", "dates", "horizon", "number_reps", "W_proxy", "model_name", "runtime", "tvp"]
     for col in keep:
         if col not in df.columns:
             df[col] = np.nan
@@ -164,6 +164,32 @@ def parse_logs(log_paths: Iterable[Path]) -> pd.DataFrame:
     df = df.drop_duplicates(subset=["id"], keep="first")
     return df
 
+def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Optional[Path]:
+    """
+    Return the first existing reference .nc Path matching (dates, tvp),
+    trying several common naming conventions. Falls back to the standard reference.
+    """
+    years = re.findall(r"\d{4}", str(dates))
+    if len(years) < 2:
+        return None
+    y0, y1 = years[0], years[1]
+
+    candidates = []
+    # tvp-specific candidates first (synthetic etc.)
+    tvp_str = str(tvp).strip() if pd.notna(tvp) else ""
+    if tvp_str and tvp_str.lower() not in {"", "nan", "none"}:
+        candidates += [
+            # models_dir / tvp_str / f"standard_{y0}_{y1}_reference.nc",
+            models_dir / f"{tvp_str}.nc",
+            models_dir / f"standard_{y0}_{y1}_{tvp_str}_reference.nc",
+        ]
+    # default standard reference
+    candidates.append(models_dir / f"standard_{y0}_{y1}_reference.nc")
+
+    for c in candidates:
+        if c.exists():
+            return c
+    return None
 
 # ------------------------- Model reading & metrics ----------------------------
 
@@ -268,24 +294,21 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
             continue
 
         dates = str(row.get("dates", ""))
-        y0_y1 = re.findall(r"\d{4}", dates)
-        if len(y0_y1) >= 2:
-            y0, y1 = y0_y1[0], y0_y1[1]
-            ref_nc = models_dir / f"standard_{y0}_{y1}_reference.nc"
-            ref_key = f"{y0},{y1}"
-        else:
-            ref_nc = models_dir / "standard_reference.nc"
-            ref_key = "ref"
+        tvp   = row.get("tvp", np.nan)
 
-        # --- memoized reference model ----------------------------------------
+        ref_key = (dates, str(tvp))
         if ref_key not in ref_cache:
-            if not ref_nc.exists():
+            ref_nc = resolve_reference_nc(dates, tvp, models_dir)
+            if ref_nc is None:
                 continue
             try:
                 model_reference = calliope.read_netcdf(str(ref_nc))
                 ref_cache[ref_key] = model_reference
             except Exception:
                 continue
+
+        # use the cached ref model
+        model_reference = ref_cache[ref_key]
 
         # --- load test model (strip time_cluster first) ----------------------
         try:
@@ -335,51 +358,51 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
                                 cache_path: Path) -> pd.DataFrame:
     """
     Build or load runtime cache for IDs required by figs 4–5,
-    including *reference* models 'standard_{start}_{end}_reference'.
-    Columns: id, runtime_min, horizon, number_reps
+    including *tvp-specific* reference models resolved from (dates, tvp).
+
+    Columns: id, runtime_min, horizon, number_reps, dates, tvp
     """
+    cols = ["id", "runtime_min", "horizon", "number_reps", "dates", "tvp"]
     if cache_path.exists():
         try:
             df_cache = pd.read_csv(cache_path)
         except Exception:
-            df_cache = pd.DataFrame(columns=["id", "runtime_min", "horizon", "number_reps"])
+            df_cache = pd.DataFrame(columns=cols)
     else:
-        df_cache = pd.DataFrame(columns=["id", "runtime_min", "horizon", "number_reps"])
+        df_cache = pd.DataFrame(columns=cols)
 
     cached_ids = set(df_cache["id"]) if not df_cache.empty else set()
 
-    # --- Build the set of required ids: logs + derived reference ids -----------
-    needed_ids = set()
+    # Build the set of required IDs: the logged test ids + their tvp-aware reference ids (by path)
+    needed = []  # list of (id, dates, tvp, nc_path)
     for _, r in df_needed.iterrows():
-        mid = r.get("id")
-        if pd.notna(mid):
-            needed_ids.add(str(mid))
+        mid   = r.get("id")
+        dates = r.get("dates", "")
+        tvp   = r.get("tvp", np.nan)
 
-        # derive reference id from the dates column if present
-        dates = str(r.get("dates", ""))
-        y = re.findall(r"\d{4}", dates)
-        if len(y) >= 2:
-            ref_id = f"standard_{y[0]}_{y[1]}_reference"
-            needed_ids.add(ref_id)
+        if pd.notna(mid):
+            nc = models_dir / f"{mid}.nc"
+            needed.append((str(mid), dates, tvp, nc))
+
+        # add tvp-aware reference
+        ref_nc = resolve_reference_nc(dates, tvp, models_dir)
+        if ref_nc is not None:
+            needed.append((ref_nc.stem, dates, tvp, ref_nc))
 
     rows = []
-    for mid in sorted(needed_ids):
-        print(f'Reading {mid} for runtimes')
+    for mid, dates, tvp, nc_path in needed:
+        print(f'Reading {mid} runtimes')
         if mid in cached_ids:
             continue
-
-        nc_path = models_dir / f"{mid}.nc"
-        if not nc_path.exists():
-            # quietly skip missing files
+        if not Path(nc_path).exists():
             continue
 
-        # open model (strip time_cluster from attrs config first)
         try:
             m = read_clustered_netcdf(nc_path)
         except Exception:
             continue
 
-        # runtime (minutes): solve_complete - build_start
+        # runtime (minutes)
         runtime_min = np.nan
         try:
             rt = m.all_attrs.runtime.timings
@@ -393,12 +416,12 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
         horizon = np.nan
         number_reps = np.nan
         try:
-            if "standard_" in mid and mid.endswith("_reference"):
-                # reference: compute horizon from timesteps directly
-                horizon = round(m.inputs.dims["timesteps"] / (24 * 365.25))
+            if str(mid).startswith("standard_") and str(mid).endswith("_reference"):
+                # reference: compute horizon from timesteps
+                horizon = round(m.inputs.sizes["timesteps"] / (24 * 365.25))
                 number_reps = np.nan
             else:
-                # clustered: read the companion JSON for k_periods and date_range
+                # clustered: prefer parameters JSON
                 param_path = PARAM_DIR / f"{mid}.json"
                 if param_path.exists():
                     with open(param_path) as p:
@@ -407,7 +430,7 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
                     horizon = round(dr[1] - dr[0] + 1)
                     number_reps = d["tsa_params"]["k_periods"]
                 else:
-                    # best-effort fallback from df_needed
+                    # best-effort fallback from the log row
                     rr = df_needed[df_needed["id"] == mid].head(1)
                     if not rr.empty:
                         if pd.notna(rr.iloc[0].get("horizon", np.nan)):
@@ -421,12 +444,13 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
             "id": mid,
             "runtime_min": runtime_min,
             "horizon": horizon,
-            "number_reps": number_reps
+            "number_reps": number_reps,
+            "dates": dates,
+            "tvp": tvp,
         })
 
     if rows:
-        df_new = pd.DataFrame(rows)
-        df_cache = pd.concat([df_cache, df_new], ignore_index=True)
+        df_cache = pd.concat([df_cache, pd.DataFrame(rows)], ignore_index=True)
 
     df_cache.drop_duplicates(subset=["id"], keep="first", inplace=True)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -867,7 +891,8 @@ def main():
     req_ids.update(ref_ids)
 
     # Pull those rows directly from the *runtime cache*
-    df_run_ready = df_runtime_cache[df_runtime_cache["id"].astype(str).isin(req_ids)]
+    keys = df_f45[["dates", "tvp"]].drop_duplicates()
+    df_run_ready = df_runtime_cache.merge(keys, on=["dates", "tvp"], how="inner")
 
     # Generate figures
     fig1_heatmap_10y(df_f123_ready, FIG1_HEATMAP_10Y)

@@ -19,13 +19,13 @@ show_visual = False
 scenarios = ['Sensitivity_W_reps14','Sensitivity_W_reps30','Sensitivity_W_reps45','Sensitivity_W_reps60','Sensitivity_W_reps90','Sensitivity_W_reps180'] 
 dispatch_config = [
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
     ['SoC_proxy_TSA/data/timeseries/synthetic_ts_01.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_01.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_01.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_01.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_01.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_02.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_03.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_04.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv', [2010,2019]],
 ]
 
 # for running the shorter horizon models too

@@ -58,7 +58,7 @@ mpl.rcParams["pgf.preamble"] = r""
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_2006,2010,2015.csv")]
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_10_years.csv")]
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_horizon.csv")]
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")

@@ -26,8 +26,8 @@ from utility_functions.helper_model_config import standardised_model_config
 DEFAULT_YEAR_RANGES: List[str] = [
     # "2001-2010",
     # "2010-2019",
-    "2006-2015",
-    "2015-2024",
+    # "2006-2015",
+    "2016-2017",
     ]  
 shuffled_dir = "time_varying_parameters__"
 shuffled_source = []

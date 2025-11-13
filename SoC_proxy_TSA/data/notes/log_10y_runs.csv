@@ -1,4 +1,5 @@
 tvp,scenario_name,model_name,dates,date_range,id,runtime
+SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv,Sensitivity_W_reps180,"K-Medoid, reps=180, SocDelta, W_proxy=1","2010,2019",10,1e3c30aa47905f8e9d9f,241.81644773483276
 SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2006,2015",10,92d87ef6d04512935782,0.4785003662109375
 SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2006,2015",10,0f33c47d71b4ee152052,2.1339995861053467
 SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2006,2015",10,12be153ca972f4b54271,2.1464998722076416
@@ -238,4 +239,3 @@ SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv,Sensitivity_W_reps180,"K-Medoi
 SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv,Sensitivity_W_reps180,"K-Medoid, reps=180, SocDelta, W_proxy=0.25","2010,2019",10,cc1bd5ada9731c56ce80,189.2381203174591
 SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv,Sensitivity_W_reps180,"K-Medoid, reps=180, SocDelta, W_proxy=0.5","2010,2019",10,06db0cc2e49985e69cce,238.08741426467896
 SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv,Sensitivity_W_reps180,"K-Medoid, reps=180, SocDelta, W_proxy=0.75","2010,2019",10,1cf4aa563cbc14962ba4,280.9343526363373
-SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv,Sensitivity_W_reps180,"K-Medoid, reps=180, SocDelta, W_proxy=1","2010,2019",10,1e3c30aa47905f8e9d9f,241.81644773483276

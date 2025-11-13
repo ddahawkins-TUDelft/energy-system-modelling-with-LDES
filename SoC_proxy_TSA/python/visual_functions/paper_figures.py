@@ -45,20 +45,20 @@ from netCDF4 import Dataset
 import calliope
 
 import matplotlib as mpl
-mpl.rcParams.update({
-    "text.usetex": True,
-    "pgf.texsystem": "pdflatex",
-    "pgf.rcfonts": False,
-    "axes.unicode_minus": False,
-})
-mpl.rcParams["pgf.preamble"] = r""
+# mpl.rcParams.update({
+#     "text.usetex": True,
+#     "pgf.texsystem": "pdflatex",
+#     "pgf.rcfonts": False,
+#     "axes.unicode_minus": False,
+# })
+# mpl.rcParams["pgf.preamble"] = r""
 
 
 # ------------------------- Paths & constants ---------------------------------
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_10yr_runs.csv")]
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_10_yr_WandKTests.csv")]
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_horizon.csv")]
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
@@ -523,8 +523,11 @@ def fig2_box_by_reps(df_cem: pd.DataFrame, path: Path) -> None:
         return
 
     x_vals = sorted(df["number_reps"].dropna().unique().tolist())
-    data_ldes = [df.loc[df["number_reps"] == x, "ldes_error"].dropna().values for x in x_vals]
-    data_mac  = [df.loc[df["number_reps"] == x, "macme"].dropna().values for x in x_vals]
+
+    df_filter = df[df['W_proxy']>0]
+
+    data_ldes = [df_filter.loc[df_filter["number_reps"] == x, "ldes_error"].dropna().values for x in x_vals]
+    data_mac  = [df_filter.loc[df_filter["number_reps"] == x, "macme"].dropna().values for x in x_vals]
 
     fig, ax = plt.subplots(figsize=(8.5, 4.8))
     offsets = np.array([-0.15, 0.15])

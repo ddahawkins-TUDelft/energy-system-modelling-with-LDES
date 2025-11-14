@@ -27,7 +27,7 @@ DEFAULT_YEAR_RANGES: List[str] = [
     # "2001-2010",
     # "2010-2019",
     # "2006-2015",
-    "2016-2017",
+    "2010-2019",
     ]  
 shuffled_dir = "time_varying_parameters__"
 shuffled_source = []
@@ -94,8 +94,9 @@ def main(ranges: List[str] | None = None) -> int:
                     # "BarHomogeneous": 1,
                     # "DualReductions": 0,
                     # Optional, if it still complains:
-                    # "NumericFocus": 3,
+                    "NumericFocus": 2,
                     # "ScaleFlag": 2,
+                    'Threads': 8
                 }
 
                 # Build, solve, save

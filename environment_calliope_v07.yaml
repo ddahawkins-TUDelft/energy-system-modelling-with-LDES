@@ -5,10 +5,10 @@ channels:
   - gurobi
   - defaults
 dependencies:
-  - calliope
+  # - calliope
   - gurobi
-  - tsam
-  - matplotlib
+  # - tsam
+  # - matplotlib
   - scipy
-  - mplcursors
+  # - mplcursors
 prefix: C:\Users\dhawkins\AppData\Local\miniforge3\envs\calliope-v07

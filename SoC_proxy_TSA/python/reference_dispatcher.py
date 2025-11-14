@@ -26,12 +26,13 @@ from utility_functions.helper_model_config import standardised_model_config
 DEFAULT_YEAR_RANGES: List[str] = [
     # "2001-2010",
     # "2010-2019",
-    # "2006-2015",
-    "2010-2019",
+    # "2005-2014",
+    # "2010-2019",
+    # "2015-2024",
     ]  
 shuffled_dir = "time_varying_parameters__"
 shuffled_source = []
-tvp_source = 'time_varying_parameters_GB'
+tvp_source = 'time_varying_parameters'
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -96,7 +97,7 @@ def main(ranges: List[str] | None = None) -> int:
                     # Optional, if it still complains:
                     "NumericFocus": 2,
                     # "ScaleFlag": 2,
-                    'Threads': 8
+                    'Threads': 6
                 }
 
                 # Build, solve, save

@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name="ref_dispatch_test"
 #SBATCH --partition=compute
-#SBATCH --time=06:00:00          
+#SBATCH --time=12:00:00          
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6        
 #SBATCH --mem-per-cpu=3900         #

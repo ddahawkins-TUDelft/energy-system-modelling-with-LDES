@@ -1,0 +1,71 @@
+Running on host: cmp024
+Starting range 2008-2017 at Mon Nov 17 10:30:01 CET 2025 on cmp024
+
+=== Running 2008-2017===
+[2025-11-17 10:35:24] DEBUG    Read LP format model from file /tmp/tmpr81m43bh.pyomo.lp
+[2025-11-17 10:35:24] DEBUG    Reading time = 5.80 seconds
+x1: 3068520 rows, 1665785 columns, 7408174 nonzeros
+Set parameter QCPDual to value 1
+Set parameter NumericFocus to value 2
+Set parameter Threads to value 6
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (linux64 - "Red Hat Enterprise Linux 8.10 (Ootpa)")
+[2025-11-17 10:35:24] DEBUG    CPU model: Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+[2025-11-17 10:35:24] DEBUG    Thread count: 48 physical cores, 48 logical processors, using up to 6 threads
+[2025-11-17 10:35:24] DEBUG    Non-default parameters:
+[2025-11-17 10:35:24] DEBUG    TSPort  27099
+[2025-11-17 10:35:24] DEBUG    NumericFocus  2
+[2025-11-17 10:35:24] DEBUG    QCPDual  1
+[2025-11-17 10:35:24] DEBUG    Threads  6
+[2025-11-17 10:35:24] DEBUG    Optimize a model with 3068520 rows, 1665785 columns and 7408174 nonzeros
+[2025-11-17 10:35:24] DEBUG    Model fingerprint: 0xfc0c7aa9
+[2025-11-17 10:35:24] DEBUG    Coefficient statistics:
+  Matrix range     [1e-04, 7e+04]
+  Objective range  [2e-07, 9e+00]
+  Bounds range     [5e+02, 4e+07]
+  RHS range        [6e+03, 2e+04]
+[2025-11-17 10:35:30] DEBUG    Presolve removed 1379217 rows and 657654 columns (presolve time = 5s)...
+[2025-11-17 10:35:30] DEBUG    Presolve removed 1379217 rows and 657654 columns
+[2025-11-17 10:35:39] DEBUG    Presolve time: 14.27s
+Presolved: 1689303 rows, 1008131 columns, 4649740 nonzeros
+[2025-11-17 10:35:39] DEBUG    Concurrent LP optimizer: primal simplex, dual simplex, and barrier
+Showing barrier log only...
+[2025-11-17 10:35:41] DEBUG    Ordering time: 1.61s
+[2025-11-17 10:35:42] DEBUG    Barrier statistics:
+ Dense cols : 10
+ AA' NZ     : 5.463e+06
+ Factor NZ  : 2.260e+07 (roughly 1.3 GB of memory)
+ Factor Ops : 3.877e+08 (less than 1 second per iteration)
+ Threads    : 1
+[2025-11-17 10:35:44] DEBUG    Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+[2025-11-17 10:35:44] DEBUG    0   1.13657983e+06 -5.58516278e+09  8.30e+04 5.68e-14  5.41e+07    20s
+[2025-11-17 10:35:47] DEBUG    1   1.15516224e+06 -1.67976663e+10  8.22e+04 6.20e+02  4.48e+07    23s
+[2025-11-17 10:35:51] DEBUG    2   1.53882582e+06 -2.00033638e+10  8.01e+04 1.49e+02  2.04e+07    27s
+[2025-11-17 10:35:56] DEBUG    3   1.49862780e+06 -2.18236812e+10  6.15e+04 8.43e+01  1.27e+07    32s
+[2025-11-17 10:35:59] DEBUG    4   1.34103457e+06 -4.86566510e+10  2.76e+04 3.86e+01  6.64e+06    35s
+[2025-11-17 10:36:02] DEBUG    5   1.55161132e+06 -4.35879867e+10  1.29e+04 2.09e+01  3.30e+06    38s
+[2025-11-17 10:36:04] DEBUG    6   1.65683510e+06 -3.55726852e+10  6.97e+03 9.63e+00  1.71e+06    40s
+[2025-11-17 10:36:07] DEBUG    7   1.76603506e+06 -2.75984511e+10  2.97e+03 4.49e+00  7.93e+05    43s
+[2025-11-17 10:36:11] DEBUG    8   1.92170998e+06 -1.65504339e+10  5.94e+02 1.40e+00  2.48e+05    47s
+[2025-11-17 10:36:15] DEBUG    9   1.95562248e+06 -4.32804762e+09  5.89e+01 2.35e-01  4.54e+04    50s
+[2025-11-17 10:36:17] DEBUG    10   1.95320785e+06 -5.05865701e+08  5.83e+00 2.67e-02  5.11e+03    53s
+[2025-11-17 10:36:19] DEBUG    11   1.91951846e+06 -1.00024750e+08  5.78e-01 5.23e-03  1.01e+03    55s
+[2025-11-17 10:36:22] DEBUG    12   1.80701803e+06 -5.35685309e+07  5.73e-02 2.76e-03  5.44e+02    58s
+[2025-11-17 10:36:25] DEBUG    13   1.68220130e+06 -1.97739379e+07  5.68e-03 9.79e-04  2.07e+02    61s
+[2025-11-17 10:36:29] DEBUG    14   1.58224741e+06 -1.49636695e+07  3.99e-03 7.44e-04  1.57e+02    65s
+[2025-11-17 10:36:32] DEBUG    15   1.54169474e+06 -1.35034741e+07  3.52e-03 6.77e-04  1.43e+02    68s
+[2025-11-17 10:36:35] DEBUG    16   1.47306242e+06 -1.10545513e+07  2.89e-03 5.58e-04  1.18e+02    71s
+[2025-11-17 10:36:37] DEBUG    17   1.33313553e+06 -8.30427541e+06  1.93e-03 4.25e-04  8.92e+01    73s
+[2025-11-17 10:36:40] DEBUG    18   1.21512567e+06 -5.37518221e+06  1.27e-03 2.90e-04  6.06e+01    76s
+[2025-11-17 10:36:44] DEBUG    19   1.15690745e+06 -3.78970411e+06  1.04e-03 2.20e-04  4.54e+01    79s
+[2025-11-17 10:36:49] DEBUG    20   1.13658736e+06 -3.13531482e+06  9.45e-04 1.88e-04  3.90e+01    85s
+[2025-11-17 10:36:53] DEBUG    21   1.03914241e+06 -2.40165143e+06  6.57e-04 1.53e-04  3.12e+01    89s
+[2025-11-17 10:36:59] DEBUG    22   9.08868015e+05 -1.32435495e+06  3.89e-04 1.08e-04  2.05e+01    95s
+[2025-11-17 10:37:04] DEBUG    23   8.13877735e+05 -9.45357630e+05  2.93e-04 9.00e-05  1.64e+01   100s
+[2025-11-17 10:37:10] DEBUG    24   7.85963910e+05 -6.88283769e+05  2.72e-04 7.72e-05  1.38e+01   106s
+[2025-11-17 10:37:16] DEBUG    25   7.76473828e+05 -5.56133775e+05  2.64e-04 6.95e-05  1.24e+01   112s
+[2025-11-17 10:37:22] DEBUG    26   7.28022989e+05 -5.23977777e+05  2.27e-04 6.76e-05  1.18e+01   118s
+[2025-11-17 10:37:28] DEBUG    27   7.06138987e+05 -3.37412603e+05  2.03e-04 5.56e-05  9.76e+00   124s
+[2025-11-17 10:37:32] DEBUG    28   6.70781112e+05 -3.04701202e+05  1.71e-04 5.34e-05  9.18e+00   127s
+[2025-11-17 10:37:37] DEBUG    29   6.40656255e+05 -2.50404066e+05  1.53e-04 5.01e-05  8.45e+00   133s
+[2025-11-17 10:37:43] DEBUG    30   6.11102499e+05 -2.02450048e+05  1.38e-04 4.64e-05  7.76e+00   139s

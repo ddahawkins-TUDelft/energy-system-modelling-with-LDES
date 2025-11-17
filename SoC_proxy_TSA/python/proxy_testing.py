@@ -8,7 +8,7 @@ from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
 
-ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc', ["2010-01-01", "2019-12-31"]
+ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2014_2023_reference.nc', ["2014-01-01", "2023-12-31"]
 
 mpl.rcParams.update({
     "text.usetex": True,

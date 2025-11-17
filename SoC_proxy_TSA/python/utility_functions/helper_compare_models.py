@@ -283,7 +283,7 @@ def compare_models(
         #cluster soc proxy
         df_test_soc_proxy, _ = tt.extrapolate_ts_from_cluster_map(
             source_cluster_map=df_clustermap_test_model,
-            source_original_ts='SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv' update for dynamic tvp
+            source_original_ts='SoC_proxy_TSA/data_tables/full_horizon/time_varying_parameters.csv' 
         )
         df_test_soc_proxy.set_index('timesteps', inplace=True)
 

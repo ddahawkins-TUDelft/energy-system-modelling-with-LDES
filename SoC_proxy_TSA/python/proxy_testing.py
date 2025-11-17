@@ -8,17 +8,21 @@ from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
 
-ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2014_2023_reference.nc', ["2014-01-01", "2023-12-31"]
+# ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
+# tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'
+ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2001_2010_GB_reference.nc', ["2001-01-01", "2010-12-31"]
+tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'
 
-mpl.rcParams.update({
-    "text.usetex": True,
-    "pgf.texsystem": "pdflatex",
-    "pgf.rcfonts": False,
-    "axes.unicode_minus": False,
-})
-mpl.rcParams["pgf.preamble"] = r""
 
-tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'
+
+# mpl.rcParams.update({
+#     "text.usetex": True,
+#     "pgf.texsystem": "pdflatex",
+#     "pgf.rcfonts": False,
+#     "axes.unicode_minus": False,
+# })
+# mpl.rcParams["pgf.preamble"] = r""
+
 DEMAND_FIELD = "demand_power"
 
 SOC_PROXY_PARAMS = {

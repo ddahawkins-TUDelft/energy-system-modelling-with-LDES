@@ -13,7 +13,15 @@ import time
 show_soc = True
 show_visual = False
 
-scenarios = ['hpc_test'] 
+scenarios = [
+    'Sensitivity_W_reps14',
+    'Sensitivity_W_reps30',
+    'Sensitivity_W_reps45',
+    'Sensitivity_W_reps60',
+    'Sensitivity_W_reps90',
+    'Sensitivity_W_reps180',
+    'Sensitivity_W_reps365',
+    ] 
 dispatch_config = [
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
@@ -162,7 +170,7 @@ for dispatch in dispatch_config:
             print( ' ------------------------------------------------------- ')
             for model_name, config in scenario_batch.items():
                 
-                print( ' ------------------------------------------------------- ', flush=True)
+                print( ' ------------------------------------------------------- ')
                 print( f' ----- {model_name}  -----')
                 
                 calliope_p = deepcopy(calliope_params)

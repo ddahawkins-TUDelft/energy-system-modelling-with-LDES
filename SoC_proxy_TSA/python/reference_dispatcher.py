@@ -32,7 +32,10 @@ DEFAULT_YEAR_RANGES: List[str] = [
     ]  
 shuffled_dir = "time_varying_parameters__"
 shuffled_source = []
-tvp_source = 'time_varying_parameters'
+# tvp_source = 'time_varying_parameters'
+# tvp_source = 'time_varying_parameters_GB'
+tvp_source = 'time_varying_parameters_GB_availability_NL_demand'
+
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
@@ -90,6 +93,8 @@ def main(ranges: List[str] | None = None) -> int:
 
                 if tvp_source == 'time_varying_parameters_GB':
                     filename = f'standard_{start_year}_{end_year}_GB_reference.nc'
+                elif tvp_source == 'time_varying_parameters_GB_availability_NL_demand':
+                    filename = f'standard_{start_year}_{end_year}_GB_availability_NL_demand.nc'
 
                 solver_options = {
                     # "BarHomogeneous": 1,

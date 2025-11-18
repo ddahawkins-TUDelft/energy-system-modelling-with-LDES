@@ -7,13 +7,15 @@ import numpy as np
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
-
+year_0 = 2014 # 2006 2008 2010 2012 2014
+year_1 = year_0+9 #
+source = 'GB'
 # ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
 # tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'
-ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2001_2010_GB_reference.nc', ["2001-01-01", "2010-12-31"]
-tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'
-
-
+ref_path, TS_WINDOW = f'SoC_proxy_TSA/data/calliope_models/standard_{year_0}_{year_1}{'_GB' if source=='GB' else ''}_reference.nc', [f"{year_0}-01-01", f"{year_1}-12-31"]
+tvp_csv = f'SoC_proxy_TSA/data/timeseries/time_varying_parameters{'_GB' if source=='GB' else ''}.csv'
+# ref_path = 'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_GB_availability_NL_demand.nc'
+# tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB_availability_NL_demand.csv'
 
 # mpl.rcParams.update({
 #     "text.usetex": True,
@@ -48,6 +50,8 @@ def _build_proxy(df: pd.DataFrame, demand_field: str, params) -> pd.Series:
         storage_process_losses=params["storage_process_losses"],
         soc_decomposition=params["soc_decomposition"],
         timestamp_col=None,
+        margin_mode='fixed',
+        margin_value = 0.03
     )
     return df_proxy["soc_proxy_LDES"].rename("soc_proxy_LDES")
 

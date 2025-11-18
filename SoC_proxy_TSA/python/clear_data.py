@@ -47,10 +47,13 @@ def clean_data_dirs(
             keep = False
             if name == "timeseries" and p.name.lower().startswith("time_varying_parameters"):
                 keep = True
+            elif name == "timeseries" and p.name.lower().startswith("synthetic"):
+                keep = True
             elif name == "calliope_models" and p.name.lower().endswith("reference.nc"):
                 keep = True
-            elif name == "calliope_models" and p.name.lower().startswith("shuffle_"):
+            elif name == "calliope_models" and p.name.lower().startswith("synthetic"):
                 keep = True
+            
 
             if keep:
                 kept_plan[name].append(p)

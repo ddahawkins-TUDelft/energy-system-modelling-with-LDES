@@ -1,0 +1,181 @@
+Running on host: cmp212
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      f98391f251b1e4c1c2b5      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/f98391f251b1e4c1c2b5.json
+[TSA] Extracting features dataframe for f98391f251b1e4c1c2b5
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/f98391f251b1e4c1c2b5.csv.
+[TSA] cluster completed in 2.86
+[Calliope] Validating and Configuring Calliope model: f98391f251b1e4c1c2b5
+[Calliope] Building Calliope model: f98391f251b1e4c1c2b5
+[Calliope] Solving Calliope model: f98391f251b1e4c1c2b5
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/f98391f251b1e4c1c2b5.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      1585cef7a38579b7bf7b      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1585cef7a38579b7bf7b.json
+[TSA] Extracting features dataframe for 1585cef7a38579b7bf7b
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/1585cef7a38579b7bf7b.csv.
+[TSA] cluster completed in 1.96
+[Calliope] Validating and Configuring Calliope model: 1585cef7a38579b7bf7b
+[Calliope] Building Calliope model: 1585cef7a38579b7bf7b
+[Calliope] Solving Calliope model: 1585cef7a38579b7bf7b
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/1585cef7a38579b7bf7b.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      335fda63a38ff5a1e5b3      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/335fda63a38ff5a1e5b3.json
+[TSA] Extracting features dataframe for 335fda63a38ff5a1e5b3
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/335fda63a38ff5a1e5b3.csv.
+[TSA] cluster completed in 2.13
+[Calliope] Validating and Configuring Calliope model: 335fda63a38ff5a1e5b3
+[Calliope] Building Calliope model: 335fda63a38ff5a1e5b3
+[Calliope] Solving Calliope model: 335fda63a38ff5a1e5b3
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/335fda63a38ff5a1e5b3.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      a837057fbe186a1c0c29      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a837057fbe186a1c0c29.json
+[TSA] Extracting features dataframe for a837057fbe186a1c0c29
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/a837057fbe186a1c0c29.csv.
+[TSA] cluster completed in 1.94
+[Calliope] Validating and Configuring Calliope model: a837057fbe186a1c0c29
+[Calliope] Building Calliope model: a837057fbe186a1c0c29
+[Calliope] Solving Calliope model: a837057fbe186a1c0c29
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/a837057fbe186a1c0c29.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      5a1394f4d9e96789ba42      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/5a1394f4d9e96789ba42.json
+[TSA] Extracting features dataframe for 5a1394f4d9e96789ba42
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/5a1394f4d9e96789ba42.csv.
+[TSA] cluster completed in 2.15
+[Calliope] Validating and Configuring Calliope model: 5a1394f4d9e96789ba42
+[Calliope] Building Calliope model: 5a1394f4d9e96789ba42
+[Calliope] Solving Calliope model: 5a1394f4d9e96789ba42
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/5a1394f4d9e96789ba42.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      255adc5cf2d0e101d0db      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/255adc5cf2d0e101d0db.json
+[TSA] Extracting features dataframe for 255adc5cf2d0e101d0db
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/255adc5cf2d0e101d0db.csv.
+[TSA] cluster completed in 2.12
+[Calliope] Validating and Configuring Calliope model: 255adc5cf2d0e101d0db
+[Calliope] Building Calliope model: 255adc5cf2d0e101d0db
+[Calliope] Solving Calliope model: 255adc5cf2d0e101d0db
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/255adc5cf2d0e101d0db.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      0ed581b89d780beac71c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0ed581b89d780beac71c.json
+[TSA] Extracting features dataframe for 0ed581b89d780beac71c
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/0ed581b89d780beac71c.csv.
+[TSA] cluster completed in 2.31
+[Calliope] Validating and Configuring Calliope model: 0ed581b89d780beac71c
+[Calliope] Building Calliope model: 0ed581b89d780beac71c
+[Calliope] Solving Calliope model: 0ed581b89d780beac71c
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/0ed581b89d780beac71c.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      17a9a70a92ce55e1a1c8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/17a9a70a92ce55e1a1c8.json
+[TSA] Extracting features dataframe for 17a9a70a92ce55e1a1c8
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/17a9a70a92ce55e1a1c8.csv.
+[TSA] cluster completed in 2.09
+[Calliope] Validating and Configuring Calliope model: 17a9a70a92ce55e1a1c8
+[Calliope] Building Calliope model: 17a9a70a92ce55e1a1c8
+[Calliope] Solving Calliope model: 17a9a70a92ce55e1a1c8
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/17a9a70a92ce55e1a1c8.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      05cb4619647141a3555d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/05cb4619647141a3555d.json
+[TSA] Extracting features dataframe for 05cb4619647141a3555d
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/05cb4619647141a3555d.csv.
+[TSA] cluster completed in 2.32
+[Calliope] Validating and Configuring Calliope model: 05cb4619647141a3555d
+[Calliope] Building Calliope model: 05cb4619647141a3555d
+[Calliope] Solving Calliope model: 05cb4619647141a3555d
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/05cb4619647141a3555d.nc
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario hpc_test
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=14, W_proxy=0.5  -----
+ -----      23d0ccedaa537d1a43aa      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/23d0ccedaa537d1a43aa.json
+[TSA] Extracting features dataframe for 23d0ccedaa537d1a43aa
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/23d0ccedaa537d1a43aa.csv.
+[TSA] cluster completed in 2.09
+[Calliope] Validating and Configuring Calliope model: 23d0ccedaa537d1a43aa
+[Calliope] Building Calliope model: 23d0ccedaa537d1a43aa
+[Calliope] Solving Calliope model: 23d0ccedaa537d1a43aa
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/23d0ccedaa537d1a43aa.nc

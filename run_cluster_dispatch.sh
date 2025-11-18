@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name="cluster_dispatch"
 #SBATCH --partition=compute
-#SBATCH --time=00:10:00          
+#SBATCH --time=00:25:00          
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2      
 #SBATCH --mem-per-cpu=3900         #

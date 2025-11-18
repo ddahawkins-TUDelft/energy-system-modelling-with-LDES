@@ -1,5 +1,4 @@
 from utility_functions.class_tsa_model import tsa_model
-from utility_functions.helper_visualise import visualise
 import os
 import calliope
 import yaml
@@ -8,24 +7,25 @@ from utility_functions.helper_calliope import read_clustered_netcdf
 import pandas as pd
 import time
 
-
-
 # -------------------------------------------------------------------------------------------
 # ----------------------------------- CONFIGURE ----------------------------------------------
 
 show_soc = True
 show_visual = False
 
-scenarios = ['Sensitivity_W_reps14','Sensitivity_W_reps30','Sensitivity_W_reps45','Sensitivity_W_reps60','Sensitivity_W_reps90','Sensitivity_W_reps180'] 
+scenarios = ['hpc_test'] 
 dispatch_config = [
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2015,2024]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_01.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_02.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_03.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_04.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/synthetic_ts_05.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008,2017]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
+
 ]
 
 # for running the shorter horizon models too
@@ -162,7 +162,7 @@ for dispatch in dispatch_config:
             print( ' ------------------------------------------------------- ')
             for model_name, config in scenario_batch.items():
                 
-                print( ' ------------------------------------------------------- ')
+                print( ' ------------------------------------------------------- ', flush=True)
                 print( f' ----- {model_name}  -----')
                 
                 calliope_p = deepcopy(calliope_params)
@@ -190,11 +190,13 @@ for dispatch in dispatch_config:
                 t_start = time.time()
                 m=run(calliope_p, soc_proxy_p, tsa_p, tsa_type=dispatch_mode, tvp_source=tvp_source if tvp_source else 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
                 t_end = time.time()
-                list_model_dict.append({
-                    'model': m,
-                    'name': f'{model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
-                    'params': {},
-                })
+
+                if show_visual:
+                    list_model_dict.append({
+                        'model': m,
+                        'name': f'{model_name}', # proxy_wt={tsa_params['matrix_weights']['proxy']} {'with proxy' if use_proxy else 'without proxy'}, k={m.tsa.params['k_periods']}, agg={cluster_method}, rep={rep_method}'
+                        'params': {},
+                    })
 
                 cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, 'dates': ','.join(map(str, calliope_p['date_range'])), 'date_range': calliope_p['date_range'][1]-calliope_p['date_range'][0]+1, "id": m.id, 'runtime': t_end-t_start})
 
@@ -206,7 +208,7 @@ df.to_csv("SoC_proxy_TSA/data/notes/log.csv", index=False)
 
 #add the reference case
 
-if len(dispatch_config)<=1:
+if len(dispatch_config)<=1 and show_visual:
     
     print(f'[Dispatch] Loading reference standard_{date_range[0]}_{date_range[-1]}_reference.nc')
     ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{date_range[0]}_{date_range[-1]}_reference.nc'
@@ -225,6 +227,7 @@ if len(dispatch_config)<=1:
 
 if show_visual:
     print('> Dispatch: Visualising results')
+    from utility_functions.helper_visualise import visualise
     visualise(
         list_model_dict=list_model_dict,
         x_field='Time', #'Time'

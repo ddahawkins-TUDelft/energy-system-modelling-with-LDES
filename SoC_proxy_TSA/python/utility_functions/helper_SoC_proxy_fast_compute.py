@@ -343,8 +343,8 @@ def generate_soc_proxy(
         'time_horizon_hours': 24
     },
     timestamp_col: str = None,
-    margin_mode: str = 'auto_volatility',          # 'fixed' | 'auto_volatility' | 'none'
-    margin_value: float = 0.05,          # only used for 'fixed'
+    margin_mode: str = 'fixed',          # 'fixed' | 'auto_volatility' | 'none'
+    margin_value: float = 0.04,          # only used for 'fixed'
     margin_bounds: tuple = (0.02, 0.07),  # clamp any margin we compute
 ):
     """

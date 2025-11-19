@@ -396,7 +396,7 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
             needed.append((ref_nc.stem, dates, tvp, ref_nc))
 
     rows = []
-    num_reads = len(df_needed)
+    num_reads = len(needed)
     counter = 0
     for mid, dates, tvp, nc_path in needed:
         counter += 1
@@ -797,7 +797,7 @@ def fig5_runtime_vs_horizon(df_runtime: pd.DataFrame, path: Path) -> None:
 
     # Horizon buckets as strings '2','5','10' (others dropped)
     mapping = {2: "2", 5: "5", 10: "10"}
-    df["h_bucket"] = df["horizon"].round().astype(int).map(mapping)
+    df["h_bucket"] = df["horizon"].astype(int).map(mapping)
     df = df[df["h_bucket"].isin(["2", "5", "10"])]
 
     if df.empty:

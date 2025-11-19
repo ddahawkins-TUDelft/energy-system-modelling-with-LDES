@@ -1,0 +1,26 @@
+Running on host: cmp139
+ ------------------------------------------------------- 
+[Dispatch] Scenarios include...
+['Sensitivity_W_reps365']
+[['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010, 2019]]]
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      6a0d0b62fac328227c54      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6a0d0b62fac328227c54.json
+> Model: SoC_proxy_TSA/data/calliope_models/6a0d0b62fac328227c54.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.25  -----
+ -----      173dd4fa033e264f34a5      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/173dd4fa033e264f34a5.json
+[TSA] Skipping TSA as cluster map already exists at SoC_proxy_TSA/data/cluster_maps/173dd4fa033e264f34a5.csv
+[Calliope] Validating and Configuring Calliope model: 173dd4fa033e264f34a5
+[Calliope] Building Calliope model: 173dd4fa033e264f34a5
+[Calliope] Solving Calliope model: 173dd4fa033e264f34a5

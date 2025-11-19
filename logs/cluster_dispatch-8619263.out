@@ -1,0 +1,34 @@
+Running on host: cmp046
+ ------------------------------------------------------- 
+[Dispatch] Scenarios include...
+['Sensitivity_W_reps365']
+[['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012, 2021]]]
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      0b1e9c802884cca71c68      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0b1e9c802884cca71c68.json
+> Model: SoC_proxy_TSA/data/calliope_models/0b1e9c802884cca71c68.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.25  -----
+ -----      054e0afbf6abacf6f267      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/054e0afbf6abacf6f267.json
+> Model: SoC_proxy_TSA/data/calliope_models/054e0afbf6abacf6f267.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.744724 lost=0.000e+00 | margin=4.000% -> curtailment=0.714935
+[SoC Proxy] curtailment forecast: 71.49%
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      6b16bc34a486003b0ebe      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6b16bc34a486003b0ebe.json
+[TSA] Skipping TSA as cluster map already exists at SoC_proxy_TSA/data/cluster_maps/6b16bc34a486003b0ebe.csv
+[Calliope] Validating and Configuring Calliope model: 6b16bc34a486003b0ebe
+[Calliope] Building Calliope model: 6b16bc34a486003b0ebe
+[Calliope] Solving Calliope model: 6b16bc34a486003b0ebe

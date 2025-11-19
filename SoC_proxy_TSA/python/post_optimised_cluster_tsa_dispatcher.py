@@ -23,16 +23,16 @@ scenarios = [
     'Sensitivity_W_reps365',
     ] 
 dispatch_config = [
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
     ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008,2017]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008,2017]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
 
 ]
 
@@ -159,7 +159,8 @@ cases_log = []
 print( ' ------------------------------------------------------- ')
 print('[Dispatch] Scenarios include...')
 print(scenarios)
-print( ' ------------------------------------------------------- ')
+print(dispatch_config)
+print( ' ------------------------------------------------------- ', flush=True)
 
 
 for dispatch in dispatch_config:

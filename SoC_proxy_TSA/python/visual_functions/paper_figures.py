@@ -45,13 +45,13 @@ from netCDF4 import Dataset
 import calliope
 
 import matplotlib as mpl
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
-# mpl.rcParams["pgf.preamble"] = r""
+mpl.rcParams.update({
+    "text.usetex": True,
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "axes.unicode_minus": False,
+})
+mpl.rcParams["pgf.preamble"] = r""
 
 
 # ------------------------- Paths & constants ---------------------------------
@@ -180,8 +180,9 @@ def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Op
     if tvp_str and tvp_str.lower() not in {"", "nan", "none"}:
         candidates += [
             # models_dir / tvp_str / f"standard_{y0}_{y1}_reference.nc",
+            models_dir / f"standard_{y0}_{y1}_reference.nc",
+            models_dir / f"standard_{y0}_{y1}_GB_reference.nc",
             models_dir / f"{tvp_str}.nc",
-            models_dir / f"standard_{y0}_{y1}_{tvp_str}_reference.nc",
         ]
     # default standard reference
     candidates.append(models_dir / f"standard_{y0}_{y1}_reference.nc")
@@ -189,7 +190,7 @@ def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Op
     for c in candidates:
         if c.exists():
             return c
-    return None
+    return Exception(f'Reference doesnt exist for {tvp}')
 
 # ------------------------- Model reading & metrics ----------------------------
 
@@ -282,9 +283,13 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
 
     rows = []
 
+    num_reads = len(df_needed)
+    counter = 0
+
     for _, row in df_needed.iterrows():
         mid = row["id"]
-        print(f'Reading {mid} for capacities')
+        counter += 1
+        print(f'Reading {mid} for capacities, {counter}/{num_reads}')
         if pd.isna(mid) or (mid in cached_ids):
             continue
 
@@ -300,6 +305,7 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
         if ref_key not in ref_cache:
             ref_nc = resolve_reference_nc(dates, tvp, models_dir)
             if ref_nc is None:
+                print('- Reference identified at:', ref_nc)
                 continue
             try:
                 model_reference = calliope.read_netcdf(str(ref_nc))
@@ -390,8 +396,11 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
             needed.append((ref_nc.stem, dates, tvp, ref_nc))
 
     rows = []
+    num_reads = len(df_needed)
+    counter = 0
     for mid, dates, tvp, nc_path in needed:
-        print(f'Reading {mid} runtimes')
+        counter += 1
+        print(f'Reading {mid} for runtimes, {counter}/{num_reads}')
         if mid in cached_ids:
             continue
         if not Path(nc_path).exists():

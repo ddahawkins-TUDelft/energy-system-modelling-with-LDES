@@ -7,7 +7,7 @@ import numpy as np
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
-RUN_DATA = True
+RUN_DATA = False
 ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
 
 sources = [
@@ -163,7 +163,7 @@ ax.scatter(
 ax.scatter(
     results['margin'], 
     results['mean_error'],
-    label="Mean Error (Normalised)",
+    label="Mean Error",
     color=COLOUR_3
 )
 
@@ -187,4 +187,4 @@ ax.legend(loc='best', frameon=False)
 
 fig.tight_layout()
 plt.show()
-# fig.savefig('soc_proxy_comparison.pdf', dpi=600, bbox_inches="tight")
+fig.savefig('margin_sensitivity_test.pdf', dpi=600, bbox_inches="tight")

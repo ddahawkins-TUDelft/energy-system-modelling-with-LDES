@@ -2,12 +2,12 @@
 #
 #SBATCH --job-name="cluster_dispatch"
 #SBATCH --partition=compute
-#SBATCH --time=00:25:00          
+#SBATCH --time=08:00:00          
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2      
-#SBATCH --mem-per-cpu=3900         #
+#SBATCH --cpus-per-task=8 
+#SBATCH --mem-per-cpu=3000         
 #SBATCH --account=research-tpm-ess
-#SBATCH --output=logs/%x.out  # logs/ref_dispatch_test-<jobid>.out
+#SBATCH --output=logs/%x-%j.out 
 
 
 

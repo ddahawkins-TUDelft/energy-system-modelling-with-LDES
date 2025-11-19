@@ -14,12 +14,12 @@ show_soc = True
 show_visual = False
 
 scenarios = [
-    'Sensitivity_W_reps14',
-    'Sensitivity_W_reps30',
-    'Sensitivity_W_reps45',
-    'Sensitivity_W_reps60',
-    'Sensitivity_W_reps90',
-    'Sensitivity_W_reps180',
+    # 'Sensitivity_W_reps14',
+    # 'Sensitivity_W_reps30',
+    # 'Sensitivity_W_reps45',
+    # 'Sensitivity_W_reps60',
+    # 'Sensitivity_W_reps90',
+    # 'Sensitivity_W_reps180',
     'Sensitivity_W_reps365',
     ] 
 dispatch_config = [
@@ -37,9 +37,9 @@ dispatch_config = [
 ]
 
 # for running the shorter horizon models too
-# for i in range(2006,2021,2):
+# for i in range(2006,2020,1):
 #     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
-# for i in range(2006,2024,1):
+# for i in range(2006,2023,1):
 #     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
 
 
@@ -66,7 +66,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str 
         
         print(f'> Model: {m.paths['calliope_model']} already exists. Reading file...')
         # m.calliope_model.model = calliope.read_netcdf(m.paths['calliope_model'])
-        m.calliope_model.model = read_clustered_netcdf(m.paths['calliope_model'])
+        # m.calliope_model.model = read_clustered_netcdf(m.paths['calliope_model'])
 
     else:
         #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -156,6 +156,12 @@ list_model_dict = []
 
 cases_log = []
 
+print( ' ------------------------------------------------------- ')
+print('[Dispatch] Scenarios include...')
+print(scenarios)
+print( ' ------------------------------------------------------- ')
+
+
 for dispatch in dispatch_config:
 
     tvp_source = dispatch[0]
@@ -167,7 +173,7 @@ for dispatch in dispatch_config:
             print( '  ')
             print(f'[Dispatch] running scenario {scenario_name}')
             print( '   ')
-            print( ' ------------------------------------------------------- ')
+            print( ' ------------------------------------------------------- ', flush=True)
             for model_name, config in scenario_batch.items():
                 
                 print( ' ------------------------------------------------------- ')
@@ -209,8 +215,9 @@ for dispatch in dispatch_config:
                 cases_log.append({"tvp": tvp_source,"scenario_name": scenario_name,"model_name": model_name, 'dates': ','.join(map(str, calliope_p['date_range'])), 'date_range': calliope_p['date_range'][1]-calliope_p['date_range'][0]+1, "id": m.id, 'runtime': t_end-t_start})
 
 
+timestamp = time.strftime("%Y%m%d_%H%M%S")
 df = pd.DataFrame(cases_log)
-df.to_csv("SoC_proxy_TSA/data/notes/log.csv", index=False)    
+df.to_csv(f"SoC_proxy_TSA/data/notes/log_{timestamp}.csv", index=False)   
 
 #VISUALISATION FUNCTIONS -------------------------------------------------------------------------------------------------
 

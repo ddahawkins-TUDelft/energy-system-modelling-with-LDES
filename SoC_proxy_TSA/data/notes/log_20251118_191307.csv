@@ -1,0 +1,101 @@
+tvp,scenario_name,model_name,dates,date_range,id,runtime
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2006,2015",10,04b9f1ae16b43be47d30,35.99039649963379
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2006,2015",10,10606cc2552a283491ca,25.36237907409668
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2006,2015",10,389abbde37fa7fac7b90,23.501621961593628
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2006,2015",10,df179318bb926c406dd7,38.42679762840271
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2006,2015",10,a252a3d6f631efef8a7d,24.171663761138916
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2006,2015",10,bacae7d1465247b1cb89,58.592721462249756
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2006,2015",10,f172a16f0dc4f7d8f0cd,45.7807183265686
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2006,2015",10,c49ad3633cb70d9a7ea6,62.478957414627075
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2006,2015",10,05784cf00c3e308a6536,46.23700475692749
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2006,2015",10,0eb40b3b6a8e33b9bd73,49.847962617874146
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2008,2017",10,85f504b9c7b492b8a522,21.88667368888855
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2008,2017",10,37428dd1d714bbb28385,35.980993032455444
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2008,2017",10,b4acdf82e97f89f392bd,42.610551834106445
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2008,2017",10,e71ad06525e18e7d0f73,35.31542658805847
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2008,2017",10,280f9b0dea3250387003,22.081958770751953
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2008,2017",10,3d8e15cff8331c90a94e,40.736809492111206
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2008,2017",10,4408030f50fb25841b36,50.84786128997803
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2008,2017",10,5ae87ab83cc5884f6f1f,41.46099925041199
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2008,2017",10,52b80ef48a9fe6177f9d,68.59301614761353
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2008,2017",10,112fd7795332461ce464,43.42971873283386
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2010,2019",10,12198e9a317cbfb21385,18.845330476760864
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2010,2019",10,ce075100e3b46ae28d29,30.74191164970398
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2010,2019",10,5bd0a15c012ee77f358c,24.458128929138184
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2010,2019",10,5fe9f826a13bc9228548,30.08049488067627
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2010,2019",10,9c37c96768cd34c0a977,24.120243549346924
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2010,2019",10,2e821fe1b5d40888b277,53.27616000175476
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2010,2019",10,c37da17c17eb70e27a49,44.108784437179565
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2010,2019",10,c779b1f75feff932f10c,41.048624992370605
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2010,2019",10,f4f6278faa202d82ee49,53.642539739608765
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2010,2019",10,0ff5f79aec7527b80f85,72.41749429702759
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2012,2021",10,c500096648a198c021a7,20.38935661315918
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2012,2021",10,9f33ad6fc8f003216d23,24.227304220199585
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2012,2021",10,33b10b6d8bd8392d8563,34.99036240577698
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2012,2021",10,d36eb4e42d6825eea486,34.42979669570923
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2012,2021",10,1d85d1df4135845c28dc,21.832383394241333
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2012,2021",10,ebbe0e4d01bf669ab0fa,44.00738883018494
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2012,2021",10,6ebfe087a83e040ecf2a,55.31101131439209
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2012,2021",10,0aba411b4f15cc1925fd,43.899202823638916
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2012,2021",10,386df85d2d5df889549d,60.83836317062378
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2012,2021",10,ee5d084890416306d9d8,45.00896096229553
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2014,2023",10,1eb5b2d81b3d9678bb5d,20.169944524765015
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2014,2023",10,47723a5f707245e900e7,37.74873113632202
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2014,2023",10,1c73263703f6885cc8bc,34.24812197685242
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2014,2023",10,aa8e61af09ea560508a9,27.98034358024597
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2014,2023",10,d40dfd11638b05425386,22.815066814422607
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2014,2023",10,c4c5888777bb02fbf18d,47.71681880950928
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2014,2023",10,faee6ce5b219a6b8c8fc,52.651171922683716
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2014,2023",10,df4eb43b9a3f65aafb12,47.00974750518799
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2014,2023",10,6ae818467a324f0b81bc,40.92430591583252
+SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2014,2023",10,9276bcc1996eb837360d,52.24021792411804
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2006,2015",10,d805feb127e8b110555c,22.301963329315186
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2006,2015",10,741126afb64c267f3d0b,30.34278154373169
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2006,2015",10,e9a9a9a61f458fa9cca5,30.830281496047974
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2006,2015",10,908acd700ee74a47a180,24.809905767440796
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2006,2015",10,f6ed2fce2443deab5f47,33.9373505115509
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2006,2015",10,bab6c127b170f4a8d870,50.32323336601257
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2006,2015",10,73d7a1d25f4b74b51915,54.66491746902466
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2006,2015",10,5425235b30f01d81d838,43.01677060127258
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2006,2015",10,37d1c56f534acb62204a,67.2118890285492
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2006,2015",10,853ab856c9431f05de72,68.75007891654968
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2008,2017",10,9fccb2d1f4251982fa4d,21.016577005386353
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2008,2017",10,5b2fb7bce8883e803dcd,32.799503803253174
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2008,2017",10,fe4c97d3186e1a4bc050,27.022508144378662
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2008,2017",10,9384f125383e9202b342,23.33029580116272
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2008,2017",10,07c58affead6d6c2a49c,31.428349018096924
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2008,2017",10,d05b5ce0a1c005fa8f96,34.82136797904968
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2008,2017",10,c18a066c2a1f01cf0f32,40.50542449951172
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2008,2017",10,0dfa26fb4c906fb24675,32.34487175941467
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2008,2017",10,3c2e23b6ed933b2ff1b2,39.58201766014099
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2008,2017",10,0ef5184bfefa0459f7c6,62.072946071624756
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2010,2019",10,c8cd1aab266275fc9742,25.968305587768555
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2010,2019",10,0acce3ca610c58d0a145,30.031439304351807
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2010,2019",10,43d822337a2d2d1a8ac0,25.040334463119507
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2010,2019",10,b460166811f622de8577,25.6501727104187
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2010,2019",10,1e7bac5e2f311fc3c4f8,25.603824138641357
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2010,2019",10,35565e407990a070c69d,35.80840039253235
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2010,2019",10,7bfd5ba3b0f430b2cf25,58.166850328445435
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2010,2019",10,a48a7106aa3793f8049f,38.50797939300537
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2010,2019",10,b76a220388e107ca2b54,44.10063362121582
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2010,2019",10,d8fb9d629b5ef097f544,40.89843964576721
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2012,2021",10,0ea737b5b23d0e26cabe,23.22250485420227
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2012,2021",10,f9583c6941a0df88a72d,34.093672037124634
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2012,2021",10,9ddbfe44a8cfe2e21a79,33.29468894004822
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2012,2021",10,dc75c79c09d166d8220e,22.856178045272827
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2012,2021",10,cb36a26f2436cf3a3fc6,24.77102255821228
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2012,2021",10,8ccc9d6232e03f17d17d,35.75459551811218
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2012,2021",10,cd47ebd4e1fd29036a11,66.80223512649536
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2012,2021",10,02dcae8e90085cc686ee,37.48034477233887
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2012,2021",10,39cb1ca4868c4b8df605,43.859225034713745
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2012,2021",10,50e18acd6b5e72d20723,35.12756872177124
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, W_proxy=0.0","2014,2023",10,56a7b65b2d88da0c379c,21.109241008758545
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.25","2014,2023",10,2edec760c3857d367faf,38.255948543548584
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.5","2014,2023",10,b58a31ea056a5f7260db,25.348034381866455
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=0.75","2014,2023",10,e2fd9a9e4e013b36ee9e,24.261900663375854
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps14,"K-Medoid, reps=14, SocDelta, W_proxy=1","2014,2023",10,af7bc1b7c4c0aa4da38c,24.34340190887451
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, W_proxy=0.0","2014,2023",10,51decd75147dbd1d966c,48.39911150932312
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.25","2014,2023",10,90b103f62f8639e5fb2b,42.66202163696289
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.5","2014,2023",10,8e55796c79b95dd6018f,65.48499751091003
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=0.75","2014,2023",10,c20441d71d3c5fc26979,39.65614676475525
+SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps30,"K-Medoid, reps=30, SocDelta, W_proxy=1","2014,2023",10,6c4aa538c65e94ccdcd8,35.75511884689331

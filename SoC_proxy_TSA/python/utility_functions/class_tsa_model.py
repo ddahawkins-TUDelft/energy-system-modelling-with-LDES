@@ -199,7 +199,7 @@ class tsa_model:
         else:
             if self.calliope_model.status != 'built':
                 raise Exception('Calliope model has not been built.')
-            print(f'[Calliope] Solving Calliope model: {self.id}')
+            print(f'[Calliope] Solving Calliope model: {self.id}', flush=True)
             self.calliope_model.model.solve()
             if self.calliope_model.model.results.nbytes > 0:
                 self.calliope_model.status = 'solved'
@@ -208,7 +208,7 @@ class tsa_model:
                 self.calliope_model.status = 'failed'
                 raise Exception('Calliope failed due to error')
             
-            print(f'[Calliope] Solution saved to: {self.paths['calliope_model']}')
+            print(f'[Calliope] Solution saved to: {self.paths['calliope_model']}', flush=True)
 
 
     #SOC Proxy FUNCTIONS -------------------------------------------------------------------------------------------------

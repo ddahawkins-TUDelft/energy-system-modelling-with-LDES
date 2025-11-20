@@ -45,21 +45,15 @@ from netCDF4 import Dataset
 import calliope
 
 import matplotlib as mpl
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
-# mpl.rcParams["pgf.preamble"] = r""
+
 
 
 # ------------------------- Paths & constants ---------------------------------
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_10_yr_WandKTests.csv")]
-LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_horizon.csv")]
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_14-180_NL_only.csv")] 
+LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_45-60-90.csv")]
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
 PARAM_DIR       = Path("SoC_proxy_TSA/data/parameters")
@@ -72,7 +66,7 @@ CACHE_RUNTIME   = Path("SoC_proxy_TSA/data/notes/runtime_cache.csv")
 FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_abs_ldes_error_10y.pdf"
 FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps.pdf"
 FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_excl14.pdf"
-FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps45to60.pdf"
+FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90.pdf"
 FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon.pdf"
 
 # Colours (preserve existing)
@@ -84,6 +78,26 @@ COLOUR_GREY_MEAN = "#666666"  # general grey where needed
 # Marker settings
 MARKER_MACME = "o"
 MARKER_LDES  = "o"
+
+#latex
+mpl.rcParams.update({
+    "text.usetex": True,
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "axes.unicode_minus": False,
+})
+
+plt.rcParams.update({
+    "font.size": 8,         
+    "axes.labelsize": 8,    
+    "xtick.labelsize": 7,
+    "ytick.labelsize": 7,
+    "legend.fontsize": 7,
+})
+mpl.rcParams["pgf.preamble"] = r""
+
+fig_width = 3.5
+fig_height = 3
 
 
 # ------------------------- Helpers: I/O & parsing ----------------------------
@@ -180,8 +194,9 @@ def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Op
     if tvp_str and tvp_str.lower() not in {"", "nan", "none"}:
         candidates += [
             # models_dir / tvp_str / f"standard_{y0}_{y1}_reference.nc",
+            models_dir / f"standard_{y0}_{y1}_reference.nc",
+            models_dir / f"standard_{y0}_{y1}_GB_reference.nc",
             models_dir / f"{tvp_str}.nc",
-            models_dir / f"standard_{y0}_{y1}_{tvp_str}_reference.nc",
         ]
     # default standard reference
     candidates.append(models_dir / f"standard_{y0}_{y1}_reference.nc")
@@ -189,7 +204,7 @@ def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Op
     for c in candidates:
         if c.exists():
             return c
-    return None
+    return Exception(f'Reference doesnt exist for {tvp}')
 
 # ------------------------- Model reading & metrics ----------------------------
 
@@ -282,9 +297,13 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
 
     rows = []
 
+    num_reads = len(df_needed)
+    counter = 0
+
     for _, row in df_needed.iterrows():
         mid = row["id"]
-        print(f'Reading {mid} for capacities')
+        counter += 1
+        print(f'Reading {mid} for capacities, {counter}/{num_reads}')
         if pd.isna(mid) or (mid in cached_ids):
             continue
 
@@ -300,6 +319,7 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
         if ref_key not in ref_cache:
             ref_nc = resolve_reference_nc(dates, tvp, models_dir)
             if ref_nc is None:
+                print('- Reference identified at:', ref_nc)
                 continue
             try:
                 model_reference = calliope.read_netcdf(str(ref_nc))
@@ -390,8 +410,11 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
             needed.append((ref_nc.stem, dates, tvp, ref_nc))
 
     rows = []
+    num_reads = len(needed)
+    counter = 0
     for mid, dates, tvp, nc_path in needed:
-        print(f'Reading {mid} runtimes')
+        counter += 1
+        print(f'Reading {mid} for runtimes, {counter}/{num_reads}')
         if mid in cached_ids:
             continue
         if not Path(nc_path).exists():
@@ -485,7 +508,7 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     cmap = plt.get_cmap("plasma", len(levels) - 1)  # plasma goes #0D0887 -> #F0F921
     norm = mcolors.BoundaryNorm(levels, cmap.N)
 
-    fig, ax = plt.subplots(figsize=(7, 4.5))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     im = ax.imshow(pivot.values,
                    aspect="auto",
                    origin="lower",
@@ -529,7 +552,7 @@ def fig2_box_by_reps(df_cem: pd.DataFrame, path: Path) -> None:
     data_ldes = [df_filter.loc[df_filter["number_reps"] == x, "ldes_error"].dropna().values for x in x_vals]
     data_mac  = [df_filter.loc[df_filter["number_reps"] == x, "macme"].dropna().values for x in x_vals]
 
-    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     offsets = np.array([-0.15, 0.15])
     positions_ldes = np.arange(len(x_vals)) + offsets[0]
     positions_mac  = np.arange(len(x_vals)) + offsets[1]
@@ -557,13 +580,13 @@ def fig2_box_by_reps(df_cem: pd.DataFrame, path: Path) -> None:
         # LDES markers (round, hollow, edge = pink)
         xs = np.full(len(sub0), positions_ldes[i]) + rng.normal(0, 0.025, len(sub0))
         ys = sub0["ldes_error"].values
-        ax.scatter(xs, ys, s=20, marker="o",
+        ax.scatter(xs, ys, s=fig_height*4, marker="o",
                    facecolors="white", edgecolors=COLOUR_LDES, linewidths=0.9, zorder=3)
 
         # MACME markers (round, hollow, edge = blue/purple)
         xs = np.full(len(sub0), positions_mac[i]) + rng.normal(0, 0.025, len(sub0))
         ys = sub0["macme"].values
-        ax.scatter(xs, ys, s=20, marker="o",
+        ax.scatter(xs, ys, s=fig_height*4, marker="o",
                    facecolors="white", edgecolors=COLOUR_MACME, linewidths=0.9, zorder=3)
 
 
@@ -612,7 +635,7 @@ def fig3_box_by_proxy(df_cem: pd.DataFrame, path: Path) -> None:
         print("[fig3] No data to plot after filtering.")
         return
 
-    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
     data_ldes = [df.loc[np.isclose(df["W_proxy"], x), "ldes_error"].dropna().values for x in x_levels]
     data_mac  = [df.loc[np.isclose(df["W_proxy"], x), "macme"].dropna().values for x in x_levels]
@@ -687,7 +710,7 @@ def fig3_box_by_proxy(df_cem: pd.DataFrame, path: Path) -> None:
 def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
     # Filter to W in {0,1} and reps in [45, 60]
     df = df_cem.copy()
-    df = df[(df["number_reps"] >= 45) & (df["number_reps"] <= 60)]
+    df = df[(df["number_reps"] >= 60) & (df["number_reps"] <= 90)]
     df = df[df["W_proxy"].isin([0.0, 1.0])]
     df = df.dropna(subset=["horizon"])
 
@@ -707,7 +730,7 @@ def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
     pos_W1 = x + 0.15
     width = 0.28
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(fig_width*2, fig_height), sharey=True)
     metrics = [
         ("ldes_error", "LDES capacity error", COLOUR_LDES, axes[0]),
         ("macme",      "MACME",              COLOUR_MACME, axes[1]),
@@ -786,9 +809,10 @@ def fig5_runtime_vs_horizon(df_runtime: pd.DataFrame, path: Path) -> None:
     df = df_runtime.copy()
     df = df.dropna(subset=["runtime_min", "horizon"])
 
+
     # Horizon buckets as strings '2','5','10' (others dropped)
     mapping = {2: "2", 5: "5", 10: "10"}
-    df["h_bucket"] = df["horizon"].round().astype(int).map(mapping)
+    df["h_bucket"] = df["horizon"].astype(int).map(mapping)
     df = df[df["h_bucket"].isin(["2", "5", "10"])]
 
     if df.empty:
@@ -804,7 +828,7 @@ def fig5_runtime_vs_horizon(df_runtime: pd.DataFrame, path: Path) -> None:
     grey = "#808080"
 
     # jitter scatter per horizon bucket
-    fig, ax = plt.subplots(figsize=(8.2, 4.8))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     rng = np.random.default_rng(23)
     horizons = ["2", "5", "10"]
     xloc = {h: i for i, h in enumerate(horizons)}
@@ -828,12 +852,12 @@ def fig5_runtime_vs_horizon(df_runtime: pd.DataFrame, path: Path) -> None:
                 kk = int(k)
                 cols.append(col_lut.get(kk, grey))
 
-        ax.scatter(xs, ys, s=28, marker="o", edgecolors="none", alpha=0.9, c=cols, zorder=3)
+        ax.scatter(xs, ys, s=fig_height*2, marker="o", linewidths=0.2, edgecolors="black", alpha=0.9, c=cols, zorder=3)
 
     ax.set_xticks(range(len(horizons)))
     ax.set_xticklabels(horizons)
     ax.set_xlabel("Horizon (years)")
-    ax.set_ylabel("Runtime (log of minutes)")
+    ax.set_ylabel(r"Runtime ($\log_{10}$ minutes)")
     ax.set_yscale("log")
 
     # legend: build from unique k plus 'ref'

@@ -52,7 +52,7 @@ import matplotlib as mpl
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_14-180_NL_only.csv")] 
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv")] 
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_45-60-90.csv")]
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
@@ -80,12 +80,12 @@ MARKER_MACME = "o"
 MARKER_LDES  = "o"
 
 #latex
-mpl.rcParams.update({
-    "text.usetex": True,
-    "pgf.texsystem": "pdflatex",
-    "pgf.rcfonts": False,
-    "axes.unicode_minus": False,
-})
+# mpl.rcParams.update({
+#     "text.usetex": True,
+#     "pgf.texsystem": "pdflatex",
+#     "pgf.rcfonts": False,
+#     "axes.unicode_minus": False,
+# })
 
 plt.rcParams.update({
     "font.size": 8,         

@@ -80,12 +80,12 @@ MARKER_MACME = "o"
 MARKER_LDES  = "o"
 
 #latex
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
+mpl.rcParams.update({
+    "text.usetex": True,
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "axes.unicode_minus": False,
+})
 
 plt.rcParams.update({
     "font.size": 8,         

@@ -15,15 +15,15 @@ show_visual = False
 
 scenarios = [
     # 'Sensitivity_W_reps14',
-    # 'Sensitivity_W_reps30',
-    # 'Sensitivity_W_reps45',
-    # 'Sensitivity_W_reps60',
-    # 'Sensitivity_W_reps90',
-    # 'Sensitivity_W_reps180',
+    'Sensitivity_W_reps30',
+    'Sensitivity_W_reps45',
+    'Sensitivity_W_reps60',
+    'Sensitivity_W_reps90',
+    'Sensitivity_W_reps180',
     'Sensitivity_W_reps365',
     ] 
 dispatch_config = [
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
@@ -37,10 +37,10 @@ dispatch_config = [
 ]
 
 # for running the shorter horizon models too
-# for i in range(2006,2020,1):
-#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
-# for i in range(2006,2023,1):
-#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
+for i in range(2006,2020,1):
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
+for i in range(2006,2023,1):
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
 
 
 # -------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ dispatch_config = [
 def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str = None):
 
     #MODEL SETUP FUNCTIONS -------------------------------------------------------------------------------------------------
-
+    s_time = time.time()
     m = tsa_model(tsa_type=tsa_type, path_timeseries=tvp_source if tvp_source else 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv')
 
 
@@ -78,7 +78,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str 
         m.configure_calliope()
         m.build_calliope()
         m.solve_and_save_calliope()
-
+        print('[Dispatch] Instance Runtime: ', time.time()-s_time)
     #CALLIOPE FUNCTIONS -------------------------------------------------------------------------------------------------
 
     m.generate_soc_proxy_expost()

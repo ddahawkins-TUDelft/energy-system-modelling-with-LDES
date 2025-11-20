@@ -249,7 +249,8 @@ class tsa_model:
                 storage_process_losses=self.soc_proxy.params['storage_process_losses'],
                 soc_decomposition = self.soc_proxy.params['soc_decomposition'],
                 timestamp_col=None,
-                margin_value=self.soc_proxy.params.get("margin_value", 0.04)
+                margin_value=self.soc_proxy.params.get("margin_value", 0.04),
+                margin_mode=self.soc_proxy.params.get("margin_mode", 'fixed')
             )
             df_timeseries = df_timeseries[original_columns]
 
@@ -409,7 +410,9 @@ class tsa_model:
                 storage_process_losses=self.soc_proxy.params['storage_process_losses'],
                 soc_decomposition = self.soc_proxy.params['soc_decomposition'],
                 timestamp_col=None,
-                margin_value=self.soc_proxy.params.get("margin_value", 0.04)
+                margin_value=self.soc_proxy.params.get("margin_value", 0.04),
+                margin_mode=self.soc_proxy.params.get("margin_mode", 'fixed')
+
             )
 
             if (self.tsa.type in ['optimisation','cluster_with_optimisation']

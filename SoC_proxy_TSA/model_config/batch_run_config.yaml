@@ -782,3 +782,76 @@ Sensitivity_W_reps365:
           proxy_inputs_to_consider: ['surplus_LDES'] 
           proxy_window: None
       soc_features:
+
+Sensitivity_margin_W1_reps60:
+  K-Medoid, reps=60, W_proxy=1.0, m=0.00:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+      margin_value: 0.00
+      margin_mode: none
+    tsa_params:
+      k_periods: 60
+      lambda_soc: 
+        cluster: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      soc_features:
+  K-Medoid, reps=60, W_proxy=1.0, m=0.02:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+      margin_value: 0.02
+    tsa_params:
+      k_periods: 60
+      lambda_soc: 
+        cluster: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      soc_features:
+  K-Medoid, reps=60, W_proxy=1.0, m=0.04:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+      margin_value: 0.04
+    tsa_params:
+      k_periods: 60
+      lambda_soc: 
+        cluster: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      soc_features:
+  K-Medoid, reps=60, W_proxy=1.0, m=0.06:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+      margin_value: 0.06
+    tsa_params:
+      k_periods: 60
+      lambda_soc: 
+        cluster: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      soc_features:
+  K-Medoid, reps=60, W_proxy=1.0, m=0.08:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+      margin_value: 0.08
+    tsa_params:
+      k_periods: 60
+      lambda_soc: 
+        cluster: 1
+      soc_proxy: 
+          use_soc_proxy: True
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      soc_features:

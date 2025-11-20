@@ -892,3 +892,43 @@ weight of "demand_power" set to the minmal tolerable weighting
 [Calliope] Validating and Configuring Calliope model: b94004f5b1e6c4530c32
 [Calliope] Building Calliope model: b94004f5b1e6c4530c32
 [Calliope] Solving Calliope model: b94004f5b1e6c4530c32
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/b94004f5b1e6c4530c32.nc
+[Dispatch] Instance Runtime:  67.51447987556458
+[SoC Proxy] Tuner: c*=0.757137 lost=0.000e+00 | margin=4.000% -> curtailment=0.726852
+[SoC Proxy] curtailment forecast: 72.69%
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.75  -----
+ -----      6472c89209062501b87a      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6472c89209062501b87a.json
+[TSA] Extracting features dataframe for 6472c89209062501b87a
+[SoC Proxy] Tuner: c*=0.752652 lost=0.000e+00 | margin=4.000% -> curtailment=0.722546
+[SoC Proxy] curtailment forecast: 72.25%
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/6472c89209062501b87a.csv.
+[TSA] cluster completed in 1.23
+[Calliope] Validating and Configuring Calliope model: 6472c89209062501b87a
+[Calliope] Building Calliope model: 6472c89209062501b87a
+[Calliope] Solving Calliope model: 6472c89209062501b87a
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/6472c89209062501b87a.nc
+[Dispatch] Instance Runtime:  80.24930882453918
+[SoC Proxy] Tuner: c*=0.753747 lost=0.000e+00 | margin=4.000% -> curtailment=0.723597
+[SoC Proxy] curtailment forecast: 72.36%
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=1  -----
+ -----      d81eddeb974aa6fd051f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/d81eddeb974aa6fd051f.json
+[TSA] Extracting features dataframe for d81eddeb974aa6fd051f
+[SoC Proxy] Tuner: c*=0.752652 lost=0.000e+00 | margin=4.000% -> curtailment=0.722546
+[SoC Proxy] curtailment forecast: 72.25%
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+weight of "solar" set to the minmal tolerable weighting
+weight of "onshore_wind" set to the minmal tolerable weighting
+weight of "offshore_wind" set to the minmal tolerable weighting
+weight of "demand_power" set to the minmal tolerable weighting
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/d81eddeb974aa6fd051f.csv.
+[TSA] cluster completed in 1.17
+[Calliope] Validating and Configuring Calliope model: d81eddeb974aa6fd051f
+[Calliope] Building Calliope model: d81eddeb974aa6fd051f
+[Calliope] Solving Calliope model: d81eddeb974aa6fd051f

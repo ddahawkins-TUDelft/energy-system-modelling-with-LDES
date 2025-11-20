@@ -392,3 +392,25 @@ weight of "demand_power" set to the minmal tolerable weighting
 [Calliope] Validating and Configuring Calliope model: 362d5181443804998a8f
 [Calliope] Building Calliope model: 362d5181443804998a8f
 [Calliope] Solving Calliope model: 362d5181443804998a8f
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/362d5181443804998a8f.nc
+[Dispatch] Instance Runtime:  407.49563217163086
+[SoC Proxy] Tuner: c*=0.748998 lost=0.000e+00 | margin=4.000% -> curtailment=0.719038
+[SoC Proxy] curtailment forecast: 71.90%
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=1  -----
+ -----      d1e12472318ac6618966      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/d1e12472318ac6618966.json
+[TSA] Extracting features dataframe for d1e12472318ac6618966
+[SoC Proxy] Tuner: c*=0.745409 lost=0.000e+00 | margin=4.000% -> curtailment=0.715592
+[SoC Proxy] curtailment forecast: 71.56%
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+weight of "solar" set to the minmal tolerable weighting
+weight of "onshore_wind" set to the minmal tolerable weighting
+weight of "offshore_wind" set to the minmal tolerable weighting
+weight of "demand_power" set to the minmal tolerable weighting
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/d1e12472318ac6618966.csv.
+[TSA] cluster completed in 2.15
+[Calliope] Validating and Configuring Calliope model: d1e12472318ac6618966
+[Calliope] Building Calliope model: d1e12472318ac6618966
+[Calliope] Solving Calliope model: d1e12472318ac6618966

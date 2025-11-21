@@ -14,34 +14,38 @@ show_soc = True
 show_visual = False
 
 scenarios = [
-    'Sensitivity_W_reps14',
-    'Sensitivity_W_reps30',
-    'Sensitivity_W_reps45',
-    'Sensitivity_W_reps60',
-    'Sensitivity_W_reps90',
-    'Sensitivity_W_reps180',
-    'Sensitivity_W_reps365',
-    # 'Sensitivity_margin_W1_reps60'
+    # 'Sensitivity_W_reps14',
+    # 'Sensitivity_W_reps30',
+    # 'Sensitivity_W_reps45',
+    # 'Sensitivity_W_reps60',
+    # 'Sensitivity_W_reps90',
+    # 'Sensitivity_W_reps180',
+    # 'Sensitivity_W_reps365',
+    # 'Sensitivity_margin_W1_reps60',
+    'margin_sensitivity_60-180_m=0.04',
+    'margin_sensitivity_60-180_m=0.1',
+    'margin_sensitivity_60-180_m=0.14',
+
     ] 
 dispatch_config = [
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008,2017]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
+    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008,2017]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
 
 ]
 
 # for running the shorter horizon models too
-for i in range(2006,2020,5):
-    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
-for i in range(2006,2023,2):
-    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
+# for i in range(2006,2020,5):
+#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
+# for i in range(2006,2023,2):
+#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
 
 
 # -------------------------------------------------------------------------------------------

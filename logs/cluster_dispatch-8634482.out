@@ -1,4 +1,0 @@
-Running on host: cmp182
-srun: Job step aborted: Waiting up to 122 seconds for job step to finish.
-slurmstepd: error: *** STEP 8634482.0 ON cmp182 CANCELLED AT 2025-11-21T18:17:31 ***
-slurmstepd: error: *** JOB 8634482 ON cmp182 CANCELLED AT 2025-11-21T18:17:31 ***

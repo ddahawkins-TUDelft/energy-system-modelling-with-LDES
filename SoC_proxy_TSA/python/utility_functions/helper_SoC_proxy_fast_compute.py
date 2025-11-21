@@ -345,7 +345,7 @@ def generate_soc_proxy(
     timestamp_col: str = None,
     margin_mode: str = 'fixed',          # 'fixed' | 'auto_volatility' | 'none'
     margin_value: float = 0.04,          # only used for 'fixed'
-    margin_bounds: tuple = (0.0, 0.1),  # clamp any margin we compute
+    margin_bounds: tuple = (0.0, 0.5),  # clamp any margin we compute
 ):
     """
     Takes time series data and returns SoC proxies for LDES and SDES.

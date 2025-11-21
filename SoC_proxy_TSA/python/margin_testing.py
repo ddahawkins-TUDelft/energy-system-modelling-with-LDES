@@ -7,36 +7,42 @@ import numpy as np
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
-RUN_DATA = False
+RUN_DATA = True
 ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
 
 sources = [
-    ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
-    ['SoC_proxy_TSA/data/calliope_models/standard_2008_2017_reference.nc', ["2008-01-01", "2017-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
-    ['SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc', ["2010-01-01", "2019-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
-    ['SoC_proxy_TSA/data/calliope_models/standard_2012_2021_reference.nc', ["2012-01-01", "2021-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
-    ['SoC_proxy_TSA/data/calliope_models/standard_2014_2023_reference.nc', ["2014-01-01", "2023-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
-    # ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_GB_reference.nc', ["2006-01-01", "2015-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
-    # ['SoC_proxy_TSA/data/calliope_models/standard_2008_2017_GB_reference.nc', ["2008-01-01", "2017-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
-    # ['SoC_proxy_TSA/data/calliope_models/standard_2010_2019_GB_reference.nc', ["2010-01-01", "2019-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
-    # ['SoC_proxy_TSA/data/calliope_models/standard_2012_2021_GB_reference.nc', ["2012-01-01", "2021-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
-    # ['SoC_proxy_TSA/data/calliope_models/standard_2014_2023_GB_reference.nc', ["2014-01-01", "2023-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
+    # ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
+    # ['SoC_proxy_TSA/data/calliope_models/standard_2008_2017_reference.nc', ["2008-01-01", "2017-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
+    # ['SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference.nc', ["2010-01-01", "2019-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
+    # ['SoC_proxy_TSA/data/calliope_models/standard_2012_2021_reference.nc', ["2012-01-01", "2021-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
+    # ['SoC_proxy_TSA/data/calliope_models/standard_2014_2023_reference.nc', ["2014-01-01", "2023-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'],
+    ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_GB_reference.nc', ["2006-01-01", "2015-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
+    ['SoC_proxy_TSA/data/calliope_models/standard_2008_2017_GB_reference.nc', ["2008-01-01", "2017-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
+    ['SoC_proxy_TSA/data/calliope_models/standard_2010_2019_GB_reference.nc', ["2010-01-01", "2019-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
+    ['SoC_proxy_TSA/data/calliope_models/standard_2012_2021_GB_reference.nc', ["2012-01-01", "2021-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
+    ['SoC_proxy_TSA/data/calliope_models/standard_2014_2023_GB_reference.nc', ["2014-01-01", "2023-12-31"],'SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv'],
 ]
 
-margins = [
-    # 'auto',
-    0,
-    0.01,
-    0.02,
-    0.03,
-    0.04,
-    0.05,
-    0.06,
-    0.07,
-    0.08,
-    0.09,
-    0.1,
-]
+step = 0.01
+max_margin = 0.2
+
+margins = np.linspace(0,max_margin,int(max_margin/step)+1)
+
+# margins = [
+#     # 'auto',
+#     0,
+#     0.01,
+#     0.02,
+#     0.03,
+#     0.04,
+#     0.05,
+#     0.06,
+#     0.07,
+#     0.08,
+#     0.09,
+#     0.1,
+# ]
+
 
 # tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'
 
@@ -187,4 +193,4 @@ ax.legend(loc='best', frameon=False)
 
 fig.tight_layout()
 plt.show()
-fig.savefig('margin_sensitivity_test.pdf', dpi=600, bbox_inches="tight")
+fig.savefig('margin_sensitivity_test_NL.pdf', dpi=600, bbox_inches="tight")

@@ -745,7 +745,7 @@ def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
     pos_W1 = x + 0.15
     width = 0.28
 
-    fig, axes = plt.subplots(1, 2, figsize=(fig_width*2, fig_height), sharey=True)
+    fig, axes = plt.subplots(2, 1, figsize=(fig_width, fig_height*2), sharey=True)
     metrics = [
         ("ldes_error", "LDES capacity error", COLOUR_LDES, axes[0]),
         ("macme",      "MACME",              COLOUR_MACME, axes[1]),
@@ -794,15 +794,16 @@ def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
         _add_y0_line(ax)
         ax.set_xticks(x)
         ax.set_xticklabels(horizons)
-        ax.set_xlabel("Horizon (years)")
-        ax.set_title(title)
+        # ax.set_title(title)
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
         ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.grid(axis="y", linestyle=":", alpha=0.4)
 
-    axes[0].set_ylabel("Relative error")
+    axes[1].set_xlabel("Horizon (years)")
+    axes[0].set_ylabel("LDES capacity error")
+    axes[1].set_ylabel("MACME")
 
     # Simple legend explaining W=0 vs W=1 encoding (hollow vs filled)
     legend_handles = [
@@ -813,7 +814,7 @@ def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
                markerfacecolor=mcolors.to_rgba(COLOUR_GREY_MEAN, 0.4),
                markeredgecolor=COLOUR_GREY_MEAN, linestyle="", label="$W_P = 1$ (filled)"),
     ]
-    axes[1].legend(handles=legend_handles, frameon=False, loc="best")
+    axes[0].legend(handles=legend_handles, frameon=False, loc="best")
 
     fig.tight_layout()
     savefig(fig, path)

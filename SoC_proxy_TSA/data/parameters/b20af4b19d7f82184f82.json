@@ -1,0 +1,61 @@
+{
+    "calliope_params": {
+        "type": "cluster",
+        "config_yaml_name": "model",
+        "date_range": [
+            2010,
+            2019
+        ],
+        "calliope_full_log": [
+            false,
+            false
+        ],
+        "tvp_source": "SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv"
+    },
+    "soc_proxy_params": {
+        "capacity_weights": {
+            "solar": 1,
+            "onshore_wind": 0.5,
+            "offshore_wind": 0.5
+        },
+        "storage_process_losses": {
+            "charging_efficiency": 0.6435,
+            "discharging_efficiency": 0.5544
+        },
+        "dispatchable_techs": {
+            "known_dispatchable_capacity": 3300
+        },
+        "soc_decomposition": {
+            "method": "fft_lowpass",
+            "time_horizon_hours": 24
+        }
+    },
+    "tsa_params": {
+        "k_periods": 45,
+        "lambda_soc": {
+            "cluster": 0.75
+        },
+        "names_renewables": [
+            "solar",
+            "onshore_wind",
+            "offshore_wind"
+        ],
+        "name_demand": [
+            "demand_power"
+        ],
+        "soc_proxy": {
+            "use_soc_proxy": true,
+            "proxy_inputs_to_consider": [
+                "surplus_LDES"
+            ],
+            "proxy_window": "None"
+        },
+        "cluster_method": "hierarchical",
+        "representation_method": "medoidRepresentation",
+        "hours_per_period": 24,
+        "soc_features": {},
+        "extremes_spec": {},
+        "soft_prune": false,
+        "post_cluster_optimisation_params": {}
+    }
+}

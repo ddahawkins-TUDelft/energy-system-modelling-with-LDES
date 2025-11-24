@@ -1,0 +1,102 @@
+Running on host: cmp032
+ ------------------------------------------------------- 
+[Dispatch] Scenarios include...
+['Sensitivity_W_reps365']
+[['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006, 2015]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008, 2017]]]
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      9b3ea13b43151bfc09ce      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9b3ea13b43151bfc09ce.json
+[TSA] Extracting features dataframe for 9b3ea13b43151bfc09ce
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/9b3ea13b43151bfc09ce.csv.
+[TSA] cluster completed in 8.10
+[Calliope] Validating and Configuring Calliope model: 9b3ea13b43151bfc09ce
+[Calliope] Building Calliope model: 9b3ea13b43151bfc09ce
+[Calliope] Solving Calliope model: 9b3ea13b43151bfc09ce
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/9b3ea13b43151bfc09ce.nc
+[Dispatch] Instance Runtime:  2219.3884143829346
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.75  -----
+ -----      b45b8901f3167adeeeda      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b45b8901f3167adeeeda.json
+[TSA] Extracting features dataframe for b45b8901f3167adeeeda
+[SoC Proxy] Tuner: c*=0.787528 lost=0.000e+00 | margin=4.000% -> curtailment=0.756027
+[SoC Proxy] curtailment forecast: 75.60%
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/b45b8901f3167adeeeda.csv.
+[TSA] cluster completed in 3.84
+[Calliope] Validating and Configuring Calliope model: b45b8901f3167adeeeda
+[Calliope] Building Calliope model: b45b8901f3167adeeeda
+[Calliope] Solving Calliope model: b45b8901f3167adeeeda
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/b45b8901f3167adeeeda.nc
+[Dispatch] Instance Runtime:  3875.7361390590668
+[SoC Proxy] Tuner: c*=0.790411 lost=0.000e+00 | margin=4.000% -> curtailment=0.758794
+[SoC Proxy] curtailment forecast: 75.88%
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=1  -----
+ -----      a20d43d8df1aebc68213      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a20d43d8df1aebc68213.json
+[TSA] Extracting features dataframe for a20d43d8df1aebc68213
+[SoC Proxy] Tuner: c*=0.787528 lost=0.000e+00 | margin=4.000% -> curtailment=0.756027
+[SoC Proxy] curtailment forecast: 75.60%
+[TSA]: Applying hierarchical clustering method, with medoidRepresentation representation.
+weight of "solar" set to the minmal tolerable weighting
+weight of "onshore_wind" set to the minmal tolerable weighting
+weight of "offshore_wind" set to the minmal tolerable weighting
+weight of "demand_power" set to the minmal tolerable weighting
+[TSA] successfully applied. Results saved to SoC_proxy_TSA/data/cluster_maps/a20d43d8df1aebc68213.csv.
+[TSA] cluster completed in 3.82
+[Calliope] Validating and Configuring Calliope model: a20d43d8df1aebc68213
+[Calliope] Building Calliope model: a20d43d8df1aebc68213
+[Calliope] Solving Calliope model: a20d43d8df1aebc68213
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/a20d43d8df1aebc68213.nc
+[Dispatch] Instance Runtime:  2158.1532871723175
+[SoC Proxy] Tuner: c*=0.784125 lost=0.000e+00 | margin=4.000% -> curtailment=0.752760
+[SoC Proxy] curtailment forecast: 75.28%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      783f78812ac2266239d0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/783f78812ac2266239d0.json
+> Model: SoC_proxy_TSA/data/calliope_models/783f78812ac2266239d0.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.75  -----
+ -----      bec46c311e7d656f389b      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/bec46c311e7d656f389b.json
+[TSA] Skipping TSA as cluster map already exists at SoC_proxy_TSA/data/cluster_maps/bec46c311e7d656f389b.csv
+[Calliope] Validating and Configuring Calliope model: bec46c311e7d656f389b
+[Calliope] Building Calliope model: bec46c311e7d656f389b
+[Calliope] Solving Calliope model: bec46c311e7d656f389b
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/bec46c311e7d656f389b.nc
+[Dispatch] Instance Runtime:  5738.80775141716
+[SoC Proxy] Tuner: c*=0.784100 lost=0.000e+00 | margin=4.000% -> curtailment=0.752736
+[SoC Proxy] curtailment forecast: 75.27%
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=1  -----
+ -----      e342b080eb7269c90e24      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/e342b080eb7269c90e24.json
+[TSA] Skipping TSA as cluster map already exists at SoC_proxy_TSA/data/cluster_maps/e342b080eb7269c90e24.csv
+[Calliope] Validating and Configuring Calliope model: e342b080eb7269c90e24
+[Calliope] Building Calliope model: e342b080eb7269c90e24
+[Calliope] Solving Calliope model: e342b080eb7269c90e24
+[Calliope] Solution saved to: SoC_proxy_TSA/data/calliope_models/e342b080eb7269c90e24.nc
+[Dispatch] Instance Runtime:  5979.875580787659
+[SoC Proxy] Tuner: c*=0.779022 lost=0.000e+00 | margin=4.000% -> curtailment=0.747861
+[SoC Proxy] curtailment forecast: 74.79%

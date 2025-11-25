@@ -7,35 +7,39 @@ import numpy as np
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
+country = 'ES' 
 
-ref_path, TS_WINDOW = 'SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]
-
-sources = [
-    ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],
-    ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],
-    ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],
-]
-
+dispatchable_by_country = {
+    'NL': 3300,
+    'IT': 0,
+    'ES': 0,
+    'BE': 4000,
+}
 
 
-tvp_csv = 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv'
+ref_path, TS_WINDOW = f'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference_{country}.nc', ["2010-01-01", "2019-12-31"]
 
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
-# mpl.rcParams["pgf.preamble"] = r""
+# sources = [
+#     ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],
+#     ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],
+#     ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],
+# ]
+
+
+tvp_csv = f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv'
+
 
 DEMAND_FIELD = "demand_power"
 
 SOC_PROXY_PARAMS = {
-    "capacity_weights": {"solar": 1, "onshore_wind": 0.5, "offshore_wind": 0.5},
+    "capacity_weights": {"solar": 2, "onshore_wind": 0.5, "offshore_wind": 0.5},
     "storage_process_losses": {"charging_efficiency": 0.65 * 0.99, "discharging_efficiency": 0.56 * 0.99},
-    "dispatchable_techs": {"known_dispatchable_capacity": 3300},
+    "dispatchable_techs": {"known_dispatchable_capacity": dispatchable_by_country[country]},
     "soc_decomposition": {"method": "fft_lowpass", "time_horizon_hours": 24},
 }
+
+
+
 
 ref_model = calliope.read_netcdf(ref_path)
 
@@ -157,4 +161,4 @@ ax.text(
 
 fig.tight_layout()
 plt.show()
-fig.savefig('soc_proxy_comparison.pdf', dpi=600, bbox_inches="tight")
+# fig.savefig('soc_proxy_comparison.pdf', dpi=600, bbox_inches="tight")

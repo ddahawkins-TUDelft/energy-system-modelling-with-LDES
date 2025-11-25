@@ -4,6 +4,9 @@
 
 scenarios:
   standard: ['fixing_capacities']
+  belgium: ['fixing_capacities_BE']
+  spain: ['fixing_capacities_ES']
+  italy: ['fixing_capacities_IT']
 
 
 ##
@@ -28,3 +31,43 @@ overrides:
       offshore_wind:
         flow_cap_min: 2.5e03 #current levels, see source below
         flow_cap_max: 108e03 #cap based on 2021 projections https://energy.nl/wp-content/uploads/technology-factsheet-wind-offshore-9.pdf
+      nuclear:
+        flow_cap_max: 3300 #MW, forecasted max src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+        flow_cap_min: 482 #MW, today src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+  
+  fixing_capacities_BE: 
+    techs:
+      onshore_wind:
+        flow_cap_min: 3.2e03 #current levels, see https://economy-finance.ec.europa.eu/document/download/601d8fed-02ee-4e85-9189-e2ad7932505a_en?filename=SWD_2024_601_1_EN_Belgium.pdf
+      offshore_wind:
+        flow_cap_min: 2.3e03 #current levels, see https://economy-finance.ec.europa.eu/document/download/601d8fed-02ee-4e85-9189-e2ad7932505a_en?filename=SWD_2024_601_1_EN_Belgium.pdf
+      nuclear:
+        flow_cap_min: 2500 #https://www.enerdata.net/publications/daily-energy-news/belgium-approves-bills-extend-two-reactors-2-gw-until-2035.html
+        flow_cap_max: 4000
+
+  fixing_capacities_ES:
+    techs:
+      onshore_wind:
+        flow_cap_min: 32e03 #current levels, https://www.sistemaelectrico-ree.es/es/informe-de-energias-renovables/viento/potencia-instalada-viento?
+        # flow_cap_max: 200e03 #arbitrary cap
+      offshore_wind:
+        flow_cap_min: 0e03 #current levels, https://www.sistemaelectrico-ree.es/es/informe-de-energias-renovables/viento/potencia-instalada-viento?
+        # flow_cap_max: 200e03 #arbitrary cap
+      nuclear:
+        # flow_cap_min: 0 #https://world-nuclear.org/information-library/country-profiles/countries-o-s/
+        flow_cap_max: 0.0  #spain 7GW today but phased out by 2050
+      solar:
+        flow_cap_min: 31719 #current levels, see https://www.sistemaelectrico-ree.es/es/informe-del-sistema-electrico/potencia-instalada
+
+  fixing_capacities_IT:
+    techs:
+      onshore_wind:
+        flow_cap_min: 13e03 #current levels, see https://download.terna.it/terna/03_IMPIANTI%20DI%20GENERAZIONE_8ddfc50c3f3e879.pdf
+      offshore_wind:
+        # flow_cap_min: 0 #current levels, see source above
+      nuclear:
+        # flow_cap_min: 0 #https://www.mase.gov.it/portale/energia-nucleare?utm_source=chatgpt.com
+        flow_cap_max: 0 #https://www.mase.gov.it/portale/energia-nucleare?utm_source=chatgpt.com
+      solar:
+        flow_cap_min: 37000 #current levels, https://download.terna.it/terna/03_IMPIANTI%20DI%20GENERAZIONE_8ddfc50c3f3e879.pdf
+

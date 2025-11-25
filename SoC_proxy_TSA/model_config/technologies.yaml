@@ -80,8 +80,7 @@ techs:
     base_tech: supply
     carrier_out: power
     lifetime: 40 
-    flow_cap_max: 3300 #MW, forecasted max src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
-    flow_cap_min: 482 #MW, today src:=https://world-nuclear.org/information-library/country-profiles/countries-g-n/netherlands
+
     flow_ramping: 0.17 #src:=https://doi.org/10.1016/j.apenergy.2018.03.002
     capacity_factor_min: 0.8 #set minimum capacity factor to 80% for nuclear for realistic op conditions.
     cost_flow_cap: #CAPEX cost

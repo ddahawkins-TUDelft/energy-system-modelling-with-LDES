@@ -1,4 +1,0 @@
-tvp,scenario_name,model_name,dates,date_range,id,runtime
-SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps365,"K-Medoid, reps=365, W_proxy=0.0","2008,2017",10,783f78812ac2266239d0,3855.5449068546295
-SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps365,"K-Medoid, reps=365, SocDelta, W_proxy=0.75","2008,2017",10,bec46c311e7d656f389b,7644.991112709045
-SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv,Sensitivity_W_reps365,"K-Medoid, reps=365, SocDelta, W_proxy=1","2008,2017",10,e342b080eb7269c90e24,6528.394581317902

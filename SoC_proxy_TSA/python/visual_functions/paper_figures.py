@@ -52,7 +52,8 @@ import matplotlib as mpl
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv")] 
+NL = True
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv")] if NL else [Path("SoC_proxy_TSA/data/notes/log_GB_30-365.csv")] 
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
 LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_GB_margins.csv")]
 
@@ -64,9 +65,9 @@ CACHE_CEM       = Path("SoC_proxy_TSA/data/notes/cem_cache.csv")
 CACHE_RUNTIME   = Path("SoC_proxy_TSA/data/notes/runtime_cache.csv")
 
 # Output filenames
-FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_abs_ldes_error_10y.pdf"
-FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps.pdf"
-FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_excl14.pdf"
+FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_ldes_error_10y.pdf" if NL else OUT_DIR / "fig1_heatmap_ldes_error_10y_GB.pdf"
+FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps.pdf" if NL else OUT_DIR / "fig2_error_box_vs_reps_GB.pdf"
+FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_excl14.pdf" if NL else OUT_DIR / "fig3_error_box_vs_proxy_excl14_GB.pdf"
 FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90.pdf"
 FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon.pdf"
 FIG6_ERR_VS_MARGIN   = OUT_DIR / "fig6_error_box_vs_margin_GB_NL.pdf"
@@ -103,6 +104,29 @@ fig_height = 3
 
 
 # ------------------------- Helpers: I/O & parsing ----------------------------
+
+class MidpointNormalize(mcolors.Normalize):
+    """
+    Normalize data around a center (vcenter), so that vmin -> 0,
+    vcenter -> 0.5, vmax -> 1.
+    """
+    def __init__(self, vmin=None, vmax=None, vcenter=None, clip=False):
+        self.vcenter = vcenter
+        super().__init__(vmin=vmin, vmax=vmax, clip=clip)
+
+    def __call__(self, value, clip=None):
+        # value can be a scalar or array
+        result, is_scalar = self.process_value(value)
+        vmin, vcenter, vmax = self.vmin, self.vcenter, self.vmax
+
+        # Avoid division by zero
+        if not (vmin < vcenter < vmax):
+            raise ValueError("vmin < vcenter < vmax must hold")
+
+        x = [vmin, vcenter, vmax]
+        y = [0, 0.5, 1]
+        data = np.interp(result, x, y)
+        return np.ma.array(data, mask=result.mask, copy=False)
 
 def savefig(fig: plt.Figure, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -500,35 +524,64 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
 def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     df = df_cem.copy()
     df = df[df["horizon"] == 10]
-    df = df.dropna(subset=["number_reps", "W_proxy", "abs_ldes_error"])
-    
+
+    value_col = "ldes_error"  # signed error
+    df = df.dropna(subset=["number_reps", "W_proxy", value_col])
 
     if df.empty:
         print("[fig1] No data after filtering for horizon==10.")
         return
 
-    pivot = (df.groupby(["number_reps", "W_proxy"])["abs_ldes_error"]
-             .mean()
-             .reset_index()
-             .pivot(index="number_reps", columns="W_proxy", values="abs_ldes_error")
-             .sort_index())
+    pivot = (
+        df.groupby(["number_reps", "W_proxy"])[value_col]
+          .mean()
+          .reset_index()
+          .pivot(index="number_reps", columns="W_proxy", values=value_col)
+          .sort_index()
+    )
 
     # Ensure x-order for columns
     cols_sorted = sorted(pivot.columns.tolist())
     pivot = pivot[cols_sorted]
 
-    import matplotlib.colors as mcolors
-    # Discrete levels in 5% increments (0, 5%, ..., 100%)
-    levels = np.arange(0.0, 0.5, 0.05)  # values are fractions 0..1
-    cmap = plt.get_cmap("plasma", len(levels) - 1)  # plasma goes #0D0887 -> #F0F921
-    norm = mcolors.BoundaryNorm(levels, cmap.N)
+    data = pivot.values
+
+    # ---- choose vmin / vmax snapped to 10% steps ----
+    # data_min = np.nanmin(data)
+    # data_max = np.nanmax(data)
+
+    # work in "fraction" units (0.1 = 10%)
+    # round min down to nearest -0.1, max up to nearest +0.1
+    step = 0.1
+    # vmin = np.floor(data_min / step) * step
+    # vmax = np.ceil(data_max / step) * step
+    vmin = -0.4
+    vmax = 0.4
+
+    # In your example: data_min = -0.16, data_max = 0.40
+    # => vmin = -0.2, vmax = 0.4
+
+    # ---- custom diverging cmap: purple -> blue -> yellow ----
+    colors = [
+        "#0d0887",  # dark purple for negative
+        "#ffffff",  # blue at 0
+        "#cc4778",  # yellow for positive 
+    ]
+    cmap = mcolors.LinearSegmentedColormap.from_list("plasmaish_div", colors)
+    # cmap = plt.get_cmap("coolwarm")
+
+    # ---- center the colormap at 0 using our MidpointNormalize ----
+    # norm = MidpointNormalize(vmin=vmin, vcenter=0.0, vmax=vmax)
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    im = ax.imshow(pivot.values,
-                   aspect="auto",
-                   origin="lower",
-                   cmap=cmap,
-                   norm=norm)
+    im = ax.imshow(
+        data,
+        aspect="auto",
+        origin="lower",
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax
+    )
 
     # tick labels from the actual row/column labels
     ax.set_xticks(np.arange(pivot.shape[1]))
@@ -536,19 +589,20 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     ax.set_yticks(np.arange(pivot.shape[0]))
     ax.set_yticklabels([f"{int(i)}" for i in pivot.index])
 
-    # Discrete colorbar with 5% tick labels
-    cbar = fig.colorbar(im, ax=ax, ticks=levels)
-    cbar.ax.set_yticklabels([f"{int(v*100)}%" for v in levels])
-    cbar.set_label("Absolute LDES capacity error")
+    # ---- Colorbar with 10% ticks, including 0 ----
+    cbar = fig.colorbar(im, ax=ax)
+
+    # ticks from vmin to vmax in 0.1 (10%) increments
+    ticks = np.arange(vmin, vmax + step * 0.5, step)  # +0.5*step to include vmax numerically
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels([f"{int(round(t * 100))}%" for t in ticks])
+
+    cbar.set_label("LDES capacity error")
 
     ax.set_xlabel("Proxy weight $(W_P)$")
     ax.set_ylabel("Number of representative days")
-    # ax.set_title("Absolute LDES capacity error (10-year models)")
 
     savefig(fig, path)
-
-
-
 def _add_y0_line(ax: plt.Axes) -> None:
     ax.axhline(0, color="black", linewidth=1, zorder=0)
 
@@ -1145,9 +1199,10 @@ def main():
     fig1_heatmap_10y(df_f123_ready, FIG1_HEATMAP_10Y)
     fig2_box_by_reps(df_f123_ready, FIG2_ERR_VS_REPS)
     fig3_box_by_proxy(df_f123_ready, FIG3_ERR_VS_PROXY)
-    fig4_error_vs_horizon(df_f45_ready,  FIG4_ERR_VS_HORIZON)
-    fig5_runtime_vs_horizon(df_run_ready, FIG5_RUNTIME_VS_HOR)
-    fig6_error_vs_margin(df_f6_ready, FIG6_ERR_VS_MARGIN)
+    if NL:
+        fig4_error_vs_horizon(df_f45_ready,  FIG4_ERR_VS_HORIZON)
+        fig5_runtime_vs_horizon(df_run_ready, FIG5_RUNTIME_VS_HOR)
+        fig6_error_vs_margin(df_f6_ready, FIG6_ERR_VS_MARGIN)
 
     print(
         "\nAll done.\n"

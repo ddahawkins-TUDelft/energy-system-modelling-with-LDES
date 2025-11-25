@@ -11,7 +11,16 @@ import time
 # ----------------------------------- CONFIGURE ----------------------------------------------
 
 show_soc = True
-show_visual = False
+show_visual = True
+
+country = 'IT'
+
+dispatchable_by_country = {
+    'NL': 3300,
+    'IT': 0,
+    'ES': 0,
+    'BE': 4000,
+}
 
 scenarios = [
     # 'Sensitivity_W_reps14',
@@ -20,7 +29,7 @@ scenarios = [
     # 'Sensitivity_W_reps60',
     # 'Sensitivity_W_reps90',
     # 'Sensitivity_W_reps180',
-    'Sensitivity_W_reps365',
+    # 'Sensitivity_W_reps365',
     # 'Sensitivity_margin_W1_reps60',
     # 'margin_sensitivity_60-180_m=0.04',
     # 'margin_sensitivity_60-180_m=0.1',
@@ -28,6 +37,7 @@ scenarios = [
     # 'margin_sensitivity_60-180_m=0.02',
     # 'margin_sensitivity_60-180_m=0.04',
     # 'margin_sensitivity_60-180_m=0.06',
+    'standard_60'
 
 
     ] 
@@ -38,7 +48,7 @@ dispatch_config = [
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
-    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2008,2017]],
+    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2010,2019]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
@@ -75,7 +85,7 @@ def run(calliope_params, soc_proxy_params, tsa_params, tsa_type, tvp_source:str 
         
         print(f'> Model: {m.paths['calliope_model']} already exists. Reading file...')
         # m.calliope_model.model = calliope.read_netcdf(m.paths['calliope_model'])
-        # m.calliope_model.model = read_clustered_netcdf(m.paths['calliope_model'])
+        m.calliope_model.model = read_clustered_netcdf(m.paths['calliope_model'])
 
     else:
         #TSA FUNCTIONS -------------------------------------------------------------------------------------------------
@@ -114,7 +124,7 @@ soc_proxy_params = {
             'discharging_efficiency': 0.56 * 0.99 #electrolyser efficiency * ldes injection efficiency
         },
         'dispatchable_techs': {
-            'known_dispatchable_capacity': 3300 #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
+            'known_dispatchable_capacity': dispatchable_by_country[country] #we know that 3.3GW nuclear makes up c.25% of 13GW mean hourly demand with a high uptime
         },
         'soc_decomposition': {
             'method': 'fft_lowpass',
@@ -236,14 +246,14 @@ df.to_csv(f"SoC_proxy_TSA/data/notes/log_{timestamp}.csv", index=False)
 if len(dispatch_config)<=1 and show_visual:
     
     print(f'[Dispatch] Loading reference standard_{date_range[0]}_{date_range[-1]}_reference.nc')
-    ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{date_range[0]}_{date_range[-1]}_reference.nc'
+    ref_path = f'SoC_proxy_TSA/data/calliope_models/standard_{date_range[0]}_{date_range[-1]}_reference_{country}.nc'
 
     list_model_dict.append({
         'model': calliope.read_netcdf(ref_path),
         'name': 'reference',
         'params': {
             'date_range': date_range,
-            'path_timeseries': 'SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',
+            'path_timeseries': f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',
             'soc_proxy_params': soc_proxy_params
         },
     })
@@ -257,7 +267,7 @@ if show_visual:
         list_model_dict=list_model_dict,
         x_field='Time', #'Time'
         y_field='State of Charge' if show_soc else 'SoC Proxy', #'State of Charge', 'SoC Proxy'
-        colour_field='MAGMe',
+        # colour_field='MAGMe',
         # show_tsa_internal_surplus_accumulation=True,
         # save_fig=True
     )

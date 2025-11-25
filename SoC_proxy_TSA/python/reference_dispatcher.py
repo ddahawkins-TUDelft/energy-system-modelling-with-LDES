@@ -24,24 +24,23 @@ from utility_functions.helper_model_config import standardised_model_config
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
 DEFAULT_YEAR_RANGES: List[str] = [
-    # "2001-2010",
+    "2010-2010",
     # "2010-2019",
-    # "2005-2014",
-    # "2010-2019",
-    # "2015-2024",
     ]  
 shuffled_dir = "time_varying_parameters__"
 shuffled_source = []
 # tvp_source = 'time_varying_parameters'
 # tvp_source = 'time_varying_parameters_GB'
-tvp_source = 'time_varying_parameters_GB_availability_NL_demand'
+
+tvp_source = 'time_varying_parameters_ES'
+scenario_calliope = 'spain'
 
 
 # Base params passed into your helper; these are merged with per-range values.
 # NOTE: your helper indexes calliope_full_log[0], so keep it as a 1-length tuple/list.
 BASE_PARAMS: Dict[str, Any] = {
     "config_yaml_name": "model",  # e.g., "model"
-    "scenario_name": "standard",
+    "scenario_name": scenario_calliope, #belgium, spain, italy
     "calliope_full_log": (True,),          # helper uses [0] / (0)
     # Optionally:
     # "filename_time_varying_parameters": shuffled_dir+shuffled_source[0] if shuffled_source else None,
@@ -95,6 +94,12 @@ def main(ranges: List[str] | None = None) -> int:
                     filename = f'standard_{start_year}_{end_year}_GB_reference.nc'
                 elif tvp_source == 'time_varying_parameters_GB_availability_NL_demand':
                     filename = f'standard_{start_year}_{end_year}_GB_availability_NL_demand.nc'
+                elif tvp_source == 'time_varying_parameters_BE':
+                    filename = f'standard_{start_year}_{end_year}_BE.nc'
+                elif tvp_source == 'time_varying_parameters_IT':
+                    filename = f'standard_{start_year}_{end_year}_IT.nc'
+                elif tvp_source == 'time_varying_parameters_ES':
+                    filename = f'standard_{start_year}_{end_year}_ES.nc'
 
                 solver_options = {
                     # "BarHomogeneous": 1,

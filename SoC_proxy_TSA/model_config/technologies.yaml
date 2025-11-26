@@ -146,7 +146,7 @@ techs:
     base_tech: storage
     carrier_in: hydrogen
     carrier_out: hydrogen
-    storage_cap_max: 43300000 #Limit for the Netherlands, src:= https://publications.tno.nl/publication/34637700/8sBxDu/TNO-2020-R12006.pdf
+    # storage_cap_max: 43300000 #Limit for the Netherlands, src:= https://publications.tno.nl/publication/34637700/8sBxDu/TNO-2020-R12006.pdf
     cyclic_storage: true 
     # flow_cap_max:  #applies for operational case not planning
     #   data: [18891.324544]

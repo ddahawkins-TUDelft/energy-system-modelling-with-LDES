@@ -32,8 +32,8 @@ shuffled_source = []
 # tvp_source = 'time_varying_parameters'
 # tvp_source = 'time_varying_parameters_GB'
 
-tvp_source = 'time_varying_parameters_IT'
-scenario_calliope = 'italy'
+tvp_source = 'time_varying_parameters_GB'
+scenario_calliope = 'GB'
 
 
 # Base params passed into your helper; these are merged with per-range values.
@@ -91,15 +91,15 @@ def main(ranges: List[str] | None = None) -> int:
                 model, filename = standardised_model_config(params)
 
                 if tvp_source == 'time_varying_parameters_GB':
-                    filename = f'standard_{start_year}_{end_year}_GB_reference.nc'
+                    filename = f'standard_{start_year}_{end_year}_reference_GB.nc'
                 elif tvp_source == 'time_varying_parameters_GB_availability_NL_demand':
                     filename = f'standard_{start_year}_{end_year}_GB_availability_NL_demand.nc'
                 elif tvp_source == 'time_varying_parameters_BE':
-                    filename = f'standard_{start_year}_{end_year}_BE.nc'
+                    filename = f'standard_{start_year}_{end_year}_reference_BE.nc'
                 elif tvp_source == 'time_varying_parameters_IT':
-                    filename = f'standard_{start_year}_{end_year}_IT.nc'
+                    filename = f'standard_{start_year}_{end_year}_reference_IT.nc'
                 elif tvp_source == 'time_varying_parameters_ES':
-                    filename = f'standard_{start_year}_{end_year}_ES.nc'
+                    filename = f'standard_{start_year}_{end_year}_reference_ES.nc'
 
                 solver_options = {
                     # "BarHomogeneous": 1,

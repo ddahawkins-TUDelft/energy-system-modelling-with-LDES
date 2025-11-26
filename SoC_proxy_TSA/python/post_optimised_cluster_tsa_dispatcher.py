@@ -22,6 +22,13 @@ dispatchable_by_country = {
     'BE': 4000,
 }
 
+overrides_by_country = {
+    'NL': 'standard',
+    'IT': 'italy',
+    'ES': 'spain',
+    'BE': 'belgium',
+}
+
 scenarios = [
     # 'Sensitivity_W_reps14',
     # 'Sensitivity_W_reps30',
@@ -113,11 +120,14 @@ calliope_params = {
         'calliope_full_log': [False, False],
 }
 
+if country != 'NL':
+    calliope_params['scenario_name'] = overrides_by_country[country]
+
 soc_proxy_params = {
         'capacity_weights': {
             'solar': 1,
-            'onshore_wind': .5, # making the baseline assumption of an even distribution between solar and wind -based products i.e. the sum of onshore and offshore wind equals solar
-            'offshore_wind': .5 
+            'onshore_wind': 0.5, # making the baseline assumption of an even distribution between solar and wind -based products i.e. the sum of onshore and offshore wind equals solar
+            'offshore_wind': 0.5 
         },
         'storage_process_losses': {
             'charging_efficiency': 0.65 * 0.99, #electrolyser efficiency * ldes injection efficiency

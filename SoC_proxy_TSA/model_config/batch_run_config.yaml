@@ -298,7 +298,20 @@ optimisation_test:
   #           weight: 1
   #           mode: match
 
-hpc_test:
+standard_60:
+  K-Medoid, reps=60, W_proxy=0:
+    dispatch_mode: 'cluster'
+    calliope_params:
+    soc_proxy_params:
+    tsa_params:
+      k_periods: 60
+      lambda_soc: 
+        cluster: 0
+      soc_proxy: 
+          use_soc_proxy: False
+          proxy_inputs_to_consider: ['surplus_LDES'] 
+          proxy_window: None
+      soc_features:
   K-Medoid, reps=60, W_proxy=1:
     dispatch_mode: 'cluster'
     calliope_params:

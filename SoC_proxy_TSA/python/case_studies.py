@@ -3,9 +3,9 @@ from pathlib import Path
 
 # ====== CONFIGURATION ======
 FILES = {
-    "ES": "SoC_proxy_TSA/es_case_study.csv",
+    # "ES": "SoC_proxy_TSA/es_case_study.csv",
     "BE": "SoC_proxy_TSA/be_case_study.csv",
-    "IT": "SoC_proxy_TSA/it_case_study.csv",
+    # "IT": "SoC_proxy_TSA/it_case_study.csv",
 }
 
 TIME_COLUMN = "timesteps"

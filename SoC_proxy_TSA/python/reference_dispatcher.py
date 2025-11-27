@@ -32,8 +32,8 @@ shuffled_source = []
 # tvp_source = 'time_varying_parameters'
 # tvp_source = 'time_varying_parameters_GB'
 
-tvp_source = 'time_varying_parameters_GB'
-scenario_calliope = 'GB'
+tvp_source = 'time_varying_parameters_BE'
+scenario_calliope = 'belgium'
 
 
 # Base params passed into your helper; these are merged with per-range values.
@@ -85,7 +85,9 @@ def main(ranges: List[str] | None = None) -> int:
             params["horizon_end"] = f"{end_year}-12-31"
             params['filename_time_varying_parameters'] = tvp_source
 
-            print(f"\n=== Running {start_year}-{end_year}===")
+            print(f"\n=== Running {start_year}-{end_year} ===")
+            print(f"=== {params['filename_time_varying_parameters']}")
+            print(f"=== {params['scenario_name']}\n")
             try:
                 # Your helper returns (model, filename)
                 model, filename = standardised_model_config(params)

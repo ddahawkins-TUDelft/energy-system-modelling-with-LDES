@@ -172,9 +172,9 @@ def find_min_feasible_curtailment(
     eta_ch: float,
     eta_dis: float,
     tol: float = 1e-12,
-    c_init: float = 0.90,
-    c_min: float = 1e-3,
-    c_max: float = 2.0,
+    c_init: float = 0.80,
+    c_min: float = 0.65,
+    c_max: float = 1,
     max_evals: int = 60,
 ):
     """
@@ -208,13 +208,13 @@ def find_min_feasible_curtailment(
     else:
         # Infeasible: shrink c until feasible (or hit c_min)
         c_hi, f_hi = c, f
-        c_lo = max(c * 0.8, c_min)
+        c_lo = max(c * 0.9, c_min)
         while True:
             f_lo = evaluate_lost_load(c_lo, base_gen, demand, eta_ch, eta_dis); evals += 1
             if f_lo <= tol or c_lo <= c_min or evals >= max_evals//3:
                 break
             c_hi, f_hi = c_lo, f_lo
-            c_lo = max(c_lo * 0.8, c_min)
+            c_lo = max(c_lo * 0.9, c_min)
         if f_lo > tol:  # still infeasible at c_min
             return c_lo, f_lo, evals
 
@@ -395,7 +395,7 @@ def generate_soc_proxy(
     # Tune curtailment_factor to (nearly) eliminate lost load
     c_star, lost_final, _ = find_min_feasible_curtailment(
         base_gen, demand, eta_ch, eta_dis,
-        tol=1e-12, c_init=0.90, c_min=1e-3, c_max=2.0, max_evals=60
+        tol=1e-12,
     )
 
     # Decide margin

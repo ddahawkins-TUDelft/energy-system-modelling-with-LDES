@@ -20,6 +20,7 @@ dispatchable_by_country = {
     'IT': 0,
     'ES': 0,
     'BE': 4000,
+    'GB': 9323,
 }
 
 overrides_by_country = {
@@ -27,13 +28,14 @@ overrides_by_country = {
     'IT': 'italy',
     'ES': 'spain',
     'BE': 'belgium',
+    'GB': 'GB',
 }
 
 scenarios = [
     # 'Sensitivity_W_reps14',
     # 'Sensitivity_W_reps30',
     # 'Sensitivity_W_reps45',
-    # 'Sensitivity_W_reps60',
+    'Sensitivity_W_reps60',
     # 'Sensitivity_W_reps90',
     # 'Sensitivity_W_reps180',
     # 'Sensitivity_W_reps365',
@@ -44,7 +46,7 @@ scenarios = [
     # 'margin_sensitivity_60-180_m=0.02',
     # 'margin_sensitivity_60-180_m=0.04',
     # 'margin_sensitivity_60-180_m=0.06',
-    'standard_60'
+    # 'standard_60'
 
 
     ] 

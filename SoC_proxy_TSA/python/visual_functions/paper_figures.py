@@ -52,8 +52,10 @@ import matplotlib as mpl
 
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
+SAVE_FIGURES = True
 NL = True
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv")] if NL else [Path("SoC_proxy_TSA/data/notes/log_GB_30-365.csv")] 
+
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_BE.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
 LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_GB_margins.csv")]
 
@@ -129,9 +131,11 @@ class MidpointNormalize(mcolors.Normalize):
         return np.ma.array(data, mask=result.mask, copy=False)
 
 def savefig(fig: plt.Figure, path: Path) -> None:
+     
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    fig.savefig(path, dpi=600, bbox_inches="tight")
+    if SAVE_FIGURES:   
+        fig.savefig(path, dpi=600, bbox_inches="tight")
     fig.show()
     plt.close(fig)
 
@@ -555,8 +559,8 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     step = 0.1
     # vmin = np.floor(data_min / step) * step
     # vmax = np.ceil(data_max / step) * step
-    vmin = -0.4
-    vmax = 0.4
+    vmin = -0.8
+    vmax = 0.8
 
     # In your example: data_min = -0.16, data_max = 0.40
     # => vmin = -0.2, vmax = 0.4

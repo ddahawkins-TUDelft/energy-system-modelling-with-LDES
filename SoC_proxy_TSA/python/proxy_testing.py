@@ -4,16 +4,17 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
-from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
+from utility_functions.helper_SoC_proxy_fast_compute_test import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
-country = 'ES' 
+country = 'BE' 
 
 dispatchable_by_country = {
     'NL': 3300,
     'IT': 0,
     'ES': 0,
     'BE': 4000,
+    'GB': 9323,
 }
 
 
@@ -32,7 +33,7 @@ tvp_csv = f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv'
 DEMAND_FIELD = "demand_power"
 
 SOC_PROXY_PARAMS = {
-    "capacity_weights": {"solar": 2, "onshore_wind": 0.5, "offshore_wind": 0.5},
+    "capacity_weights": {"solar": 1, "onshore_wind": 0.5, "offshore_wind": 0.5},
     "storage_process_losses": {"charging_efficiency": 0.65 * 0.99, "discharging_efficiency": 0.56 * 0.99},
     "dispatchable_techs": {"known_dispatchable_capacity": dispatchable_by_country[country]},
     "soc_decomposition": {"method": "fft_lowpass", "time_horizon_hours": 24},
@@ -58,7 +59,7 @@ def _build_proxy(df: pd.DataFrame, demand_field: str, params) -> pd.Series:
         soc_decomposition=params["soc_decomposition"],
         timestamp_col=None,
         margin_mode='fixed',
-        margin_value = 0.04
+        margin_value = 0.04,
     )
     return df_proxy["soc_proxy_LDES"].rename("soc_proxy_LDES")
 
@@ -88,10 +89,13 @@ fig = plt.figure(figsize=(12, 4))
 ax = fig.add_subplot(1, 1, 1)
 ax.set_axisbelow(True)
 
+
+rescalar = cem_soc.max() / proxy_soc.max()
+
 ax.plot(cem_soc.index, cem_soc,
         label="SoC (CEM)",
         color=COLOUR_R, linewidth=1.2)
-ax.plot(proxy_soc.index, proxy_soc,
+ax.plot(proxy_soc.index, proxy_soc*rescalar,
         label="SoC Proxy",
         color=COLOUR_EC, linewidth=1.2, linestyle='dashed')
 

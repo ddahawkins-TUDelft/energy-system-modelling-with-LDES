@@ -40,11 +40,13 @@ overrides:
     techs:
       onshore_wind:
         flow_cap_min: 3.2e03 #current levels, see https://economy-finance.ec.europa.eu/document/download/601d8fed-02ee-4e85-9189-e2ad7932505a_en?filename=SWD_2024_601_1_EN_Belgium.pdf
+        flow_cap_max: 13.1e3 #https://climat.be/doc/14-energy.pdf
       offshore_wind:
         flow_cap_min: 2.3e03 #current levels, see https://economy-finance.ec.europa.eu/document/download/601d8fed-02ee-4e85-9189-e2ad7932505a_en?filename=SWD_2024_601_1_EN_Belgium.pdf
+        flow_cap_max: 16.8e3 #https://climat.be/doc/14-energy.pdf
       nuclear:
-        flow_cap_min: 2500 #https://www.enerdata.net/publications/daily-energy-news/belgium-approves-bills-extend-two-reactors-2-gw-until-2035.html
-        flow_cap_max: 4000
+        flow_cap_min: 2500 #https://world-nuclear.org/information-library/country-profiles/countries-a-f/belgium
+        flow_cap_max: 2501 #https://world-nuclear.org/information-library/country-profiles/countries-a-f/belgium
 
   fixing_capacities_ES:
     techs:

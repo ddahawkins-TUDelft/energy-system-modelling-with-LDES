@@ -4,21 +4,23 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
-from utility_functions.helper_SoC_proxy_fast_compute_test import generate_soc_proxy
+from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
 country = 'BE' 
+year_s=2014
+year_e=year_s+9
 
 dispatchable_by_country = {
     'NL': 3300,
     'IT': 0,
     'ES': 0,
-    'BE': 4000,
+    'BE': 2501,
     'GB': 9323,
 }
 
 
-ref_path, TS_WINDOW = f'SoC_proxy_TSA/data/calliope_models/standard_2010_2019_reference_{country}.nc', ["2010-01-01", "2019-12-31"]
+ref_path, TS_WINDOW = f'SoC_proxy_TSA/data/calliope_models/standard_{year_s}_{year_e}_reference_{country}.nc', [f"{year_s}-01-01", f"{year_e}-12-31"]
 
 # sources = [
 #     ['SoC_proxy_TSA/data/calliope_models/standard_2006_2015_reference.nc', ["2006-01-01", "2015-12-31"]],

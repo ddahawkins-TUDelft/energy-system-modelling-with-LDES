@@ -13,13 +13,13 @@ import time
 show_soc = True
 show_visual = True
 
-country = 'IT'
+country = 'BE'
 
 dispatchable_by_country = {
     'NL': 3300,
     'IT': 0,
     'ES': 0,
-    'BE': 4000,
+    'BE': 2501,
     'GB': 9323,
 }
 
@@ -33,11 +33,11 @@ overrides_by_country = {
 
 scenarios = [
     # 'Sensitivity_W_reps14',
-    # 'Sensitivity_W_reps30',
-    # 'Sensitivity_W_reps45',
+    'Sensitivity_W_reps30',
+    'Sensitivity_W_reps45',
     'Sensitivity_W_reps60',
-    # 'Sensitivity_W_reps90',
-    # 'Sensitivity_W_reps180',
+    'Sensitivity_W_reps90',
+    'Sensitivity_W_reps180',
     # 'Sensitivity_W_reps365',
     # 'Sensitivity_margin_W1_reps60',
     # 'margin_sensitivity_60-180_m=0.04',
@@ -56,11 +56,11 @@ dispatch_config = [
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
     # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2006,2015]],
-    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2010,2019]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2010,2019]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2012,2021]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters_GB.csv', [2014,2023]],
+    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2006,2015]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2008,2017]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2010,2019]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2012,2021]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2014,2023]],
 
 ]
 

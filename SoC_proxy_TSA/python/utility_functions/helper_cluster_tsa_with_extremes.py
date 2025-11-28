@@ -190,6 +190,12 @@ def cluster_tsa_with_extremes(
     # =========================
     # EXPORT (unchanged shape)
     # =========================
+
+    if matched_indices.index.duplicated().any():
+        dup_count = matched_indices.index.duplicated().sum()
+        print(f"[TSA] Warning: dropping {dup_count} duplicated timesteps in matched_indices.")
+        matched_indices = matched_indices[~matched_indices.index.duplicated(keep="first")]
+        
     # Merge to produce clustered time series
     typPeriods = typPeriods.reset_index().rename(columns={'level_0': 'PeriodNum'})
     df_new_timeseries_values = matched_indices.merge(

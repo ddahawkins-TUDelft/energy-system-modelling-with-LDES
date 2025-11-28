@@ -5,7 +5,7 @@
 #SBATCH --time=06:00:00          
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --mem-per-cpu=3000         
+#SBATCH --mem-per-cpu=2500         
 #SBATCH --account=research-tpm-ess
 #SBATCH --output=logs/%x-%j.out 
 

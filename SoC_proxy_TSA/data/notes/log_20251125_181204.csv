@@ -1,3 +1,0 @@
-tvp,scenario_name,model_name,dates,date_range,id,runtime
-SoC_proxy_TSA/data/timeseries/time_varying_parameters_BE.csv,standard_60,"K-Medoid, reps=60, W_proxy=0","2010,2019",10,8f59f8ecbba729205900,40.99999642372131
-SoC_proxy_TSA/data/timeseries/time_varying_parameters_BE.csv,standard_60,"K-Medoid, reps=60, W_proxy=1","2010,2019",10,7c27849473f410474070,50.10532999038696

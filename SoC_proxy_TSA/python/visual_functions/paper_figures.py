@@ -67,7 +67,7 @@ CACHE_CEM       = Path("SoC_proxy_TSA/data/notes/cem_cache.csv")
 CACHE_RUNTIME   = Path("SoC_proxy_TSA/data/notes/runtime_cache.csv")
 
 # Output filenames
-FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_ldes_error_10y.pdf" if NL else OUT_DIR / "fig1_heatmap_ldes_error_10y_GB.pdf"
+FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_abs_ldes_error_10y.pdf" if NL else OUT_DIR / "fig1_heatmap_ldes_error_10y_GB.pdf"
 FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps.pdf" if NL else OUT_DIR / "fig2_error_box_vs_reps_GB.pdf"
 FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_excl14.pdf" if NL else OUT_DIR / "fig3_error_box_vs_proxy_excl14_GB.pdf"
 FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90.pdf"
@@ -529,7 +529,7 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     df = df_cem.copy()
     df = df[df["horizon"] == 10]
 
-    value_col = "ldes_error"  # signed error
+    value_col = "abs_ldes_error"  # signed error
     df = df.dropna(subset=["number_reps", "W_proxy", value_col])
 
     if df.empty:
@@ -551,16 +551,16 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     data = pivot.values
 
     # ---- choose vmin / vmax snapped to 10% steps ----
-    # data_min = np.nanmin(data)
-    # data_max = np.nanmax(data)
+    data_min = np.nanmin(data)
+    data_max = np.nanmax(data)
 
     # work in "fraction" units (0.1 = 10%)
     # round min down to nearest -0.1, max up to nearest +0.1
     step = 0.1
-    # vmin = np.floor(data_min / step) * step
-    # vmax = np.ceil(data_max / step) * step
-    vmin = -0.8
-    vmax = 0.8
+    vmin = np.min(np.floor(data_min / step) * step,0)
+    vmax = np.ceil(data_max / step) * step
+    # vmin = -0.8
+    # vmax = 0.8
 
     # In your example: data_min = -0.16, data_max = 0.40
     # => vmin = -0.2, vmax = 0.4
@@ -601,7 +601,7 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     cbar.set_ticks(ticks)
     cbar.set_ticklabels([f"{int(round(t * 100))}%" for t in ticks])
 
-    cbar.set_label("LDES capacity error")
+    cbar.set_label("Absolute LDES capacity error")
 
     ax.set_xlabel("Proxy weight $(W_P)$")
     ax.set_ylabel("Number of representative days")

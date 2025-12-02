@@ -24,7 +24,7 @@ from utility_functions.helper_model_config import standardised_model_config
 
 # You can use "2015-2019", "2010-2014", or single years like "2018"
 DEFAULT_YEAR_RANGES: List[str] = [
-    "2010-2010",
+    "2010-2019",
     # "2010-2019",
     ]  
 shuffled_dir = "time_varying_parameters__"
@@ -32,8 +32,8 @@ shuffled_source = []
 # tvp_source = 'time_varying_parameters'
 # tvp_source = 'time_varying_parameters_GB'
 
-tvp_source = 'time_varying_parameters_BE'
-scenario_calliope = 'belgium'
+tvp_source = 'time_varying_parameters_GB'
+scenario_calliope = 'GB'
 
 
 # Base params passed into your helper; these are merged with per-range values.

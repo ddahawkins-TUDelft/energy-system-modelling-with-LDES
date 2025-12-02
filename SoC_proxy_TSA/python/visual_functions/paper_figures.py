@@ -53,9 +53,8 @@ import matplotlib as mpl
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
 SAVE_FIGURES = True
-NL = True
 
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_BE.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
+LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_GB_30-365.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
 LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_GB_margins.csv")]
 
@@ -67,11 +66,11 @@ CACHE_CEM       = Path("SoC_proxy_TSA/data/notes/cem_cache.csv")
 CACHE_RUNTIME   = Path("SoC_proxy_TSA/data/notes/runtime_cache.csv")
 
 # Output filenames
-FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_abs_ldes_error_10y.pdf" if NL else OUT_DIR / "fig1_heatmap_ldes_error_10y_GB.pdf"
-FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps.pdf" if NL else OUT_DIR / "fig2_error_box_vs_reps_GB.pdf"
-FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_excl14.pdf" if NL else OUT_DIR / "fig3_error_box_vs_proxy_excl14_GB.pdf"
-FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90.pdf"
-FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon.pdf"
+FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_ldes_error_10y_GB.pdf" 
+FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps_GB.pdf" 
+FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_GB.pdf" 
+FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90_GB.pdf"
+FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon_GB.pdf"
 FIG6_ERR_VS_MARGIN   = OUT_DIR / "fig6_error_box_vs_margin_GB_NL.pdf"
 
 # Colours (preserve existing)
@@ -222,10 +221,15 @@ def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Op
     # tvp-specific candidates first (synthetic etc.)
     tvp_str = str(tvp).strip() if pd.notna(tvp) else ""
     if tvp_str and tvp_str.lower() not in {"", "nan", "none"}:
+        stem = Path(tvp_str).stem
+        parts = stem.split("_")
+        cc = None
+        if len(parts)>1 and len(parts[-1])==2:
+            cc = parts[-1]
+        
         candidates += [
             # models_dir / tvp_str / f"standard_{y0}_{y1}_reference.nc",
-            models_dir / f"standard_{y0}_{y1}_reference.nc",
-            models_dir / f"standard_{y0}_{y1}_GB_reference.nc",
+            models_dir / f"standard_{y0}_{y1}_reference_{cc}.nc" if cc else models_dir / f"standard_{y0}_{y1}_reference.nc",
             models_dir / f"{tvp_str}.nc",
         ]
     # default standard reference
@@ -529,7 +533,7 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     df = df_cem.copy()
     df = df[df["horizon"] == 10]
 
-    value_col = "abs_ldes_error"  # signed error
+    value_col = "ldes_error"  # signed error
     df = df.dropna(subset=["number_reps", "W_proxy", value_col])
 
     if df.empty:
@@ -559,6 +563,7 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     step = 0.1
     vmin = np.min(np.floor(data_min / step) * step,0)
     vmax = np.ceil(data_max / step) * step
+    vmid = (0 - vmin) / (vmax - vmin)
     # vmin = -0.8
     # vmax = 0.8
 
@@ -567,12 +572,14 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
 
     # ---- custom diverging cmap: purple -> blue -> yellow ----
     colors = [
-        "#0d0887",  # dark purple for negative
-        "#ffffff",  # blue at 0
-        "#cc4778",  # yellow for positive 
+        (0,"#0d0887"),  # dark purple for negative
+        (vmid,"#ffffff"),  # blue at 0
+        (1,"#cc4778"),  # yellow for positive 
     ]
     cmap = mcolors.LinearSegmentedColormap.from_list("plasmaish_div", colors)
-    # cmap = plt.get_cmap("coolwarm")
+    norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+    # cmap = plt.get_cmap("plasma")
+
 
     # ---- center the colormap at 0 using our MidpointNormalize ----
     # norm = MidpointNormalize(vmin=vmin, vcenter=0.0, vmax=vmax)
@@ -583,8 +590,9 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
         aspect="auto",
         origin="lower",
         cmap=cmap,
-        vmin=vmin,
-        vmax=vmax
+        # vmin=vmin,
+        # vmax=vmax
+        norm=norm
     )
 
     # tick labels from the actual row/column labels
@@ -601,7 +609,7 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     cbar.set_ticks(ticks)
     cbar.set_ticklabels([f"{int(round(t * 100))}%" for t in ticks])
 
-    cbar.set_label("Absolute LDES capacity error")
+    cbar.set_label("LDES capacity error")
 
     ax.set_xlabel("Proxy weight $(W_P)$")
     ax.set_ylabel("Number of representative days")
@@ -1203,10 +1211,10 @@ def main():
     fig1_heatmap_10y(df_f123_ready, FIG1_HEATMAP_10Y)
     fig2_box_by_reps(df_f123_ready, FIG2_ERR_VS_REPS)
     fig3_box_by_proxy(df_f123_ready, FIG3_ERR_VS_PROXY)
-    if NL:
-        fig4_error_vs_horizon(df_f45_ready,  FIG4_ERR_VS_HORIZON)
-        fig5_runtime_vs_horizon(df_run_ready, FIG5_RUNTIME_VS_HOR)
-        fig6_error_vs_margin(df_f6_ready, FIG6_ERR_VS_MARGIN)
+    
+    fig4_error_vs_horizon(df_f45_ready,  FIG4_ERR_VS_HORIZON)
+    fig5_runtime_vs_horizon(df_run_ready, FIG5_RUNTIME_VS_HOR)
+    fig6_error_vs_margin(df_f6_ready, FIG6_ERR_VS_MARGIN)
 
     print(
         "\nAll done.\n"

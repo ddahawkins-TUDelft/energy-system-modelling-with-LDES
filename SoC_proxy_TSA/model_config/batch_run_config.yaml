@@ -303,6 +303,7 @@ standard_60:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
+      # margin_value: 0.06
     tsa_params:
       k_periods: 60
       lambda_soc: 
@@ -316,6 +317,8 @@ standard_60:
     dispatch_mode: 'cluster'
     calliope_params:
     soc_proxy_params:
+      # margin_value: 0.0
+      # margin_mode: none
     tsa_params:
       k_periods: 60
       lambda_soc: 

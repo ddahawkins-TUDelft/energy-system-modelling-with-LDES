@@ -51,7 +51,7 @@ def clean_data_dirs(
                 keep = True
             elif name == "calliope_models" and p.name.lower().endswith("reference.nc"):
                 keep = True
-            elif name == "calliope_models" and p.name.lower().startswith("synthetic"):
+            elif name == "calliope_models" and p.name.lower().startswith("standard"):
                 keep = True
             
 

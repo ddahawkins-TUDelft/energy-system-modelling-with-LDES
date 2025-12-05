@@ -101,15 +101,15 @@ class tsa_model:
         
         #assign and create the relevant directories
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}"):
-            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}")
+            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}", exist_ok=True)
         self.paths['calliope_model'] = f"{self.paths['directory']}/{self.paths['subdirectories']['calliope_models']}/{self.id}.nc"
         
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}"):
-            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}")
+            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}", exist_ok=True)
         self.paths['cluster_map'] = f"{self.paths['directory']}/{self.paths['subdirectories']['cluster_maps']}/{self.id}.csv"
 
         if not os.path.exists(f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}"):
-            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}")
+            os.makedirs(f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}", exist_ok=True)
         self.paths['parameters'] = f"{self.paths['directory']}/{self.paths['subdirectories']['parameters']}/{self.id}.json"
         
         #here we copy the source timeseries data into the model's directory and reassign the path id

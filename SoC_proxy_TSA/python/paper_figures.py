@@ -46,6 +46,8 @@ import calliope
 
 import matplotlib as mpl
 
+from helper_signals import build_signal_metrics
+
 
 
 # ------------------------- Paths & constants ---------------------------------
@@ -53,10 +55,13 @@ import matplotlib as mpl
 # Adjust these if your repo layout differs
 # Per your note: separate logs for figs 1–3 and 4–5:
 SAVE_FIGURES = True
+countrycode = 'NL'
 
-LOGS_F123     = [Path("SoC_proxy_TSA/data/notes/log_GB_30-365.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
+LOGS_F123     = [Path(f"SoC_proxy_TSA/data/notes/log_{countrycode}_rerun.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
 LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_GB_margins.csv")]
+
+
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
 PARAM_DIR       = Path("SoC_proxy_TSA/data/parameters")
@@ -66,11 +71,11 @@ CACHE_CEM       = Path("SoC_proxy_TSA/data/notes/cem_cache.csv")
 CACHE_RUNTIME   = Path("SoC_proxy_TSA/data/notes/runtime_cache.csv")
 
 # Output filenames
-FIG1_HEATMAP_10Y      = OUT_DIR / "fig1_heatmap_ldes_error_10y_GB.pdf" 
-FIG2_ERR_VS_REPS      = OUT_DIR / "fig2_error_box_vs_reps_GB.pdf" 
-FIG3_ERR_VS_PROXY     = OUT_DIR / "fig3_error_box_vs_proxy_GB.pdf" 
-FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90_GB.pdf"
-FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon_GB.pdf"
+FIG1_HEATMAP_10Y      = OUT_DIR / f"fig1_heatmap_ldes_error_10y_{countrycode}.pdf" 
+FIG2_ERR_VS_REPS      = OUT_DIR / f"fig2_error_box_vs_reps_{countrycode}.pdf" 
+FIG3_ERR_VS_PROXY     = OUT_DIR / f"fig3_error_box_vs_proxy_{countrycode}.pdf" 
+FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90.pdf"
+FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon.pdf"
 FIG6_ERR_VS_MARGIN   = OUT_DIR / "fig6_error_box_vs_margin_GB_NL.pdf"
 
 # Colours (preserve existing)
@@ -318,7 +323,6 @@ def relative_error(df_ref, df_test):
     return e, e_mean_abs
 
 
-
 # ------------------------- Cache builders ------------------------------------
 
 def build_or_load_cem_cache(df_needed: pd.DataFrame,
@@ -388,6 +392,7 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
             # get_capacities returns (power_caps_series, energy_caps_series)
             power_caps_reference, energy_caps_reference = get_capacities(ref_cache[ref_key])
             power_caps_test,      energy_caps_test      = get_capacities(model_test)
+            pearson_r, nrmse = build_signal_metrics(tvp, mid )
         except Exception:
             continue
 
@@ -405,6 +410,8 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
             "W_proxy": row.get("W_proxy", np.nan),
             "ldes_error": ldes_err,                 # single value (fraction)
             "macme": e_mean_power,                  # single value (fraction)
+            'proxy_cem_pearson': pearson_r,
+            'proxy_cem_nrmse': nrmse,
             "abs_ldes_error": abs(ldes_err) if pd.notna(ldes_err) else np.nan
         })
 
@@ -571,11 +578,30 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     # => vmin = -0.2, vmax = 0.4
 
     # ---- custom diverging cmap: purple -> blue -> yellow ----
-    colors = [
-        (0,"#0d0887"),  # dark purple for negative
-        (vmid,"#ffffff"),  # blue at 0
-        (1,"#cc4778"),  # yellow for positive 
-    ]
+    if vmin < 0 < vmax:
+        # 0 is inside the range: valid midpoint
+        vmid = (0 - vmin) / (vmax - vmin)
+        colors = [
+            (0.0, "#0d0887"),   # dark purple
+            (vmid, "#ffffff"),  # white at 0
+            (1.0, "#cc4778"),   # pink
+        ]
+    elif vmax>0:
+        # All values are on one side of 0; use a simple 2-point gradient
+        # (pick whichever endpoints you prefer)
+        colors = [
+            (0.0, "#ffffff"),
+            (1.0, "#cc4778"),
+        ]
+    else:
+        colors = [
+            (0.0, "#0d0887"),
+            (1.0, "#ffffff"),
+        ]
+
+
+
+
     cmap = mcolors.LinearSegmentedColormap.from_list("plasmaish_div", colors)
     norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
     # cmap = plt.get_cmap("plasma")

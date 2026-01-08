@@ -7,7 +7,7 @@ import numpy as np
 from utility_functions.helper_SoC_proxy_fast_compute import generate_soc_proxy
 from plot_signal_results import _load_timeseries_reference
 
-country = 'GB'
+country = 'BE'
 year_s=2010
 year_e=year_s+9
 

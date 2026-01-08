@@ -13,7 +13,7 @@ import time
 show_soc = True
 show_visual = False
 
-country = 'BE'
+country = 'NL'
 
 dispatchable_by_country = {
     'NL': 3300,
@@ -65,10 +65,16 @@ dispatch_config = [
 ]
 
 # for running the shorter horizon models too
+for i in range(2006,2020,5):
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
+for i in range(2006,2023,2):
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
+
 # for i in range(2006,2020,5):
-#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
+#     dispatch_config.append([f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',[i,i+4]])
 # for i in range(2006,2023,2):
-#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
+#     dispatch_config.append([f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',[i,i+1]])
+
 
 
 # -------------------------------------------------------------------------------------------

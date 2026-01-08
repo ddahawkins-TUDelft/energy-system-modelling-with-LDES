@@ -13,7 +13,7 @@ import time
 show_soc = True
 show_visual = False
 
-country = 'NL'
+country = 'BE'
 
 dispatchable_by_country = {
     'NL': 3300,

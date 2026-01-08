@@ -40,6 +40,7 @@ import matplotlib.ticker as mtick
 import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
 
+
 import yaml
 from netCDF4 import Dataset
 import calliope
@@ -59,9 +60,9 @@ countrycode = 'NL'
 
 LOGS_F123     = [Path(f"SoC_proxy_TSA/data/notes/log_{countrycode}_rerun.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
 LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
-LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_GB_margins.csv")]
+LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_margins.csv")]
 
-
+ICON_PATH = f'SoC_proxy_TSA/icons/{countrycode}.png'
 
 MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
 PARAM_DIR       = Path("SoC_proxy_TSA/data/parameters")
@@ -640,9 +641,32 @@ def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
     ax.set_xlabel("Proxy weight $(W_P)$")
     ax.set_ylabel("Number of representative days")
 
+    ax = add_title_and_icon(ax)
+
     savefig(fig, path)
+
 def _add_y0_line(ax: plt.Axes) -> None:
     ax.axhline(0, color="black", linewidth=1, zorder=0)
+
+def add_title_and_icon(ax: plt.Axes) -> None:
+    t = ax.set_title('The Netherlands' if countrycode == 'NL' else 'Belgium', fontweight='bold', pad=10)
+    spacing  = 0.2*2 if countrycode == 'NL' else 0.12*2
+    spacing_ratio = 0.25
+
+    t.set_x(0.5+spacing*spacing_ratio)
+
+    flag = mpl.image.imread(ICON_PATH)
+    imbox = mpl.offsetbox.OffsetImage(flag, zoom =0.04)
+
+    ab = mpl.offsetbox.AnnotationBbox(
+        imbox,
+        (0.5-spacing*(1-spacing_ratio),1.1),
+        xycoords = 'axes fraction',
+        frameon = False,
+        box_alignment=(0.5,0.5)
+    )
+    ax.add_artist(ab)
+    return ax
 
 
 def fig2_box_by_reps(df_cem: pd.DataFrame, path: Path) -> None:
@@ -725,6 +749,8 @@ def fig2_box_by_reps(df_cem: pd.DataFrame, path: Path) -> None:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(axis="y", linestyle=":", alpha=0.4)
+
+    ax = add_title_and_icon(ax)
 
     savefig(fig, path)
     print(f"[fig2] Saved {path}")
@@ -810,6 +836,8 @@ def fig3_box_by_proxy(df_cem: pd.DataFrame, path: Path) -> None:
     ax.spines["right"].set_visible(False)
     ax.grid(axis="y", linestyle=":", alpha=0.4)
 
+    ax = add_title_and_icon(ax)
+
     savefig(fig, path)
     print(f"[fig3] Saved {path}")
 
@@ -817,7 +845,7 @@ def fig3_box_by_proxy(df_cem: pd.DataFrame, path: Path) -> None:
 def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
     # Filter to W in {0,1} and reps in [45, 60]
     df = df_cem.copy()
-    df = df[(df["number_reps"] >= 60) & (df["number_reps"] <= 365)]
+    df = df[(df["number_reps"] >= 45) & (df["number_reps"] <= 180)]
     df = df[df["W_proxy"].isin([0.0, 1.0])]
     df = df.dropna(subset=["horizon"])
 
@@ -907,6 +935,8 @@ def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
                markeredgecolor=COLOUR_GREY_MEAN, linestyle="", label="$W_P = 1$ (filled)"),
     ]
     axes[0].legend(handles=legend_handles, frameon=False, loc="best")
+
+    ax = add_title_and_icon(ax)
 
     fig.tight_layout()
     savefig(fig, path)

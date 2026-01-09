@@ -43,7 +43,7 @@ LOGS_F123_BY_CC = {
 }
 
 # Keep these for your other figures if you still use them
-LOGS_F45 = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
+LOGS_F45 = [Path("SoC_proxy_TSA/data/notes/log_horizons_runtimes.csv")]
 LOGS_F6  = [Path("SoC_proxy_TSA/data/notes/log_NL_margins.csv")]
 
 ICON_BY_CC = {cc: f"SoC_proxy_TSA/icons/{cc}.png" for cc in COUNTRIES}

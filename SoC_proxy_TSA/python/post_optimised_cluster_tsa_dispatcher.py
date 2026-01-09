@@ -13,7 +13,7 @@ import time
 show_soc = False
 show_visual = False
 
-country = 'BE'
+country = 'NL'
 
 dispatchable_by_country = {
     'NL': 3300,
@@ -51,29 +51,29 @@ scenarios = [
 
     ] 
 dispatch_config = [
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
-    # ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
-    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2006,2015]],
-    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2008,2017]],
-    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2010,2019]],
-    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2012,2021]],
-    [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2014,2023]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006,2015]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008,2017]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010,2019]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012,2021]],
+    ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014,2023]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2006,2015]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2008,2017]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2010,2019]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2012,2021]],
+    # [f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv', [2014,2023]],
 
 ]
 
 # for running the shorter horizon models too
-# for i in range(2006,2020,5):
-#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
-# for i in range(2006,2023,2):
-#     dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
-
 for i in range(2006,2020,5):
-    dispatch_config.append([f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',[i,i+4]])
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+4]])
 for i in range(2006,2023,2):
-    dispatch_config.append([f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',[i,i+1]])
+    dispatch_config.append(['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv',[i,i+1]])
+
+# for i in range(2006,2020,5):
+#     dispatch_config.append([f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',[i,i+4]])
+# for i in range(2006,2023,2):
+#     dispatch_config.append([f'SoC_proxy_TSA/data/timeseries/time_varying_parameters_{country}.csv',[i,i+1]])
 
 
 

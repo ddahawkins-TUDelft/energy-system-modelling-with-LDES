@@ -427,7 +427,7 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
       - within each subplot: boxplots for W_P in {0, 0.5}
     """
     df = df_cem.copy()
-    df = df[(df["number_reps"] >= 60) & (df["number_reps"] <= 365)]
+    df = df[(df["number_reps"] >= 30) & (df["number_reps"] <= 365)]
     df = df[df["W_proxy"].isin([0.0, 0.5])]
     df = df.dropna(subset=["horizon"])
 

@@ -1,0 +1,1949 @@
+Running on host: cmp040
+ ------------------------------------------------------- 
+[Dispatch] Scenarios include...
+['Sensitivity_W_reps30', 'Sensitivity_W_reps45', 'Sensitivity_W_reps60', 'Sensitivity_W_reps90', 'Sensitivity_W_reps180', 'Sensitivity_W_reps365']
+[['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006, 2015]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008, 2017]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010, 2019]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012, 2021]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014, 2023]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006, 2010]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2011, 2015]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2016, 2020]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2006, 2007]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2008, 2009]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2010, 2011]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2012, 2013]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2014, 2015]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2016, 2017]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2018, 2019]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2020, 2021]], ['SoC_proxy_TSA/data/timeseries/time_varying_parameters.csv', [2022, 2023]]]
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      bacae7d1465247b1cb89      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/bacae7d1465247b1cb89.json
+> Model: SoC_proxy_TSA/data/calliope_models/bacae7d1465247b1cb89.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      c49ad3633cb70d9a7ea6      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c49ad3633cb70d9a7ea6.json
+> Model: SoC_proxy_TSA/data/calliope_models/c49ad3633cb70d9a7ea6.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.753433 lost=0.000e+00 | margin=4.000% -> curtailment=0.723295
+[SoC Proxy] curtailment forecast: 72.33%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      17b411527c6c5f2ecab6      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/17b411527c6c5f2ecab6.json
+> Model: SoC_proxy_TSA/data/calliope_models/17b411527c6c5f2ecab6.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      e75c8c048d9f8c40a6cd      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/e75c8c048d9f8c40a6cd.json
+> Model: SoC_proxy_TSA/data/calliope_models/e75c8c048d9f8c40a6cd.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.756761 lost=0.000e+00 | margin=4.000% -> curtailment=0.726490
+[SoC Proxy] curtailment forecast: 72.65%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      40b7d2268400a87af68f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/40b7d2268400a87af68f.json
+> Model: SoC_proxy_TSA/data/calliope_models/40b7d2268400a87af68f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      76695c76ccbe050856a8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/76695c76ccbe050856a8.json
+> Model: SoC_proxy_TSA/data/calliope_models/76695c76ccbe050856a8.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.757745 lost=0.000e+00 | margin=4.000% -> curtailment=0.727436
+[SoC Proxy] curtailment forecast: 72.74%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      59f7c2789a630acb048c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/59f7c2789a630acb048c.json
+> Model: SoC_proxy_TSA/data/calliope_models/59f7c2789a630acb048c.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      8820e50fd5cd5fef72e7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8820e50fd5cd5fef72e7.json
+> Model: SoC_proxy_TSA/data/calliope_models/8820e50fd5cd5fef72e7.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.756041 lost=0.000e+00 | margin=4.000% -> curtailment=0.725799
+[SoC Proxy] curtailment forecast: 72.58%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      a8303ce24cdfb7033d4d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a8303ce24cdfb7033d4d.json
+> Model: SoC_proxy_TSA/data/calliope_models/a8303ce24cdfb7033d4d.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      2ec532d93e5c336aee61      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2ec532d93e5c336aee61.json
+> Model: SoC_proxy_TSA/data/calliope_models/2ec532d93e5c336aee61.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.753403 lost=0.000e+00 | margin=4.000% -> curtailment=0.723267
+[SoC Proxy] curtailment forecast: 72.33%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      c7b7e9436a152397f294      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c7b7e9436a152397f294.json
+> Model: SoC_proxy_TSA/data/calliope_models/c7b7e9436a152397f294.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      9ec270fb3a061bd590b8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9ec270fb3a061bd590b8.json
+> Model: SoC_proxy_TSA/data/calliope_models/9ec270fb3a061bd590b8.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.750036 lost=0.000e+00 | margin=4.000% -> curtailment=0.720035
+[SoC Proxy] curtailment forecast: 72.00%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      3d8e15cff8331c90a94e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3d8e15cff8331c90a94e.json
+> Model: SoC_proxy_TSA/data/calliope_models/3d8e15cff8331c90a94e.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      5ae87ab83cc5884f6f1f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/5ae87ab83cc5884f6f1f.json
+> Model: SoC_proxy_TSA/data/calliope_models/5ae87ab83cc5884f6f1f.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.756420 lost=0.000e+00 | margin=4.000% -> curtailment=0.726163
+[SoC Proxy] curtailment forecast: 72.62%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      2e2a8440bc1c92ef4c7f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2e2a8440bc1c92ef4c7f.json
+> Model: SoC_proxy_TSA/data/calliope_models/2e2a8440bc1c92ef4c7f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      786f74e0f0386fff2ed6      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/786f74e0f0386fff2ed6.json
+> Model: SoC_proxy_TSA/data/calliope_models/786f74e0f0386fff2ed6.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.754799 lost=0.000e+00 | margin=4.000% -> curtailment=0.724607
+[SoC Proxy] curtailment forecast: 72.46%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      02e2875fcf8d13fd281f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/02e2875fcf8d13fd281f.json
+> Model: SoC_proxy_TSA/data/calliope_models/02e2875fcf8d13fd281f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      a8cfbd4de7a8cf9d6d99      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a8cfbd4de7a8cf9d6d99.json
+> Model: SoC_proxy_TSA/data/calliope_models/a8cfbd4de7a8cf9d6d99.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755574 lost=0.000e+00 | margin=4.000% -> curtailment=0.725351
+[SoC Proxy] curtailment forecast: 72.54%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      2b071898b9f8dce47fd8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2b071898b9f8dce47fd8.json
+> Model: SoC_proxy_TSA/data/calliope_models/2b071898b9f8dce47fd8.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      febdabdbed7025ecb7a5      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/febdabdbed7025ecb7a5.json
+> Model: SoC_proxy_TSA/data/calliope_models/febdabdbed7025ecb7a5.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.753650 lost=0.000e+00 | margin=4.000% -> curtailment=0.723504
+[SoC Proxy] curtailment forecast: 72.35%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      b105bfa922eae06027a4      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b105bfa922eae06027a4.json
+> Model: SoC_proxy_TSA/data/calliope_models/b105bfa922eae06027a4.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      66f7fb6a84cee13f6d9c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/66f7fb6a84cee13f6d9c.json
+> Model: SoC_proxy_TSA/data/calliope_models/66f7fb6a84cee13f6d9c.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.751361 lost=0.000e+00 | margin=4.000% -> curtailment=0.721307
+[SoC Proxy] curtailment forecast: 72.13%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      cac1ea4ed37a89ebaa51      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cac1ea4ed37a89ebaa51.json
+> Model: SoC_proxy_TSA/data/calliope_models/cac1ea4ed37a89ebaa51.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      b901c05f0c11faa9cedf      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b901c05f0c11faa9cedf.json
+> Model: SoC_proxy_TSA/data/calliope_models/b901c05f0c11faa9cedf.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747646 lost=0.000e+00 | margin=4.000% -> curtailment=0.717741
+[SoC Proxy] curtailment forecast: 71.77%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      2e821fe1b5d40888b277      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2e821fe1b5d40888b277.json
+> Model: SoC_proxy_TSA/data/calliope_models/2e821fe1b5d40888b277.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      c779b1f75feff932f10c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c779b1f75feff932f10c.json
+> Model: SoC_proxy_TSA/data/calliope_models/c779b1f75feff932f10c.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.759608 lost=0.000e+00 | margin=4.000% -> curtailment=0.729224
+[SoC Proxy] curtailment forecast: 72.92%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      271cd640532bcbf45f97      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/271cd640532bcbf45f97.json
+> Model: SoC_proxy_TSA/data/calliope_models/271cd640532bcbf45f97.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      fd86e34566bd9989ed55      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/fd86e34566bd9989ed55.json
+> Model: SoC_proxy_TSA/data/calliope_models/fd86e34566bd9989ed55.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.757182 lost=0.000e+00 | margin=4.000% -> curtailment=0.726895
+[SoC Proxy] curtailment forecast: 72.69%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      68cfa09e374e74764d65      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/68cfa09e374e74764d65.json
+> Model: SoC_proxy_TSA/data/calliope_models/68cfa09e374e74764d65.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      7599dcc043a38f827d47      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7599dcc043a38f827d47.json
+> Model: SoC_proxy_TSA/data/calliope_models/7599dcc043a38f827d47.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755859 lost=0.000e+00 | margin=4.000% -> curtailment=0.725624
+[SoC Proxy] curtailment forecast: 72.56%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      532ee900b565c80f87c4      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/532ee900b565c80f87c4.json
+> Model: SoC_proxy_TSA/data/calliope_models/532ee900b565c80f87c4.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      aec576d86c66a76cd929      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/aec576d86c66a76cd929.json
+> Model: SoC_proxy_TSA/data/calliope_models/aec576d86c66a76cd929.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755463 lost=0.000e+00 | margin=4.000% -> curtailment=0.725244
+[SoC Proxy] curtailment forecast: 72.52%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      b1800f23460121599509      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b1800f23460121599509.json
+> Model: SoC_proxy_TSA/data/calliope_models/b1800f23460121599509.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      c3f4c9a6a4dd3cddee1e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c3f4c9a6a4dd3cddee1e.json
+> Model: SoC_proxy_TSA/data/calliope_models/c3f4c9a6a4dd3cddee1e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.749343 lost=0.000e+00 | margin=4.000% -> curtailment=0.719370
+[SoC Proxy] curtailment forecast: 71.94%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      6a0d0b62fac328227c54      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6a0d0b62fac328227c54.json
+> Model: SoC_proxy_TSA/data/calliope_models/6a0d0b62fac328227c54.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      45c35feff5bc9309e547      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/45c35feff5bc9309e547.json
+> Model: SoC_proxy_TSA/data/calliope_models/45c35feff5bc9309e547.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746736 lost=0.000e+00 | margin=4.000% -> curtailment=0.716867
+[SoC Proxy] curtailment forecast: 71.69%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      ebbe0e4d01bf669ab0fa      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ebbe0e4d01bf669ab0fa.json
+> Model: SoC_proxy_TSA/data/calliope_models/ebbe0e4d01bf669ab0fa.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      0aba411b4f15cc1925fd      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0aba411b4f15cc1925fd.json
+> Model: SoC_proxy_TSA/data/calliope_models/0aba411b4f15cc1925fd.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.744541 lost=0.000e+00 | margin=4.000% -> curtailment=0.714759
+[SoC Proxy] curtailment forecast: 71.48%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      98dbe471fa45c980b070      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/98dbe471fa45c980b070.json
+> Model: SoC_proxy_TSA/data/calliope_models/98dbe471fa45c980b070.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      741efa638cadc74a4d74      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/741efa638cadc74a4d74.json
+> Model: SoC_proxy_TSA/data/calliope_models/741efa638cadc74a4d74.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.745274 lost=0.000e+00 | margin=4.000% -> curtailment=0.715463
+[SoC Proxy] curtailment forecast: 71.55%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      7ea88400c32511feeeb9      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7ea88400c32511feeeb9.json
+> Model: SoC_proxy_TSA/data/calliope_models/7ea88400c32511feeeb9.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      308fb8658063ecd70fae      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/308fb8658063ecd70fae.json
+> Model: SoC_proxy_TSA/data/calliope_models/308fb8658063ecd70fae.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746786 lost=0.000e+00 | margin=4.000% -> curtailment=0.716914
+[SoC Proxy] curtailment forecast: 71.69%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      41cc9e7068a3a10b8715      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/41cc9e7068a3a10b8715.json
+> Model: SoC_proxy_TSA/data/calliope_models/41cc9e7068a3a10b8715.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      96b20689441206a920a6      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/96b20689441206a920a6.json
+> Model: SoC_proxy_TSA/data/calliope_models/96b20689441206a920a6.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.749831 lost=0.000e+00 | margin=4.000% -> curtailment=0.719838
+[SoC Proxy] curtailment forecast: 71.98%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      cb88d4179f6d58042c60      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cb88d4179f6d58042c60.json
+> Model: SoC_proxy_TSA/data/calliope_models/cb88d4179f6d58042c60.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      20a9b9e2577a3b658141      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/20a9b9e2577a3b658141.json
+> Model: SoC_proxy_TSA/data/calliope_models/20a9b9e2577a3b658141.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.749619 lost=0.000e+00 | margin=4.000% -> curtailment=0.719634
+[SoC Proxy] curtailment forecast: 71.96%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      0b1e9c802884cca71c68      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0b1e9c802884cca71c68.json
+> Model: SoC_proxy_TSA/data/calliope_models/0b1e9c802884cca71c68.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      6b16bc34a486003b0ebe      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6b16bc34a486003b0ebe.json
+> Model: SoC_proxy_TSA/data/calliope_models/6b16bc34a486003b0ebe.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747398 lost=0.000e+00 | margin=4.000% -> curtailment=0.717502
+[SoC Proxy] curtailment forecast: 71.75%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      c4c5888777bb02fbf18d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c4c5888777bb02fbf18d.json
+> Model: SoC_proxy_TSA/data/calliope_models/c4c5888777bb02fbf18d.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      df4eb43b9a3f65aafb12      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/df4eb43b9a3f65aafb12.json
+> Model: SoC_proxy_TSA/data/calliope_models/df4eb43b9a3f65aafb12.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746696 lost=0.000e+00 | margin=4.000% -> curtailment=0.716828
+[SoC Proxy] curtailment forecast: 71.68%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      86a2e3bca4ef038164ef      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/86a2e3bca4ef038164ef.json
+> Model: SoC_proxy_TSA/data/calliope_models/86a2e3bca4ef038164ef.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      128e89709d976aa43189      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/128e89709d976aa43189.json
+> Model: SoC_proxy_TSA/data/calliope_models/128e89709d976aa43189.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747670 lost=0.000e+00 | margin=4.000% -> curtailment=0.717763
+[SoC Proxy] curtailment forecast: 71.78%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      6b0caf0a6c3d0a3c3f2f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6b0caf0a6c3d0a3c3f2f.json
+> Model: SoC_proxy_TSA/data/calliope_models/6b0caf0a6c3d0a3c3f2f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      4260b207b32176fd54fe      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/4260b207b32176fd54fe.json
+> Model: SoC_proxy_TSA/data/calliope_models/4260b207b32176fd54fe.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747939 lost=0.000e+00 | margin=4.000% -> curtailment=0.718022
+[SoC Proxy] curtailment forecast: 71.80%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      8ab2a243a1d305587a58      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8ab2a243a1d305587a58.json
+> Model: SoC_proxy_TSA/data/calliope_models/8ab2a243a1d305587a58.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      9f0f686037e9be2c390e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9f0f686037e9be2c390e.json
+> Model: SoC_proxy_TSA/data/calliope_models/9f0f686037e9be2c390e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.745865 lost=0.000e+00 | margin=4.000% -> curtailment=0.716030
+[SoC Proxy] curtailment forecast: 71.60%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      2573150a69be7c0ba8c5      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2573150a69be7c0ba8c5.json
+> Model: SoC_proxy_TSA/data/calliope_models/2573150a69be7c0ba8c5.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      3abf346115ff6625c943      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3abf346115ff6625c943.json
+> Model: SoC_proxy_TSA/data/calliope_models/3abf346115ff6625c943.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747448 lost=0.000e+00 | margin=4.000% -> curtailment=0.717550
+[SoC Proxy] curtailment forecast: 71.75%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      29e22fea8350c83a60ac      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/29e22fea8350c83a60ac.json
+> Model: SoC_proxy_TSA/data/calliope_models/29e22fea8350c83a60ac.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      4487a99d41900be6ad52      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/4487a99d41900be6ad52.json
+> Model: SoC_proxy_TSA/data/calliope_models/4487a99d41900be6ad52.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746585 lost=0.000e+00 | margin=4.000% -> curtailment=0.716722
+[SoC Proxy] curtailment forecast: 71.67%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      da10d9034de3eab98e43      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/da10d9034de3eab98e43.json
+> Model: SoC_proxy_TSA/data/calliope_models/da10d9034de3eab98e43.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      ed3c70156cf0f7df6a98      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ed3c70156cf0f7df6a98.json
+> Model: SoC_proxy_TSA/data/calliope_models/ed3c70156cf0f7df6a98.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.760457 lost=0.000e+00 | margin=4.000% -> curtailment=0.730038
+[SoC Proxy] curtailment forecast: 73.00%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      f52ddfb2af2eda7c26d7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/f52ddfb2af2eda7c26d7.json
+> Model: SoC_proxy_TSA/data/calliope_models/f52ddfb2af2eda7c26d7.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      b2c095abea702b1dcd37      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b2c095abea702b1dcd37.json
+> Model: SoC_proxy_TSA/data/calliope_models/b2c095abea702b1dcd37.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.758458 lost=0.000e+00 | margin=4.000% -> curtailment=0.728120
+[SoC Proxy] curtailment forecast: 72.81%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      ed5fbe3928045634db6d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ed5fbe3928045634db6d.json
+> Model: SoC_proxy_TSA/data/calliope_models/ed5fbe3928045634db6d.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      56aaba64f9985665b821      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/56aaba64f9985665b821.json
+> Model: SoC_proxy_TSA/data/calliope_models/56aaba64f9985665b821.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.757156 lost=0.000e+00 | margin=4.000% -> curtailment=0.726870
+[SoC Proxy] curtailment forecast: 72.69%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      2458dacbfdcb1933f3d7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2458dacbfdcb1933f3d7.json
+> Model: SoC_proxy_TSA/data/calliope_models/2458dacbfdcb1933f3d7.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      c65f549df7a20a1d646c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c65f549df7a20a1d646c.json
+> Model: SoC_proxy_TSA/data/calliope_models/c65f549df7a20a1d646c.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.752567 lost=0.000e+00 | margin=4.000% -> curtailment=0.722464
+[SoC Proxy] curtailment forecast: 72.25%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      cd22957541b791a09380      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cd22957541b791a09380.json
+> Model: SoC_proxy_TSA/data/calliope_models/cd22957541b791a09380.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      edbe7eda29b8e4a5e4de      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/edbe7eda29b8e4a5e4de.json
+> Model: SoC_proxy_TSA/data/calliope_models/edbe7eda29b8e4a5e4de.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.751816 lost=0.000e+00 | margin=4.000% -> curtailment=0.721743
+[SoC Proxy] curtailment forecast: 72.17%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      004ebc0c7f0770d58f20      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/004ebc0c7f0770d58f20.json
+> Model: SoC_proxy_TSA/data/calliope_models/004ebc0c7f0770d58f20.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      39d51e21456b16fcec87      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/39d51e21456b16fcec87.json
+> Model: SoC_proxy_TSA/data/calliope_models/39d51e21456b16fcec87.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747758 lost=0.000e+00 | margin=4.000% -> curtailment=0.717848
+[SoC Proxy] curtailment forecast: 71.78%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      1c2a157266acf6ecb35f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1c2a157266acf6ecb35f.json
+> Model: SoC_proxy_TSA/data/calliope_models/1c2a157266acf6ecb35f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      aee6b3d619d3bdbf19dc      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/aee6b3d619d3bdbf19dc.json
+> Model: SoC_proxy_TSA/data/calliope_models/aee6b3d619d3bdbf19dc.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.764314 lost=0.000e+00 | margin=4.000% -> curtailment=0.733741
+[SoC Proxy] curtailment forecast: 73.37%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      0b6a71b373c27133d068      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0b6a71b373c27133d068.json
+> Model: SoC_proxy_TSA/data/calliope_models/0b6a71b373c27133d068.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      6d07a654d136e2f6b7f3      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6d07a654d136e2f6b7f3.json
+> Model: SoC_proxy_TSA/data/calliope_models/6d07a654d136e2f6b7f3.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.757677 lost=0.000e+00 | margin=4.000% -> curtailment=0.727370
+[SoC Proxy] curtailment forecast: 72.74%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      25d48354b0956295d723      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/25d48354b0956295d723.json
+> Model: SoC_proxy_TSA/data/calliope_models/25d48354b0956295d723.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      757338b67dd133c29ca0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/757338b67dd133c29ca0.json
+> Model: SoC_proxy_TSA/data/calliope_models/757338b67dd133c29ca0.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755997 lost=0.000e+00 | margin=4.000% -> curtailment=0.725757
+[SoC Proxy] curtailment forecast: 72.58%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      45b3f46811581993d719      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/45b3f46811581993d719.json
+> Model: SoC_proxy_TSA/data/calliope_models/45b3f46811581993d719.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      e5305b3cf00682d99651      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/e5305b3cf00682d99651.json
+> Model: SoC_proxy_TSA/data/calliope_models/e5305b3cf00682d99651.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.758138 lost=0.000e+00 | margin=4.000% -> curtailment=0.727812
+[SoC Proxy] curtailment forecast: 72.78%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      f73ea9c1ffab78135050      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/f73ea9c1ffab78135050.json
+> Model: SoC_proxy_TSA/data/calliope_models/f73ea9c1ffab78135050.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      7bda1d20d8b5bca6f930      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7bda1d20d8b5bca6f930.json
+> Model: SoC_proxy_TSA/data/calliope_models/7bda1d20d8b5bca6f930.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.753314 lost=0.000e+00 | margin=4.000% -> curtailment=0.723182
+[SoC Proxy] curtailment forecast: 72.32%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      0b00959b1c6a72b72d94      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0b00959b1c6a72b72d94.json
+> Model: SoC_proxy_TSA/data/calliope_models/0b00959b1c6a72b72d94.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      e59e4694c4764f62b405      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/e59e4694c4764f62b405.json
+> Model: SoC_proxy_TSA/data/calliope_models/e59e4694c4764f62b405.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.748689 lost=0.000e+00 | margin=4.000% -> curtailment=0.718741
+[SoC Proxy] curtailment forecast: 71.87%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      bea6bdba4ef0c1d32bbb      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/bea6bdba4ef0c1d32bbb.json
+> Model: SoC_proxy_TSA/data/calliope_models/bea6bdba4ef0c1d32bbb.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      3db67183b5e5998c7aa4      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3db67183b5e5998c7aa4.json
+> Model: SoC_proxy_TSA/data/calliope_models/3db67183b5e5998c7aa4.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.741862 lost=0.000e+00 | margin=4.000% -> curtailment=0.712188
+[SoC Proxy] curtailment forecast: 71.22%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      8346ea5f902d839bb23b      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8346ea5f902d839bb23b.json
+> Model: SoC_proxy_TSA/data/calliope_models/8346ea5f902d839bb23b.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      7de8b8564f19602b4b45      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7de8b8564f19602b4b45.json
+> Model: SoC_proxy_TSA/data/calliope_models/7de8b8564f19602b4b45.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742227 lost=0.000e+00 | margin=4.000% -> curtailment=0.712537
+[SoC Proxy] ⚠ Warning: SoC Proxy severely non-cyclical (end-start = 1.057e+04)
+[SoC Proxy] curtailment forecast: 71.25%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      9912b9a70f9f45c76854      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9912b9a70f9f45c76854.json
+> Model: SoC_proxy_TSA/data/calliope_models/9912b9a70f9f45c76854.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      5a859a269f714847de64      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/5a859a269f714847de64.json
+> Model: SoC_proxy_TSA/data/calliope_models/5a859a269f714847de64.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746020 lost=0.000e+00 | margin=4.000% -> curtailment=0.716179
+[SoC Proxy] ⚠ Warning: SoC Proxy severely non-cyclical (end-start = 1.059e+04)
+[SoC Proxy] curtailment forecast: 71.62%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      86f504c2fd904b8a75c6      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/86f504c2fd904b8a75c6.json
+> Model: SoC_proxy_TSA/data/calliope_models/86f504c2fd904b8a75c6.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      1a591b98df07fd33a672      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1a591b98df07fd33a672.json
+> Model: SoC_proxy_TSA/data/calliope_models/1a591b98df07fd33a672.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.745983 lost=0.000e+00 | margin=4.000% -> curtailment=0.716143
+[SoC Proxy] curtailment forecast: 71.61%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      da7ac6e895154ee1096e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/da7ac6e895154ee1096e.json
+> Model: SoC_proxy_TSA/data/calliope_models/da7ac6e895154ee1096e.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      cc64e190096a9ffc7d0c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cc64e190096a9ffc7d0c.json
+> Model: SoC_proxy_TSA/data/calliope_models/cc64e190096a9ffc7d0c.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742748 lost=0.000e+00 | margin=4.000% -> curtailment=0.713038
+[SoC Proxy] curtailment forecast: 71.30%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      245bd0404aa7a4a254e7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/245bd0404aa7a4a254e7.json
+> Model: SoC_proxy_TSA/data/calliope_models/245bd0404aa7a4a254e7.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      e145f6197d7a85710d83      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/e145f6197d7a85710d83.json
+> Model: SoC_proxy_TSA/data/calliope_models/e145f6197d7a85710d83.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742039 lost=0.000e+00 | margin=4.000% -> curtailment=0.712358
+[SoC Proxy] curtailment forecast: 71.24%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      7d0093c63702d23c26fc      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7d0093c63702d23c26fc.json
+> Model: SoC_proxy_TSA/data/calliope_models/7d0093c63702d23c26fc.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      07210e6c6a59cc4400ef      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/07210e6c6a59cc4400ef.json
+> Model: SoC_proxy_TSA/data/calliope_models/07210e6c6a59cc4400ef.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.751648 lost=0.000e+00 | margin=4.000% -> curtailment=0.721582
+[SoC Proxy] ⚠ Warning: SoC Proxy severely non-cyclical (end-start = 1.098e+04)
+[SoC Proxy] curtailment forecast: 72.16%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      c45468db560a20270433      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c45468db560a20270433.json
+> Model: SoC_proxy_TSA/data/calliope_models/c45468db560a20270433.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      404d022232ef0649778a      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/404d022232ef0649778a.json
+> Model: SoC_proxy_TSA/data/calliope_models/404d022232ef0649778a.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.756110 lost=0.000e+00 | margin=4.000% -> curtailment=0.725866
+[SoC Proxy] ⚠ Warning: SoC Proxy severely non-cyclical (end-start = 1.020e+04)
+[SoC Proxy] curtailment forecast: 72.59%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      771372ac1a1f187d4add      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/771372ac1a1f187d4add.json
+> Model: SoC_proxy_TSA/data/calliope_models/771372ac1a1f187d4add.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      57c8a187c821a8caaa9c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/57c8a187c821a8caaa9c.json
+> Model: SoC_proxy_TSA/data/calliope_models/57c8a187c821a8caaa9c.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755457 lost=0.000e+00 | margin=4.000% -> curtailment=0.725238
+[SoC Proxy] ⚠ Warning: SoC Proxy severely non-cyclical (end-start = 1.097e+04)
+[SoC Proxy] curtailment forecast: 72.52%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      11f98b07ec80215958cf      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/11f98b07ec80215958cf.json
+> Model: SoC_proxy_TSA/data/calliope_models/11f98b07ec80215958cf.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      cdf233e156e934c2568b      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cdf233e156e934c2568b.json
+> Model: SoC_proxy_TSA/data/calliope_models/cdf233e156e934c2568b.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.752806 lost=0.000e+00 | margin=4.000% -> curtailment=0.722694
+[SoC Proxy] curtailment forecast: 72.27%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      6a424d4ad693aee15711      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6a424d4ad693aee15711.json
+> Model: SoC_proxy_TSA/data/calliope_models/6a424d4ad693aee15711.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      c8c41b4893428b75b74d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c8c41b4893428b75b74d.json
+> Model: SoC_proxy_TSA/data/calliope_models/c8c41b4893428b75b74d.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746963 lost=0.000e+00 | margin=4.000% -> curtailment=0.717084
+[SoC Proxy] curtailment forecast: 71.71%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      16393ec6ccd611d5b2d8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/16393ec6ccd611d5b2d8.json
+> Model: SoC_proxy_TSA/data/calliope_models/16393ec6ccd611d5b2d8.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      b2ba2aa96b3f5f58e199      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b2ba2aa96b3f5f58e199.json
+> Model: SoC_proxy_TSA/data/calliope_models/b2ba2aa96b3f5f58e199.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746834 lost=0.000e+00 | margin=4.000% -> curtailment=0.716961
+[SoC Proxy] curtailment forecast: 71.70%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      f72ba286575be40e8397      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/f72ba286575be40e8397.json
+> Model: SoC_proxy_TSA/data/calliope_models/f72ba286575be40e8397.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      1259926649232041936f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1259926649232041936f.json
+> Model: SoC_proxy_TSA/data/calliope_models/1259926649232041936f.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.758304 lost=0.000e+00 | margin=4.000% -> curtailment=0.727972
+[SoC Proxy] curtailment forecast: 72.80%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      161ee0fd2a30ef4fe941      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/161ee0fd2a30ef4fe941.json
+> Model: SoC_proxy_TSA/data/calliope_models/161ee0fd2a30ef4fe941.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      87d4c729800797d7fd6e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/87d4c729800797d7fd6e.json
+> Model: SoC_proxy_TSA/data/calliope_models/87d4c729800797d7fd6e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.760068 lost=0.000e+00 | margin=4.000% -> curtailment=0.729666
+[SoC Proxy] curtailment forecast: 72.97%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      9bf9c7bce04807196b47      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9bf9c7bce04807196b47.json
+> Model: SoC_proxy_TSA/data/calliope_models/9bf9c7bce04807196b47.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      3c86e0471a5beee6eb5e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3c86e0471a5beee6eb5e.json
+> Model: SoC_proxy_TSA/data/calliope_models/3c86e0471a5beee6eb5e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.757092 lost=0.000e+00 | margin=4.000% -> curtailment=0.726808
+[SoC Proxy] curtailment forecast: 72.68%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      bd8c262306018b9e6919      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/bd8c262306018b9e6919.json
+> Model: SoC_proxy_TSA/data/calliope_models/bd8c262306018b9e6919.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      30e75f6ca42bdffe38ec      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/30e75f6ca42bdffe38ec.json
+> Model: SoC_proxy_TSA/data/calliope_models/30e75f6ca42bdffe38ec.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.761216 lost=0.000e+00 | margin=4.000% -> curtailment=0.730767
+[SoC Proxy] curtailment forecast: 73.08%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      f32d49d12d00c27eafb7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/f32d49d12d00c27eafb7.json
+> Model: SoC_proxy_TSA/data/calliope_models/f32d49d12d00c27eafb7.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      b94004f5b1e6c4530c32      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b94004f5b1e6c4530c32.json
+> Model: SoC_proxy_TSA/data/calliope_models/b94004f5b1e6c4530c32.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.756933 lost=0.000e+00 | margin=4.000% -> curtailment=0.726656
+[SoC Proxy] curtailment forecast: 72.67%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      7593e25541d579f617ec      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7593e25541d579f617ec.json
+> Model: SoC_proxy_TSA/data/calliope_models/7593e25541d579f617ec.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      1ae9bd3b384be78d5d33      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1ae9bd3b384be78d5d33.json
+> Model: SoC_proxy_TSA/data/calliope_models/1ae9bd3b384be78d5d33.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.754077 lost=0.000e+00 | margin=4.000% -> curtailment=0.723914
+[SoC Proxy] curtailment forecast: 72.39%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      cc42448b29116db2dde7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cc42448b29116db2dde7.json
+> Model: SoC_proxy_TSA/data/calliope_models/cc42448b29116db2dde7.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      943fa5322a31409e0c01      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/943fa5322a31409e0c01.json
+> Model: SoC_proxy_TSA/data/calliope_models/943fa5322a31409e0c01.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.751293 lost=0.000e+00 | margin=4.000% -> curtailment=0.721241
+[SoC Proxy] curtailment forecast: 72.12%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      42dfbfee9c5bc9d7b07c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/42dfbfee9c5bc9d7b07c.json
+> Model: SoC_proxy_TSA/data/calliope_models/42dfbfee9c5bc9d7b07c.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      df7fa2be488652a5e926      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/df7fa2be488652a5e926.json
+> Model: SoC_proxy_TSA/data/calliope_models/df7fa2be488652a5e926.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.739973 lost=0.000e+00 | margin=4.000% -> curtailment=0.710374
+[SoC Proxy] curtailment forecast: 71.04%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      45276567368f9a7d9dcb      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/45276567368f9a7d9dcb.json
+> Model: SoC_proxy_TSA/data/calliope_models/45276567368f9a7d9dcb.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      294b47e260fb78564602      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/294b47e260fb78564602.json
+> Model: SoC_proxy_TSA/data/calliope_models/294b47e260fb78564602.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742877 lost=0.000e+00 | margin=4.000% -> curtailment=0.713162
+[SoC Proxy] curtailment forecast: 71.32%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      797489e7ce0f1640fa2d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/797489e7ce0f1640fa2d.json
+> Model: SoC_proxy_TSA/data/calliope_models/797489e7ce0f1640fa2d.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      fa26ae36c46b867063c0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/fa26ae36c46b867063c0.json
+> Model: SoC_proxy_TSA/data/calliope_models/fa26ae36c46b867063c0.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742139 lost=0.000e+00 | margin=4.000% -> curtailment=0.712454
+[SoC Proxy] curtailment forecast: 71.25%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      634540de621b97ac0914      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/634540de621b97ac0914.json
+> Model: SoC_proxy_TSA/data/calliope_models/634540de621b97ac0914.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      5a179605cd6610b4dc84      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/5a179605cd6610b4dc84.json
+> Model: SoC_proxy_TSA/data/calliope_models/5a179605cd6610b4dc84.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742301 lost=0.000e+00 | margin=4.000% -> curtailment=0.712609
+[SoC Proxy] curtailment forecast: 71.26%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      160ca5af01015dac1183      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/160ca5af01015dac1183.json
+> Model: SoC_proxy_TSA/data/calliope_models/160ca5af01015dac1183.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      f30a912abfb41c9a9fdb      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/f30a912abfb41c9a9fdb.json
+> Model: SoC_proxy_TSA/data/calliope_models/f30a912abfb41c9a9fdb.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.738166 lost=0.000e+00 | margin=4.000% -> curtailment=0.708639
+[SoC Proxy] curtailment forecast: 70.86%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      e845aa28cdfdbe44ad3f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/e845aa28cdfdbe44ad3f.json
+> Model: SoC_proxy_TSA/data/calliope_models/e845aa28cdfdbe44ad3f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      725dd010e4cadee20a01      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/725dd010e4cadee20a01.json
+> Model: SoC_proxy_TSA/data/calliope_models/725dd010e4cadee20a01.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.741486 lost=0.000e+00 | margin=4.000% -> curtailment=0.711827
+[SoC Proxy] curtailment forecast: 71.18%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      4aaf304c780f7d36a7cb      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/4aaf304c780f7d36a7cb.json
+> Model: SoC_proxy_TSA/data/calliope_models/4aaf304c780f7d36a7cb.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      114930ce21eccbda703d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/114930ce21eccbda703d.json
+> Model: SoC_proxy_TSA/data/calliope_models/114930ce21eccbda703d.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.745536 lost=0.000e+00 | margin=4.000% -> curtailment=0.715715
+[SoC Proxy] curtailment forecast: 71.57%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      5172c250622509176094      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/5172c250622509176094.json
+> Model: SoC_proxy_TSA/data/calliope_models/5172c250622509176094.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      d6e5bc7d6aadec441585      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/d6e5bc7d6aadec441585.json
+> Model: SoC_proxy_TSA/data/calliope_models/d6e5bc7d6aadec441585.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.745545 lost=0.000e+00 | margin=4.000% -> curtailment=0.715723
+[SoC Proxy] curtailment forecast: 71.57%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      ac5d5a93fa28a329a1c2      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ac5d5a93fa28a329a1c2.json
+> Model: SoC_proxy_TSA/data/calliope_models/ac5d5a93fa28a329a1c2.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      b58ac2141b1d4cadc124      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b58ac2141b1d4cadc124.json
+> Model: SoC_proxy_TSA/data/calliope_models/b58ac2141b1d4cadc124.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742370 lost=0.000e+00 | margin=4.000% -> curtailment=0.712675
+[SoC Proxy] curtailment forecast: 71.27%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      1dd16439f8cb75daa264      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1dd16439f8cb75daa264.json
+> Model: SoC_proxy_TSA/data/calliope_models/1dd16439f8cb75daa264.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      9b2941279b43f88f3d38      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9b2941279b43f88f3d38.json
+> Model: SoC_proxy_TSA/data/calliope_models/9b2941279b43f88f3d38.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746035 lost=0.000e+00 | margin=4.000% -> curtailment=0.716193
+[SoC Proxy] curtailment forecast: 71.62%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      db1b7a6a16a5ab403d73      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/db1b7a6a16a5ab403d73.json
+> Model: SoC_proxy_TSA/data/calliope_models/db1b7a6a16a5ab403d73.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      468a222e664d745ee627      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/468a222e664d745ee627.json
+> Model: SoC_proxy_TSA/data/calliope_models/468a222e664d745ee627.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742353 lost=0.000e+00 | margin=4.000% -> curtailment=0.712659
+[SoC Proxy] curtailment forecast: 71.27%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      894cd49b8b8170a80fbd      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/894cd49b8b8170a80fbd.json
+> Model: SoC_proxy_TSA/data/calliope_models/894cd49b8b8170a80fbd.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      c3dc1c91afffb6d80425      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c3dc1c91afffb6d80425.json
+> Model: SoC_proxy_TSA/data/calliope_models/c3dc1c91afffb6d80425.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.759423 lost=0.000e+00 | margin=4.000% -> curtailment=0.729046
+[SoC Proxy] curtailment forecast: 72.90%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      35ad4cffc0ebebfe9085      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/35ad4cffc0ebebfe9085.json
+> Model: SoC_proxy_TSA/data/calliope_models/35ad4cffc0ebebfe9085.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      b8ec8dfc59b38a7f9729      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/b8ec8dfc59b38a7f9729.json
+> Model: SoC_proxy_TSA/data/calliope_models/b8ec8dfc59b38a7f9729.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.753489 lost=0.000e+00 | margin=4.000% -> curtailment=0.723349
+[SoC Proxy] curtailment forecast: 72.33%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      9461028afef54eb9cf13      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9461028afef54eb9cf13.json
+> Model: SoC_proxy_TSA/data/calliope_models/9461028afef54eb9cf13.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      3245d28a7314f727748f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3245d28a7314f727748f.json
+> Model: SoC_proxy_TSA/data/calliope_models/3245d28a7314f727748f.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.749962 lost=0.000e+00 | margin=4.000% -> curtailment=0.719964
+[SoC Proxy] curtailment forecast: 72.00%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      6fef9845d9cd9f1971b5      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6fef9845d9cd9f1971b5.json
+> Model: SoC_proxy_TSA/data/calliope_models/6fef9845d9cd9f1971b5.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      7bc2b7a472f4aafdf1f0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7bc2b7a472f4aafdf1f0.json
+> Model: SoC_proxy_TSA/data/calliope_models/7bc2b7a472f4aafdf1f0.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.745822 lost=0.000e+00 | margin=4.000% -> curtailment=0.715989
+[SoC Proxy] curtailment forecast: 71.60%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      8843e9cff35273ca981a      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8843e9cff35273ca981a.json
+> Model: SoC_proxy_TSA/data/calliope_models/8843e9cff35273ca981a.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      ba82584bc1ed6c548691      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ba82584bc1ed6c548691.json
+> Model: SoC_proxy_TSA/data/calliope_models/ba82584bc1ed6c548691.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.746559 lost=0.000e+00 | margin=4.000% -> curtailment=0.716697
+[SoC Proxy] curtailment forecast: 71.67%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      196d6e78c5acb9f51a60      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/196d6e78c5acb9f51a60.json
+> Model: SoC_proxy_TSA/data/calliope_models/196d6e78c5acb9f51a60.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      07fb7c16d2823ee6ba63      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/07fb7c16d2823ee6ba63.json
+> Model: SoC_proxy_TSA/data/calliope_models/07fb7c16d2823ee6ba63.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747226 lost=0.000e+00 | margin=4.000% -> curtailment=0.717337
+[SoC Proxy] curtailment forecast: 71.73%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      0db413fcdb5a389c5c18      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0db413fcdb5a389c5c18.json
+> Model: SoC_proxy_TSA/data/calliope_models/0db413fcdb5a389c5c18.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      c49b3e0f635b9553cea9      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c49b3e0f635b9553cea9.json
+> Model: SoC_proxy_TSA/data/calliope_models/c49b3e0f635b9553cea9.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.747635 lost=0.000e+00 | margin=4.000% -> curtailment=0.717729
+[SoC Proxy] curtailment forecast: 71.77%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      2af82dab8d154c9a791e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/2af82dab8d154c9a791e.json
+> Model: SoC_proxy_TSA/data/calliope_models/2af82dab8d154c9a791e.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      a012b7387154b4c56562      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a012b7387154b4c56562.json
+> Model: SoC_proxy_TSA/data/calliope_models/a012b7387154b4c56562.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.732590 lost=0.000e+00 | margin=4.000% -> curtailment=0.703287
+[SoC Proxy] curtailment forecast: 70.33%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      df4be09ee48b21169ec3      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/df4be09ee48b21169ec3.json
+> Model: SoC_proxy_TSA/data/calliope_models/df4be09ee48b21169ec3.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      6a490fc1c4eac932b490      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6a490fc1c4eac932b490.json
+> Model: SoC_proxy_TSA/data/calliope_models/6a490fc1c4eac932b490.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.739669 lost=0.000e+00 | margin=4.000% -> curtailment=0.710082
+[SoC Proxy] curtailment forecast: 71.01%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      fae5fff74eee0be13178      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/fae5fff74eee0be13178.json
+> Model: SoC_proxy_TSA/data/calliope_models/fae5fff74eee0be13178.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      9a51256ab9e5be24701e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9a51256ab9e5be24701e.json
+> Model: SoC_proxy_TSA/data/calliope_models/9a51256ab9e5be24701e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.738508 lost=0.000e+00 | margin=4.000% -> curtailment=0.708968
+[SoC Proxy] curtailment forecast: 70.90%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      0cd5866c6bd00ec28b76      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0cd5866c6bd00ec28b76.json
+> Model: SoC_proxy_TSA/data/calliope_models/0cd5866c6bd00ec28b76.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      8b474904601466ce2f05      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8b474904601466ce2f05.json
+> Model: SoC_proxy_TSA/data/calliope_models/8b474904601466ce2f05.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.739829 lost=0.000e+00 | margin=4.000% -> curtailment=0.710236
+[SoC Proxy] curtailment forecast: 71.02%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      0a0251009ca90ee9395c      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/0a0251009ca90ee9395c.json
+> Model: SoC_proxy_TSA/data/calliope_models/0a0251009ca90ee9395c.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      3d8e551924a2489a513e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3d8e551924a2489a513e.json
+> Model: SoC_proxy_TSA/data/calliope_models/3d8e551924a2489a513e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.736513 lost=0.000e+00 | margin=4.000% -> curtailment=0.707053
+[SoC Proxy] curtailment forecast: 70.71%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      1da6df00c3361120af32      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1da6df00c3361120af32.json
+> Model: SoC_proxy_TSA/data/calliope_models/1da6df00c3361120af32.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      a32797ceb61704368274      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a32797ceb61704368274.json
+> Model: SoC_proxy_TSA/data/calliope_models/a32797ceb61704368274.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.758538 lost=0.000e+00 | margin=4.000% -> curtailment=0.728197
+[SoC Proxy] curtailment forecast: 72.82%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      348415b80a779c47c8c9      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/348415b80a779c47c8c9.json
+> Model: SoC_proxy_TSA/data/calliope_models/348415b80a779c47c8c9.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      ab7630e0b0ec2e7b4580      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ab7630e0b0ec2e7b4580.json
+> Model: SoC_proxy_TSA/data/calliope_models/ab7630e0b0ec2e7b4580.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.751824 lost=0.000e+00 | margin=4.000% -> curtailment=0.721751
+[SoC Proxy] curtailment forecast: 72.18%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      d59756696f1f5da9b866      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/d59756696f1f5da9b866.json
+> Model: SoC_proxy_TSA/data/calliope_models/d59756696f1f5da9b866.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      581c85b1dba5bfd6e0f6      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/581c85b1dba5bfd6e0f6.json
+> Model: SoC_proxy_TSA/data/calliope_models/581c85b1dba5bfd6e0f6.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755076 lost=0.000e+00 | margin=4.000% -> curtailment=0.724873
+[SoC Proxy] curtailment forecast: 72.49%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      c3e2d150db490d1c0e91      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c3e2d150db490d1c0e91.json
+> Model: SoC_proxy_TSA/data/calliope_models/c3e2d150db490d1c0e91.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      bc22414b32c7442d2d39      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/bc22414b32c7442d2d39.json
+> Model: SoC_proxy_TSA/data/calliope_models/bc22414b32c7442d2d39.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.753956 lost=0.000e+00 | margin=4.000% -> curtailment=0.723797
+[SoC Proxy] curtailment forecast: 72.38%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      46d945458a1aece73c07      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/46d945458a1aece73c07.json
+> Model: SoC_proxy_TSA/data/calliope_models/46d945458a1aece73c07.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      476f80c336d513c742c3      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/476f80c336d513c742c3.json
+> Model: SoC_proxy_TSA/data/calliope_models/476f80c336d513c742c3.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.748624 lost=0.000e+00 | margin=4.000% -> curtailment=0.718679
+[SoC Proxy] curtailment forecast: 71.87%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      92e03be2efa91f384529      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/92e03be2efa91f384529.json
+> Model: SoC_proxy_TSA/data/calliope_models/92e03be2efa91f384529.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      fb19de5049dc3129aeb8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/fb19de5049dc3129aeb8.json
+> Model: SoC_proxy_TSA/data/calliope_models/fb19de5049dc3129aeb8.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.748077 lost=0.000e+00 | margin=4.000% -> curtailment=0.718154
+[SoC Proxy] curtailment forecast: 71.82%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      038408270333ed379d20      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/038408270333ed379d20.json
+> Model: SoC_proxy_TSA/data/calliope_models/038408270333ed379d20.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      3f31f813e3524db1da94      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/3f31f813e3524db1da94.json
+> Model: SoC_proxy_TSA/data/calliope_models/3f31f813e3524db1da94.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.744896 lost=0.000e+00 | margin=4.000% -> curtailment=0.715100
+[SoC Proxy] curtailment forecast: 71.51%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      6ffec4044e23eca822b9      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6ffec4044e23eca822b9.json
+> Model: SoC_proxy_TSA/data/calliope_models/6ffec4044e23eca822b9.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      32e2d4a93520c53469fc      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/32e2d4a93520c53469fc.json
+> Model: SoC_proxy_TSA/data/calliope_models/32e2d4a93520c53469fc.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.744319 lost=0.000e+00 | margin=4.000% -> curtailment=0.714547
+[SoC Proxy] curtailment forecast: 71.45%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      046793b28ff2cac2f41d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/046793b28ff2cac2f41d.json
+> Model: SoC_proxy_TSA/data/calliope_models/046793b28ff2cac2f41d.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      518c00708e2d16b709ba      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/518c00708e2d16b709ba.json
+> Model: SoC_proxy_TSA/data/calliope_models/518c00708e2d16b709ba.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.741987 lost=0.000e+00 | margin=4.000% -> curtailment=0.712308
+[SoC Proxy] curtailment forecast: 71.23%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      90fd30b4fbd368c024e0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/90fd30b4fbd368c024e0.json
+> Model: SoC_proxy_TSA/data/calliope_models/90fd30b4fbd368c024e0.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      8cd5bc3cfb1bf9024cfa      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8cd5bc3cfb1bf9024cfa.json
+> Model: SoC_proxy_TSA/data/calliope_models/8cd5bc3cfb1bf9024cfa.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.738084 lost=0.000e+00 | margin=4.000% -> curtailment=0.708561
+[SoC Proxy] curtailment forecast: 70.86%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      db2654c264fae95830f0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/db2654c264fae95830f0.json
+> Model: SoC_proxy_TSA/data/calliope_models/db2654c264fae95830f0.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      ae25d811314b6c95978e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/ae25d811314b6c95978e.json
+> Model: SoC_proxy_TSA/data/calliope_models/ae25d811314b6c95978e.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.736825 lost=0.000e+00 | margin=4.000% -> curtailment=0.707352
+[SoC Proxy] curtailment forecast: 70.74%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      60d561c2ebd330d3843e      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/60d561c2ebd330d3843e.json
+> Model: SoC_proxy_TSA/data/calliope_models/60d561c2ebd330d3843e.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      73ad40bbdeda8c0abd41      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/73ad40bbdeda8c0abd41.json
+> Model: SoC_proxy_TSA/data/calliope_models/73ad40bbdeda8c0abd41.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.735172 lost=0.000e+00 | margin=4.000% -> curtailment=0.705765
+[SoC Proxy] curtailment forecast: 70.58%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps30
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, W_proxy=0.0  -----
+ -----      7cd283c9328a6012323f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/7cd283c9328a6012323f.json
+> Model: SoC_proxy_TSA/data/calliope_models/7cd283c9328a6012323f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=30, SocDelta, W_proxy=0.5  -----
+ -----      9483dc596458fbdad16d      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/9483dc596458fbdad16d.json
+> Model: SoC_proxy_TSA/data/calliope_models/9483dc596458fbdad16d.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.755016 lost=0.000e+00 | margin=4.000% -> curtailment=0.724815
+[SoC Proxy] curtailment forecast: 72.48%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps45
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, W_proxy=0.0  -----
+ -----      389994ad1b9b1a53dcf4      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/389994ad1b9b1a53dcf4.json
+> Model: SoC_proxy_TSA/data/calliope_models/389994ad1b9b1a53dcf4.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=45, SocDelta, W_proxy=0.5  -----
+ -----      c7fbe195aa0b73f2a001      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c7fbe195aa0b73f2a001.json
+> Model: SoC_proxy_TSA/data/calliope_models/c7fbe195aa0b73f2a001.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.743447 lost=0.000e+00 | margin=4.000% -> curtailment=0.713709
+[SoC Proxy] curtailment forecast: 71.37%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps60
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, W_proxy=0.0  -----
+ -----      c4d0dacdb5a900a329db      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/c4d0dacdb5a900a329db.json
+> Model: SoC_proxy_TSA/data/calliope_models/c4d0dacdb5a900a329db.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=60, SocDelta, W_proxy=0.5  -----
+ -----      1b9c0ae9bcb9885a56d1      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/1b9c0ae9bcb9885a56d1.json
+> Model: SoC_proxy_TSA/data/calliope_models/1b9c0ae9bcb9885a56d1.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.742999 lost=0.000e+00 | margin=4.000% -> curtailment=0.713279
+[SoC Proxy] curtailment forecast: 71.33%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps90
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, W_proxy=0.0  -----
+ -----      65d3cf306e3cdf88516f      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/65d3cf306e3cdf88516f.json
+> Model: SoC_proxy_TSA/data/calliope_models/65d3cf306e3cdf88516f.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=90, SocDelta, W_proxy=0.5  -----
+ -----      8ec0bbf91a192c175cc7      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/8ec0bbf91a192c175cc7.json
+> Model: SoC_proxy_TSA/data/calliope_models/8ec0bbf91a192c175cc7.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.741170 lost=0.000e+00 | margin=4.000% -> curtailment=0.711523
+[SoC Proxy] curtailment forecast: 71.15%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps180
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, W_proxy=0.0  -----
+ -----      37b3ec76adab4340c1c8      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/37b3ec76adab4340c1c8.json
+> Model: SoC_proxy_TSA/data/calliope_models/37b3ec76adab4340c1c8.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=180, SocDelta, W_proxy=0.5  -----
+ -----      cbbf9b560ca109f2831b      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/cbbf9b560ca109f2831b.json
+> Model: SoC_proxy_TSA/data/calliope_models/cbbf9b560ca109f2831b.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.740541 lost=0.000e+00 | margin=4.000% -> curtailment=0.710920
+[SoC Proxy] curtailment forecast: 71.09%
+ ------------------------------------------------------- 
+  
+[Dispatch] running scenario Sensitivity_W_reps365
+   
+ ------------------------------------------------------- 
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, W_proxy=0.0  -----
+ -----      6f58269edc1ce324ab98      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/6f58269edc1ce324ab98.json
+> Model: SoC_proxy_TSA/data/calliope_models/6f58269edc1ce324ab98.nc already exists. Reading file...
+ ------------------------------------------------------- 
+ ----- K-Medoid, reps=365, SocDelta, W_proxy=0.5  -----
+ -----      a6145ca525d882a1f4f0      ----- 
+ ------------------------------------------------------- 
+[Model] Parameter json saved to SoC_proxy_TSA/data/parameters/a6145ca525d882a1f4f0.json
+> Model: SoC_proxy_TSA/data/calliope_models/a6145ca525d882a1f4f0.nc already exists. Reading file...
+[SoC Proxy] Tuner: c*=0.738828 lost=0.000e+00 | margin=4.000% -> curtailment=0.709275
+[SoC Proxy] curtailment forecast: 70.93%

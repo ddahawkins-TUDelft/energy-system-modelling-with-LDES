@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-#SBATCH --job-name="ref_dispatch_test"
+#SBATCH --job-name="ref_dispatch"
 #SBATCH --partition=compute
-#SBATCH --time=12:00:00          
+#SBATCH --time=2:00:00          
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8       
+#SBATCH --cpus-per-task=6     
 #SBATCH --mem-per-cpu=3900         #
 #SBATCH --account=research-tpm-ess
 #SBATCH --output=logs/%x-%j.out  # logs/ref_dispatch_test-<jobid>.out

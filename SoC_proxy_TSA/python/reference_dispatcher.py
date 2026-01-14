@@ -32,8 +32,8 @@ shuffled_source = []
 # tvp_source = 'time_varying_parameters'
 # tvp_source = 'time_varying_parameters_GB'
 
-tvp_source = 'time_varying_parameters_GB'
-scenario_calliope = 'GB'
+tvp_source = 'time_varying_parameters_BE'
+scenario_calliope = 'belgium'
 
 
 # Base params passed into your helper; these are merged with per-range values.

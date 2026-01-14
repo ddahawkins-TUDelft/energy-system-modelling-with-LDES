@@ -43,7 +43,7 @@ LOGS_F123_BY_CC = {
 }
 
 # Keep these for your other figures if you still use them
-LOGS_F45 = [Path("SoC_proxy_TSA/data/notes/log_horizons_runtimes.csv")]
+LOGS_F45 = [Path("SoC_proxy_TSA/data/notes/log_horizons_runtimes_W0_05_1.csv")]
 LOGS_F6  = [Path("SoC_proxy_TSA/data/notes/log_NL_margins.csv")]
 
 ICON_BY_CC = {cc: f"SoC_proxy_TSA/icons/{cc}.png" for cc in COUNTRIES}
@@ -427,8 +427,8 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
       - within each subplot: boxplots for W_P in {0, 0.5}
     """
     df = df_cem.copy()
-    df = df[(df["number_reps"] >= 30) & (df["number_reps"] <= 365)]
-    df = df[df["W_proxy"].isin([0.0, 0.5])]
+    df = df[(df["number_reps"] >= 45) & (df["number_reps"] <= 180)]
+    df = df[df["W_proxy"].isin([0.0, 0.5, 1])]
     df = df.dropna(subset=["horizon"])
 
     mapping = {2: "2", 5: "5", 10: "10"}
@@ -441,16 +441,20 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
 
     horizons = ["2", "5", "10"]
     x = np.arange(len(horizons))
-    pos_W0  = x - 0.15
-    pos_W05 = x + 0.15
-    width = 0.28
+    pos_W0  = x - 0.3
+    pos_W05 = x + 0.
+    pos_W1 = x + 0.3
+    width = 0.25
 
-    fig, axes = plt.subplots(2, 1, figsize=(fig_width, fig_height * 2.0), sharey=True)
+    
+
+    fig, axes = plt.subplots(1, 1, figsize=(fig_width, fig_height * 1.0), sharey=True)
 
     metrics = [
-        ("ldes_error", "LDES capacity error", COLOUR_LDES, axes[0]),
-        ("macme",      "MACME",              COLOUR_MACME, axes[1]),
+        ("ldes_error", "LDES capacity error", COLOUR_LDES, axes),
+        # ("macme",      "MACME",              COLOUR_MACME, axes),
     ]
+    
 
     for colname, _, color, ax in metrics:
         data_W0 = [
@@ -459,6 +463,10 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
         ]
         data_W05 = [
             df[(df["h_bucket"] == h) & np.isclose(df["W_proxy"], 0.5)][colname].dropna().values
+            for h in horizons
+        ]
+        data_W1 = [
+            df[(df["h_bucket"] == h) & np.isclose(df["W_proxy"], 1)][colname].dropna().values
             for h in horizons
         ]
 
@@ -474,11 +482,22 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
                 p.set_color(color)
 
         # W=0.5 (filled)
-        bp1 = ax.boxplot(
+        bp05 = ax.boxplot(
             data_W05, positions=pos_W05, widths=width, patch_artist=True, showfliers=False
         )
-        for patch in bp1["boxes"]:
+        for patch in bp05["boxes"]:
             patch.set_facecolor(mcolors.to_rgba(color, 0.4))
+            patch.set_edgecolor(color)
+        for elem in ["caps", "whiskers", "medians"]:
+            for p in bp05[elem]:
+                p.set_color(color)
+        
+        # W=0.5 (filled)
+        bp1 = ax.boxplot(
+            data_W1, positions=pos_W1, widths=width, patch_artist=True, showfliers=False
+        )
+        for patch in bp1["boxes"]:
+            patch.set_facecolor(mcolors.to_rgba(color, 0.8))
             patch.set_edgecolor(color)
         for elem in ["caps", "whiskers", "medians"]:
             for p in bp1[elem]:
@@ -493,9 +512,8 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
         ax.spines["right"].set_visible(False)
         ax.grid(axis="y", linestyle=":", alpha=0.4)
 
-    axes[1].set_xlabel("Horizon (years)")
-    axes[0].set_ylabel("LDES capacity error")
-    axes[1].set_ylabel("MACME")
+    axes.set_xlabel("Horizon (years)")
+    axes.set_ylabel("LDES Capacity Error")
 
     legend_handles = [
         Line2D([0], [0], marker="s", color=COLOUR_GREY_MEAN,
@@ -503,13 +521,28 @@ def fig4_error_vs_horizon_combined(df_cem: pd.DataFrame, path: Path) -> None:
                linestyle="", label="$W_P = 0$ (hollow)"),
         Line2D([0], [0], marker="s", color=COLOUR_GREY_MEAN,
                markerfacecolor=mcolors.to_rgba(COLOUR_GREY_MEAN, 0.4),
-               markeredgecolor=COLOUR_GREY_MEAN, linestyle="", label="$W_P = 0.5$ (filled)"),
+               markeredgecolor=COLOUR_GREY_MEAN, linestyle="", label="$W_P = 0.5$ (part-filled)"),
+        Line2D([0], [0], marker="s", color=COLOUR_GREY_MEAN,
+               markerfacecolor=mcolors.to_rgba(COLOUR_GREY_MEAN, 0.8),
+               markeredgecolor=COLOUR_GREY_MEAN, linestyle="", label="$W_P = 1$ (filled)"),
     ]
-    axes[0].legend(handles=legend_handles, frameon=False, loc="best")
+    axes.legend(handles=legend_handles, frameon=False, loc="best")
 
     savefig(fig, path, use_tight_layout=True)
 
-
+def _fmt_runtime_minutes(y, pos):
+    """Format log-scale runtime ticks in minutes."""
+    if y <= 0:
+        return ""
+    # y is already in minutes (10^-1, 10^0, 10^1, 10^2, ...)
+    if y < 1:
+        # 0.1 min = 6 s, but we just show minutes to keep it clean
+        return f"{y:.1f} min"
+    elif y < 10:
+        return f"{y:.1f} min"
+    else:
+        return f"{y:.0f} min"
+    
 def fig5_runtime_vs_horizon_combined(df_runtime: pd.DataFrame, path: Path) -> None:
     """
     Combined (NL+BE) version of your Fig 5 (single panel):
@@ -588,8 +621,9 @@ def fig5_runtime_vs_horizon_combined(df_runtime: pd.DataFrame, path: Path) -> No
     ax.set_ylabel("Runtime (minutes, log scale)")
     ax.set_yscale("log")
     ax.yaxis.set_major_locator(mtick.LogLocator(base=10.0))
-    ax.yaxis.set_minor_locator(mtick.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))
-    ax.yaxis.set_minor_formatter(mtick.NullFormatter())
+    # ax.yaxis.set_minor_locator(mtick.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))
+    # ax.yaxis.set_minor_formatter(mtick.NullFormatter())
+    ax.yaxis.set_major_formatter(mtick.FuncFormatter(_fmt_runtime_minutes))
     ax.grid(axis="y", linestyle=":", alpha=0.4)
 
     # legend for k
@@ -598,6 +632,9 @@ def fig5_runtime_vs_horizon_combined(df_runtime: pd.DataFrame, path: Path) -> No
         handles.append(Line2D([0], [0], marker="o", color="none",
                               markerfacecolor=col_lut[k], markeredgecolor="black",
                               label=f"k={k}", markersize=5))
+    handles.append(Line2D([0], [0], marker="o", color="none",
+                              markerfacecolor=grey, markeredgecolor="black",
+                              label="ref", markersize=5))    
     if handles:
         ax.legend(handles=handles, frameon=False, loc="best", ncol=2)
 
@@ -728,15 +765,15 @@ def fig2_box_by_reps(df_cem: pd.DataFrame, ax: plt.Axes, countrycode: str):
     positions_ldes = np.arange(len(x_vals)) + offsets[0]
     positions_mac  = np.arange(len(x_vals)) + offsets[1]
 
-    bp1 = ax.boxplot(data_ldes, positions=positions_ldes, widths=0.25, patch_artist=True, showfliers=False)
+    bp05 = ax.boxplot(data_ldes, positions=positions_ldes, widths=0.25, patch_artist=True, showfliers=False)
     bp2 = ax.boxplot(data_mac,  positions=positions_mac,  widths=0.25, patch_artist=True, showfliers=False)
 
     for elem in ["boxes", "caps", "whiskers", "medians"]:
-        for patch in bp1[elem]:
+        for patch in bp05[elem]:
             patch.set_color(COLOUR_LDES)
         for patch in bp2[elem]:
             patch.set_color(COLOUR_MACME)
-    for patch in bp1["boxes"]:
+    for patch in bp05["boxes"]:
         patch.set_facecolor(mcolors.to_rgba(COLOUR_LDES, 0.15))
     for patch in bp2["boxes"]:
         patch.set_facecolor(mcolors.to_rgba(COLOUR_MACME, 0.15))
@@ -803,15 +840,15 @@ def fig3_box_by_proxy(df_cem: pd.DataFrame, ax: plt.Axes, countrycode: str):
     positions_ldes = np.arange(len(x_levels)) + offsets[0]
     positions_mac  = np.arange(len(x_levels)) + offsets[1]
 
-    bp1 = ax.boxplot(data_ldes, positions=positions_ldes, widths=0.25, patch_artist=True, showfliers=False)
+    bp05 = ax.boxplot(data_ldes, positions=positions_ldes, widths=0.25, patch_artist=True, showfliers=False)
     bp2 = ax.boxplot(data_mac,  positions=positions_mac,  widths=0.25, patch_artist=True, showfliers=False)
 
     for elem in ["boxes", "caps", "whiskers", "medians"]:
-        for patch in bp1[elem]:
+        for patch in bp05[elem]:
             patch.set_color(COLOUR_LDES)
         for patch in bp2[elem]:
             patch.set_color(COLOUR_MACME)
-    for patch in bp1["boxes"]:
+    for patch in bp05["boxes"]:
         patch.set_facecolor(mcolors.to_rgba(COLOUR_LDES, 0.15))
     for patch in bp2["boxes"]:
         patch.set_facecolor(mcolors.to_rgba(COLOUR_MACME, 0.15))

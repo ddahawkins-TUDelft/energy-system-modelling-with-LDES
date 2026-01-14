@@ -1,178 +1,106 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
-One-shot figure generator for CEM results and runtimes.
+Plot LDES capacity error for a chosen (W_proxy, number_reps) across horizons,
+with NL points on the left and BE points on the right.
 
-Now supports multiple log files:
-- FIGS 1–3 use LOGS_F123 (e.g., per-date logs like 'log_2006,2010,2015.csv')
-- FIGS 4–5 use LOGS_F45 (e.g., 'log_horizon.csv')
+Key design choices (fixes your “only 10y shows” issue):
+- Treat the CEM cache as the source of truth for horizon / W_proxy / number_reps.
+- Merge cache fields into log rows and always filter/colour using *_use columns.
+- Print a small coverage debug summary so you can immediately see whether other
+  horizons exist for the selected (W, k).
 
-Usage:
-    python plot_cem_results.py
-
-This script:
-  - Loads all specified logs, builds a union of model IDs for caching
-  - Builds/updates a lightweight cache of CEM metrics (absolute LDES error, MACME)
-    so model files are read only when needed
-  - Builds/updates a lightweight cache of runtimes
-  - Generates all requested figures in sequence without manual tweaking
-
-Notes:
-  * Colour/marker choices are preserved from the previous code:
-        MACME = '#0D0887'
-        LDES  = '#CC4778'
-        W=0   = grey outline '#666666' for hollow markers
-  * A solid black horizontal line (linewidth=1) at y=0 is added to ALL error
-    box-and-whisker charts.
+Two plotters included:
+  1) strip plot (jittered points)
+  2) boxplot (optionally with point overlay)
 """
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
-from typing import Dict, Tuple, Optional, Iterable, List
+from typing import Iterable, List, Optional, Sequence, Dict, Tuple
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
+import matplotlib as mpl
 
-
+# --- Optional: only needed if you want the script to auto-build/refresh cache ---
+import json
 import yaml
 from netCDF4 import Dataset
 import calliope
 
-import matplotlib as mpl
-
 from helper_signals import build_signal_metrics
-
-
 
 # ------------------------- Paths & constants ---------------------------------
 
-# Adjust these if your repo layout differs
-# Per your note: separate logs for figs 1–3 and 4–5:
 SAVE_FIGURES = True
-countrycode = 'NL'
+OUT_DIR = Path(".")
 
-LOGS_F123     = [Path(f"SoC_proxy_TSA/data/notes/log_{countrycode}_rerun.csv")] # "SoC_proxy_TSA/data/notes/log_14-365_NL_only.csv"
-LOGS_F45      = [Path("SoC_proxy_TSA/data/notes/log_runtimes.csv")]
-LOGS_F6       = [Path("SoC_proxy_TSA/data/notes/log_NL_margins.csv")]
+COUNTRIES = ["NL", "BE"]  # plotting order: left -> right
 
-ICON_PATH = f'SoC_proxy_TSA/icons/{countrycode}.png'
+LOGS_F123_BY_CC = {
+    cc: [Path(f"SoC_proxy_TSA/data/notes/log_{cc}_rerun.csv")]
+    for cc in COUNTRIES
+}
 
-MODELS_DIR      = Path("SoC_proxy_TSA/data/calliope_models")
-PARAM_DIR       = Path("SoC_proxy_TSA/data/parameters")
-OUT_DIR         = Path(".")
+MODELS_DIR = Path("SoC_proxy_TSA/data/calliope_models")
+PARAM_DIR  = Path("SoC_proxy_TSA/data/parameters")
 
-CACHE_CEM       = Path("SoC_proxy_TSA/data/notes/cem_cache.csv")
-CACHE_RUNTIME   = Path("SoC_proxy_TSA/data/notes/runtime_cache.csv")
-
-# Output filenames
-FIG1_HEATMAP_10Y      = OUT_DIR / f"fig1_heatmap_ldes_error_10y_{countrycode}.pdf" 
-FIG2_ERR_VS_REPS      = OUT_DIR / f"fig2_error_box_vs_reps_{countrycode}.pdf" 
-FIG3_ERR_VS_PROXY     = OUT_DIR / f"fig3_error_box_vs_proxy_{countrycode}.pdf" 
-FIG4_ERR_VS_HORIZON   = OUT_DIR / "fig4_error_vs_horizon_W01_reps60to90.pdf"
-FIG5_RUNTIME_VS_HOR   = OUT_DIR / "fig5_runtime_vs_horizon.pdf"
-FIG6_ERR_VS_MARGIN   = OUT_DIR / "fig6_error_box_vs_margin_GB_NL.pdf"
-
-# Colours (preserve existing)
-COLOUR_MACME = "#0D0887"
-COLOUR_LDES  = "#CC4778"
-COLOUR_W0_EDGE = "#666666"   # hollow marker edge for W=0
-COLOUR_GREY_MEAN = "#666666"  # general grey where needed
-
-# Marker settings
-MARKER_MACME = "o"
-MARKER_LDES  = "o"
-
-#latex
-# mpl.rcParams.update({
-#     "text.usetex": True,
-#     "pgf.texsystem": "pdflatex",
-#     "pgf.rcfonts": False,
-#     "axes.unicode_minus": False,
-# })
+CACHE_CEM = Path("SoC_proxy_TSA/data/notes/cem_cache.csv")
 
 plt.rcParams.update({
-    "font.size": 8,         
-    "axes.labelsize": 8,    
-    "xtick.labelsize": 7,
-    "ytick.labelsize": 7,
-    "legend.fontsize": 7,
+    "font.size": 10,
+    "axes.labelsize": 9,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "legend.fontsize": 8,
 })
-mpl.rcParams["pgf.preamble"] = r""
 
-fig_width = 3.5
-fig_height = 3
+fig_width = 5.0
+fig_height = 2.8
 
 
-# ------------------------- Helpers: I/O & parsing ----------------------------
+# ------------------------- I/O helpers ---------------------------------------
 
-class MidpointNormalize(mcolors.Normalize):
-    """
-    Normalize data around a center (vcenter), so that vmin -> 0,
-    vcenter -> 0.5, vmax -> 1.
-    """
-    def __init__(self, vmin=None, vmax=None, vcenter=None, clip=False):
-        self.vcenter = vcenter
-        super().__init__(vmin=vmin, vmax=vmax, clip=clip)
-
-    def __call__(self, value, clip=None):
-        # value can be a scalar or array
-        result, is_scalar = self.process_value(value)
-        vmin, vcenter, vmax = self.vmin, self.vcenter, self.vmax
-
-        # Avoid division by zero
-        if not (vmin < vcenter < vmax):
-            raise ValueError("vmin < vcenter < vmax must hold")
-
-        x = [vmin, vcenter, vmax]
-        y = [0, 0.5, 1]
-        data = np.interp(result, x, y)
-        return np.ma.array(data, mask=result.mask, copy=False)
-
-def savefig(fig: plt.Figure, path: Path) -> None:
-     
+def savefig(fig, path: Path, tight: bool = True):
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
-    if SAVE_FIGURES:   
+    if tight:
+        fig.tight_layout()
+    if SAVE_FIGURES:
         fig.savefig(path, dpi=600, bbox_inches="tight")
     fig.show()
     plt.close(fig)
 
 
+# ------------------------- Log parsing (lightweight) --------------------------
+
 def _parse_single_log(log_path: Path) -> pd.DataFrame:
     """
-    Parse a single log.csv and extract: id, dates, horizon (date_range), number_reps, W_proxy.
+    Parse the rerun log. IMPORTANT: horizon in the logs may be unreliable, so we
+    will *not* depend on it. Still parse it for fallback/debug.
     """
     df = pd.read_csv(log_path)
 
-    # base columns presence
     required_cols = {"id", "dates", "date_range", "model_name", "tvp"}
     missing = required_cols - set(df.columns)
-    if missing:
-        # Allow some logs to be missing columns; fill with NaN
-        for col in missing:
-            df[col] = np.nan
+    for col in missing:
+        df[col] = np.nan
 
     df = df.copy()
 
-    # Horizon in years
-    if "date_range" in df.columns:
-        df["horizon"] = pd.to_numeric(df["date_range"], errors="coerce")
-    else:
-        df["horizon"] = np.nan
+    # Often unreliable: keep it but don't trust it
+    df["horizon"] = pd.to_numeric(df.get("date_range", np.nan), errors="coerce")
 
-    # Extract number of representative periods (days)
     reps = df["model_name"].astype(str).str.extract(r"reps\s*=\s*(\d+)", expand=False)
     reps_k = df["model_name"].astype(str).str.extract(r"k\s*=\s*(\d+)", expand=False)
     df["number_reps"] = pd.to_numeric(reps.fillna(reps_k), errors="coerce")
 
-    # Extract proxy weight (prefer explicit 'W_proxy', fallback to 'L=a/b')
     w_direct = df["model_name"].astype(str).str.extract(
         r"W[_ ]?proxy\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)", expand=False
     )
@@ -197,9 +125,6 @@ def _parse_single_log(log_path: Path) -> pd.DataFrame:
 
 
 def parse_logs(log_paths: Iterable[Path]) -> pd.DataFrame:
-    """
-    Parse multiple logs and row-bind them (with de-duplication by id).
-    """
     frames: List[pd.DataFrame] = []
     for p in log_paths:
         if p.exists():
@@ -207,89 +132,60 @@ def parse_logs(log_paths: Iterable[Path]) -> pd.DataFrame:
         else:
             print(f"[parse_logs] Missing log: {p}")
     if not frames:
-        return pd.DataFrame(columns=["id", "dates", "horizon", "number_reps", "W_proxy", "model_name", "runtime"])
+        return pd.DataFrame(columns=["id", "dates", "horizon", "number_reps", "W_proxy", "model_name", "runtime", "tvp"])
     df = pd.concat(frames, ignore_index=True)
-    # drop duplicate ids, keep first occurrence
     df = df.drop_duplicates(subset=["id"], keep="first")
     return df
 
+
+# ------------------------- Cache building (copied from your script) ----------
+
 def resolve_reference_nc(dates: str, tvp: Optional[str], models_dir: Path) -> Optional[Path]:
-    """
-    Return the first existing reference .nc Path matching (dates, tvp),
-    trying several common naming conventions. Falls back to the standard reference.
-    """
     years = re.findall(r"\d{4}", str(dates))
     if len(years) < 2:
         return None
     y0, y1 = years[0], years[1]
 
     candidates = []
-    # tvp-specific candidates first (synthetic etc.)
     tvp_str = str(tvp).strip() if pd.notna(tvp) else ""
     if tvp_str and tvp_str.lower() not in {"", "nan", "none"}:
         stem = Path(tvp_str).stem
         parts = stem.split("_")
         cc = None
-        if len(parts)>1 and len(parts[-1])==2:
+        if len(parts) > 1 and len(parts[-1]) == 2:
             cc = parts[-1]
-        
+
         candidates += [
-            # models_dir / tvp_str / f"standard_{y0}_{y1}_reference.nc",
             models_dir / f"standard_{y0}_{y1}_reference_{cc}.nc" if cc else models_dir / f"standard_{y0}_{y1}_reference.nc",
             models_dir / f"{tvp_str}.nc",
         ]
-    # default standard reference
+
     candidates.append(models_dir / f"standard_{y0}_{y1}_reference.nc")
 
     for c in candidates:
         if c.exists():
             return c
-    return Exception(f'Reference doesnt exist for {tvp}')
+    return None
 
-def _fmt_runtime_minutes(y, pos):
-    """Format log-scale runtime ticks in minutes."""
-    if y <= 0:
-        return ""
-    # y is already in minutes (10^-1, 10^0, 10^1, 10^2, ...)
-    if y < 1:
-        # 0.1 min = 6 s, but we just show minutes to keep it clean
-        return f"{y:.1f} min"
-    elif y < 10:
-        return f"{y:.1f} min"
-    else:
-        return f"{y:.0f} min"
-
-# ------------------------- Model reading & metrics ----------------------------
 
 def read_clustered_netcdf(path):
-    """Open model .nc and strip lingering clustering from attrs."""
     p = Path(path).resolve()
     if not p.is_file():
         raise Exception(f"File does not exist at: {path}")
-    with Dataset(p, "a") as nc:  # append mode to edit attrs
+    with Dataset(p, "a") as nc:
         g = nc.groups["attrs"]
         cfg = yaml.safe_load(g.getncattr("config"))
         cfg.get("init", {}).pop("time_cluster", None)
         g.setncattr("config", yaml.safe_dump(cfg))
-
     return calliope.read_netcdf(path)
 
 
 def get_capacities(m: calliope.Model):
-    """Return power_cap and storage_cap Series indexed by techs."""
-    # Power capacities
     df_power_caps = (
-        m.results["flow_cap"]
-        .fillna(0)
-        .to_series()
-        .dropna()
-        .to_frame("capacity")
-        .reset_index()
+        m.results["flow_cap"].fillna(0).to_series().dropna().to_frame("capacity").reset_index()
         .drop(columns=["nodes"], errors="ignore")
     )
 
-    # drop pure storage & demand from the power cap metric;
-    # keep electrolyser only when carriers == hydrogen; others only when carriers == power
     mask_drop = (
         df_power_caps["techs"].isin(["battery", "h2_salt_cavern", "demand"])
         | df_power_caps["techs"].str.startswith("demand")
@@ -303,14 +199,8 @@ def get_capacities(m: calliope.Model):
     ]
     df_power_caps.set_index("techs", inplace=True)
 
-    # Storage (energy) capacities
     df_energy_caps = (
-        m.results["storage_cap"]
-        .fillna(0)
-        .to_series()
-        .dropna()
-        .to_frame("capacity")
-        .reset_index()
+        m.results["storage_cap"].fillna(0).to_series().dropna().to_frame("capacity").reset_index()
         .drop(columns=["nodes"], errors="ignore")
     )
     df_energy_caps = df_energy_caps[df_energy_caps["capacity"] > 0]
@@ -318,35 +208,30 @@ def get_capacities(m: calliope.Model):
 
     return df_power_caps["capacity"], df_energy_caps["capacity"]
 
+
 def relative_error(df_ref, df_test):
     e = (df_ref - df_test) / df_ref
     e_mean_abs = np.mean(np.abs(e))
     return e, e_mean_abs
 
 
-# ------------------------- Cache builders ------------------------------------
-
-def build_or_load_cem_cache(df_needed: pd.DataFrame,
-                            models_dir: Path,
-                            cache_path: Path) -> pd.DataFrame:
+def build_or_load_cem_cache(df_needed: pd.DataFrame, models_dir: Path, cache_path: Path) -> pd.DataFrame:
     """
-    Build or load a cache with CEM metrics per model id.
-    df_needed provides the union of IDs we care about (from both figure groups).
-
-    Cache columns:
-        id, horizon, number_reps, W_proxy, ldes_error, macme, abs_ldes_error
+    Builds/extends cache if needed. IMPORTANT:
+    It *writes* row.get("horizon") / row.get("W_proxy") / row.get("number_reps") into cache.
+    So: if your df_needed doesn't contain correct horizons, cache horizon can be wrong.
     """
     if cache_path.exists():
         df_cache = pd.read_csv(cache_path)
     else:
-        df_cache = pd.DataFrame(columns=["id", "horizon", "number_reps", "W_proxy",
-                                         "ldes_error", "macme", "abs_ldes_error"])
+        df_cache = pd.DataFrame(columns=[
+            "id", "horizon", "number_reps", "W_proxy",
+            "ldes_error", "macme", "abs_ldes_error",
+            "proxy_cem_pearson", "proxy_cem_nrmse"
+        ])
 
     cached_ids = set(df_cache["id"]) if not df_cache.empty else set()
-
-    # Memoize reference capacities per date span to avoid repeated loads
-    ref_cache: Dict[str, Tuple[float, float]] = {}
-
+    ref_cache: Dict[Tuple[str, str], calliope.Model] = {}
     rows = []
 
     num_reads = len(df_needed)
@@ -355,11 +240,11 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
     for _, row in df_needed.iterrows():
         mid = row["id"]
         counter += 1
-        print(f'Reading {mid} for capacities, {counter}/{num_reads}')
+        print(f"Reading {mid} for capacities, {counter}/{num_reads}")
+
         if pd.isna(mid) or (mid in cached_ids):
             continue
 
-         # --- resolve paths ---------------------------------------------------
         test_nc = models_dir / f"{mid}.nc"
         if not test_nc.exists():
             continue
@@ -371,36 +256,28 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
         if ref_key not in ref_cache:
             ref_nc = resolve_reference_nc(dates, tvp, models_dir)
             if ref_nc is None:
-                print('- Reference identified at:', ref_nc)
                 continue
             try:
-                model_reference = calliope.read_netcdf(str(ref_nc))
-                ref_cache[ref_key] = model_reference
+                ref_cache[ref_key] = calliope.read_netcdf(str(ref_nc))
             except Exception:
                 continue
 
-        # use the cached ref model
         model_reference = ref_cache[ref_key]
 
-        # --- load test model (strip time_cluster first) ----------------------
         try:
             model_test = read_clustered_netcdf(test_nc)
         except Exception:
             continue
 
-        # --- capacities & errors ---------------------------------------------
         try:
-            # get_capacities returns (power_caps_series, energy_caps_series)
-            power_caps_reference, energy_caps_reference = get_capacities(ref_cache[ref_key])
+            power_caps_reference, energy_caps_reference = get_capacities(model_reference)
             power_caps_test,      energy_caps_test      = get_capacities(model_test)
-            pearson_r, nrmse = build_signal_metrics(tvp, mid )
+            pearson_r, nrmse = build_signal_metrics(tvp, mid)
         except Exception:
             continue
 
-        # MACME: mean abs relative error on POWER capacities
         _, e_mean_power = relative_error(power_caps_reference, power_caps_test)
 
-        # LDES cap error: tech-specific relative error from ENERGY capacities
         e_storage, _ = relative_error(energy_caps_reference, energy_caps_test)
         ldes_err = e_storage.get("h2_salt_cavern", np.nan)
 
@@ -409,122 +286,11 @@ def build_or_load_cem_cache(df_needed: pd.DataFrame,
             "horizon": row.get("horizon", np.nan),
             "number_reps": row.get("number_reps", np.nan),
             "W_proxy": row.get("W_proxy", np.nan),
-            "ldes_error": ldes_err,                 # single value (fraction)
-            "macme": e_mean_power,                  # single value (fraction)
-            'proxy_cem_pearson': pearson_r,
-            'proxy_cem_nrmse': nrmse,
+            "ldes_error": ldes_err,
+            "macme": e_mean_power,
+            "proxy_cem_pearson": pearson_r,
+            "proxy_cem_nrmse": nrmse,
             "abs_ldes_error": abs(ldes_err) if pd.notna(ldes_err) else np.nan
-        })
-
-    if rows:
-        df_new = pd.DataFrame(rows)
-        df_cache = pd.concat([df_cache, df_new], ignore_index=True)
-
-    df_cache.drop_duplicates(subset=["id"], keep="first", inplace=True)
-
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    df_cache.to_csv(cache_path, index=False)
-
-    return df_cache
-
-
-def build_or_load_runtime_cache(df_needed: pd.DataFrame,
-                                models_dir: Path,
-                                cache_path: Path) -> pd.DataFrame:
-    """
-    Build or load runtime cache for IDs required by figs 4–5,
-    including *tvp-specific* reference models resolved from (dates, tvp).
-
-    Columns: id, runtime_min, horizon, number_reps, dates, tvp
-    """
-    cols = ["id", "runtime_min", "horizon", "number_reps", "dates", "tvp"]
-    if cache_path.exists():
-        try:
-            df_cache = pd.read_csv(cache_path)
-        except Exception:
-            df_cache = pd.DataFrame(columns=cols)
-    else:
-        df_cache = pd.DataFrame(columns=cols)
-
-    cached_ids = set(df_cache["id"]) if not df_cache.empty else set()
-
-    # Build the set of required IDs: the logged test ids + their tvp-aware reference ids (by path)
-    needed = []  # list of (id, dates, tvp, nc_path)
-    for _, r in df_needed.iterrows():
-        mid   = r.get("id")
-        dates = r.get("dates", "")
-        tvp   = r.get("tvp", np.nan)
-
-        if pd.notna(mid):
-            nc = models_dir / f"{mid}.nc"
-            needed.append((str(mid), dates, tvp, nc))
-
-        # add tvp-aware reference
-        ref_nc = resolve_reference_nc(dates, tvp, models_dir)
-        if ref_nc is not None:
-            needed.append((ref_nc.stem, dates, tvp, ref_nc))
-
-    rows = []
-    num_reads = len(needed)
-    counter = 0
-    for mid, dates, tvp, nc_path in needed:
-        counter += 1
-        print(f'Reading {mid} for runtimes, {counter}/{num_reads}')
-        if mid in cached_ids:
-            continue
-        if not Path(nc_path).exists():
-            continue
-
-        try:
-            m = read_clustered_netcdf(nc_path)
-        except Exception:
-            continue
-
-        # runtime (minutes)
-        runtime_min = np.nan
-        try:
-            rt = m.all_attrs.runtime.timings
-            runtime_min = float(rt["solve_complete"] - rt["build_start"]) / 60.0
-            if runtime_min <= 0:
-                runtime_min = np.nan
-        except Exception:
-            pass
-
-        # horizon + number_reps
-        horizon = np.nan
-        number_reps = np.nan
-        try:
-            if str(mid).startswith("standard_") and str(mid).endswith("_reference"):
-                # reference: compute horizon from timesteps
-                horizon = round(m.inputs.sizes["timesteps"] / (24 * 365.25))
-                number_reps = np.nan
-            else:
-                # clustered: prefer parameters JSON
-                param_path = PARAM_DIR / f"{mid}.json"
-                if param_path.exists():
-                    with open(param_path) as p:
-                        d = json.load(p)
-                    dr = d["calliope_params"]["date_range"]
-                    horizon = round(dr[1] - dr[0] + 1)
-                    number_reps = d["tsa_params"]["k_periods"]
-                else:
-                    # best-effort fallback from the log row
-                    rr = df_needed[df_needed["id"] == mid].head(1)
-                    if not rr.empty:
-                        if pd.notna(rr.iloc[0].get("horizon", np.nan)):
-                            horizon = int(rr.iloc[0]["horizon"])
-                        if pd.notna(rr.iloc[0].get("number_reps", np.nan)):
-                            number_reps = int(rr.iloc[0]["number_reps"])
-        except Exception:
-            pass
-
-        rows.append({
-            "id": mid,
-            "runtime_min": runtime_min,
-            "horizon": horizon,
-            "number_reps": number_reps,
-            "dates": dates,
-            "tvp": tvp,
         })
 
     if rows:
@@ -535,752 +301,294 @@ def build_or_load_runtime_cache(df_needed: pd.DataFrame,
     df_cache.to_csv(cache_path, index=False)
     return df_cache
 
-# ------------------------- Figure builders -----------------------------------
 
-def fig1_heatmap_10y(df_cem: pd.DataFrame, path: Path) -> None:
-    df = df_cem.copy()
-    df = df[df["horizon"] == 10]
+# ------------------------- Data prep for plotting ----------------------------
 
-    value_col = "ldes_error"  # signed error
-    df = df.dropna(subset=["number_reps", "W_proxy", value_col])
+def load_logs_with_cache(debug: bool = True) -> pd.DataFrame:
+    """
+    1) parse NL+BE logs
+    2) build/refresh cache for those IDs
+    3) merge cache fields into logs
+    4) create *_use columns (cache-first)
+    """
+    df_logs_by_cc = {cc: parse_logs(LOGS_F123_BY_CC[cc]).assign(country=cc) for cc in COUNTRIES}
+    df_logs = pd.concat(list(df_logs_by_cc.values()), ignore_index=True)
+    if df_logs.empty:
+        raise RuntimeError("No log rows found.")
 
-    if df.empty:
-        print("[fig1] No data after filtering for horizon==10.")
-        return
+    df_cache = build_or_load_cem_cache(df_logs, MODELS_DIR, CACHE_CEM)
 
-    pivot = (
-        df.groupby(["number_reps", "W_proxy"])[value_col]
-          .mean()
-          .reset_index()
-          .pivot(index="number_reps", columns="W_proxy", values=value_col)
-          .sort_index()
+    # Merge cache fields
+    df = df_logs.merge(
+        df_cache[["id", "ldes_error", "horizon", "number_reps", "W_proxy"]],
+        on="id",
+        how="left",
+        suffixes=("_log", "_cache"),
     )
 
-    # Ensure x-order for columns
-    cols_sorted = sorted(pivot.columns.tolist())
-    pivot = pivot[cols_sorted]
+    # cache-first usable columns
+    df["horizon_use"] = df["horizon_cache"].fillna(df["horizon_log"])
+    df["number_reps_use"] = df["number_reps_cache"].fillna(df["number_reps_log"])
+    df["W_proxy_use"] = df["W_proxy_cache"].fillna(df["W_proxy_log"])
 
-    data = pivot.values
+    # Horizon int
+    df["horizon_int"] = pd.to_numeric(df["horizon_use"], errors="coerce").round().astype("Int64")
 
-    # ---- choose vmin / vmax snapped to 10% steps ----
-    data_min = np.nanmin(data)
-    data_max = np.nanmax(data)
+    if debug:
+        tmp = df.dropna(subset=["W_proxy_use", "number_reps_use", "horizon_int"])
+        if not tmp.empty:
+            print("\n=== DEBUG: overall coverage (cache-first) ===")
+            print("Unique horizons:", sorted(tmp["horizon_int"].dropna().unique().tolist()))
+            print("Counts by country x horizon:")
+            print(tmp.groupby(["country", "horizon_int"]).size())
+        else:
+            print("\n=== DEBUG: coverage is empty after basic dropna. Check cache/log fields. ===")
 
-    # work in "fraction" units (0.1 = 10%)
-    # round min down to nearest -0.1, max up to nearest +0.1
-    step = 0.1
-    vmin = np.min(np.floor(data_min / step) * step,0)
-    vmax = np.ceil(data_max / step) * step
-    vmid = (0 - vmin) / (vmax - vmin)
-    # vmin = -0.8
-    # vmax = 0.8
-
-    # In your example: data_min = -0.16, data_max = 0.40
-    # => vmin = -0.2, vmax = 0.4
-
-    # ---- custom diverging cmap: purple -> blue -> yellow ----
-    if vmin < 0 < vmax:
-        # 0 is inside the range: valid midpoint
-        vmid = (0 - vmin) / (vmax - vmin)
-        colors = [
-            (0.0, "#0d0887"),   # dark purple
-            (vmid, "#ffffff"),  # white at 0
-            (1.0, "#cc4778"),   # pink
-        ]
-    elif vmax>0:
-        # All values are on one side of 0; use a simple 2-point gradient
-        # (pick whichever endpoints you prefer)
-        colors = [
-            (0.0, "#ffffff"),
-            (1.0, "#cc4778"),
-        ]
-    else:
-        colors = [
-            (0.0, "#0d0887"),
-            (1.0, "#ffffff"),
-        ]
+    return df
 
 
+def filter_for_params(df: pd.DataFrame, weight: float, number_reps: int, horizons: Sequence[int], debug: bool = True) -> pd.DataFrame:
+    horizons = [int(h) for h in horizons]
+
+    d = df.copy()
+    d = d.dropna(subset=["W_proxy_use", "number_reps_use", "horizon_int", "ldes_error"])
+
+    d = d[np.isclose(d["W_proxy_use"].astype(float), float(weight), atol=1e-9)]
+    d = d[d["number_reps_use"].astype(int) == int(number_reps)]
+
+    if debug:
+        print("\n=== DEBUG: coverage for chosen (W,k) BEFORE horizon filter ===")
+        if d.empty:
+            print("No rows for this (W,k) at all.")
+        else:
+            print("Unique horizons for (W,k):", sorted(d["horizon_int"].unique().tolist()))
+            print(d.groupby(["country", "horizon_int"]).size())
+
+    d = d[d["horizon_int"].isin(horizons)]
+
+    if debug:
+        missing = sorted(set(horizons) - set(d["horizon_int"].unique().tolist()))
+        if missing:
+            print(f"[warn] Missing horizons for this (W,k): {missing}")
+
+    return d
 
 
-    cmap = mcolors.LinearSegmentedColormap.from_list("plasmaish_div", colors)
-    norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-    # cmap = plt.get_cmap("plasma")
+# ------------------------- Plot 1: strip (jittered) --------------------------
 
-
-    # ---- center the colormap at 0 using our MidpointNormalize ----
-    # norm = MidpointNormalize(vmin=vmin, vcenter=0.0, vmax=vmax)
-
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    im = ax.imshow(
-        data,
-        aspect="auto",
-        origin="lower",
-        cmap=cmap,
-        # vmin=vmin,
-        # vmax=vmax
-        norm=norm
-    )
-
-    # tick labels from the actual row/column labels
-    ax.set_xticks(np.arange(pivot.shape[1]))
-    ax.set_xticklabels([f"{c:g}" for c in pivot.columns], rotation=0)
-    ax.set_yticks(np.arange(pivot.shape[0]))
-    ax.set_yticklabels([f"{int(i)}" for i in pivot.index])
-
-    # ---- Colorbar with 10% ticks, including 0 ----
-    cbar = fig.colorbar(im, ax=ax)
-
-    # ticks from vmin to vmax in 0.1 (10%) increments
-    ticks = np.arange(vmin, vmax + step * 0.5, step)  # +0.5*step to include vmax numerically
-    cbar.set_ticks(ticks)
-    cbar.set_ticklabels([f"{int(round(t * 100))}%" for t in ticks])
-
-    cbar.set_label("LDES capacity error")
-
-    ax.set_xlabel("Proxy weight $(W_P)$")
-    ax.set_ylabel("Number of representative days")
-
-    ax = add_title_and_icon(ax)
-
-    savefig(fig, path)
-
-def _add_y0_line(ax: plt.Axes) -> None:
-    ax.axhline(0, color="black", linewidth=1, zorder=0)
-
-def add_title_and_icon(ax: plt.Axes) -> None:
-    t = ax.set_title('The Netherlands' if countrycode == 'NL' else 'Belgium', fontweight='bold', pad=10)
-    spacing  = 0.2*2 if countrycode == 'NL' else 0.12*2
-    spacing_ratio = 0.25
-
-    t.set_x(0.5+spacing*spacing_ratio)
-
-    flag = mpl.image.imread(ICON_PATH)
-    imbox = mpl.offsetbox.OffsetImage(flag, zoom =0.04)
-
-    ab = mpl.offsetbox.AnnotationBbox(
-        imbox,
-        (0.5-spacing*(1-spacing_ratio),1.1),
-        xycoords = 'axes fraction',
-        frameon = False,
-        box_alignment=(0.5,0.5)
-    )
-    ax.add_artist(ab)
-    return ax
-
-
-def fig2_box_by_reps(df_cem: pd.DataFrame, path: Path) -> None:
-    df = df_cem.dropna(subset=["number_reps"])
+def plot_ldes_error_strip(
+    df_all: pd.DataFrame,
+    weight: float,
+    number_reps: int,
+    horizons: Sequence[int],
+    out_path: Path,
+    jitter: float = 0.12,
+    seed: int = 42,
+    debug: bool = True,
+) -> None:
+    df = filter_for_params(df_all, weight, number_reps, horizons, debug=debug)
 
     if df.empty:
-        print("[fig2] No data to plot.")
+        print("[plot_strip] No data after filtering.")
         return
 
-    x_vals = sorted(df["number_reps"].dropna().unique().tolist())
-
-    df_filter = df[df['W_proxy']>0]
-
-    data_ldes = [df_filter.loc[df_filter["number_reps"] == x, "ldes_error"].dropna().values for x in x_vals]
-    data_mac  = [df_filter.loc[df_filter["number_reps"] == x, "macme"].dropna().values for x in x_vals]
-
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    offsets = np.array([-0.15, 0.15])
-    positions_ldes = np.arange(len(x_vals)) + offsets[0]
-    positions_mac  = np.arange(len(x_vals)) + offsets[1]
-
-    bp1 = ax.boxplot(data_ldes, positions=positions_ldes, widths=0.25, patch_artist=True, showfliers=False)
-    bp2 = ax.boxplot(data_mac,  positions=positions_mac,  widths=0.25, patch_artist=True, showfliers=False)
-
-    for elem in ["boxes", "caps", "whiskers", "medians"]:
-        for patch in bp1[elem]:
-            patch.set_color(COLOUR_LDES)
-        for patch in bp2[elem]:
-            patch.set_color(COLOUR_MACME)
-    for patch in bp1["boxes"]:
-        patch.set_facecolor(mcolors.to_rgba(COLOUR_LDES, 0.15))
-    for patch in bp2["boxes"]:
-        patch.set_facecolor(mcolors.to_rgba(COLOUR_MACME, 0.15))
-
-    rng = np.random.default_rng(42)
-    for i, x in enumerate(x_vals):
-        sub = df[df["number_reps"] == x]
-
-        # Only show markers where W_proxy == 0
-        sub0 = sub[np.isclose(sub["W_proxy"], 0.0, atol=1e-9)]
-
-        # LDES markers (round, hollow, edge = pink)
-        xs = np.full(len(sub0), positions_ldes[i]) + rng.normal(0, 0.025, len(sub0))
-        ys = sub0["ldes_error"].values
-        ax.scatter(xs, ys, s=fig_height*4, marker="o",
-                   facecolors="white", edgecolors=COLOUR_LDES, linewidths=0.9, zorder=3)
-
-        # MACME markers (round, hollow, edge = blue/purple)
-        xs = np.full(len(sub0), positions_mac[i]) + rng.normal(0, 0.025, len(sub0))
-        ys = sub0["macme"].values
-        ax.scatter(xs, ys, s=fig_height*4, marker="o",
-                   facecolors="white", edgecolors=COLOUR_MACME, linewidths=0.9, zorder=3)
-
-
-    _add_y0_line(ax)
-
-    ax.set_xticks(np.arange(len(x_vals)))
-    ax.set_xticklabels([str(int(x)) for x in x_vals])
-    ax.set_xlabel("Number of representative days")
-    ax.set_ylabel("Relative error")
-    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
-
-    legend_handles = [
-        Line2D([0], [0], marker=MARKER_LDES, color="none",
-               markerfacecolor=COLOUR_LDES, markeredgecolor=COLOUR_LDES,
-               label="LDES capacity error", markersize=6),
-        Line2D([0], [0], marker=MARKER_MACME, color="none",
-               markerfacecolor=COLOUR_MACME, markeredgecolor=COLOUR_MACME,
-               label="MACME", markersize=6),
-        Line2D([0], [0], marker="o", color="none",
-               markerfacecolor="white", markeredgecolor=COLOUR_W0_EDGE,
-               label="$W_P = 0$", markersize=6),
-        # Line2D([0], [0], marker="o", color="none",
-        #        markerfacecolor="black", markeredgecolor="black",
-        #        label="$W_P = 1$", markersize=6),
-    ]
-    ax.legend(handles=legend_handles, frameon=False, loc="best")
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(axis="y", linestyle=":", alpha=0.4)
-
-    ax = add_title_and_icon(ax)
-
-    savefig(fig, path)
-    print(f"[fig2] Saved {path}")
-
-
-def fig3_box_by_proxy(df_cem: pd.DataFrame, path: Path) -> None:
-    df = df_cem.copy()
-    df = df[df["number_reps"] >= 60]
-    df = df.dropna(subset=["W_proxy"])
-
-    x_levels = [0.0, 0.25, 0.5, 0.75, 1.0]
-    df = df[df["W_proxy"].round(2).isin(x_levels)]
-
-    if df.empty:
-        print("[fig3] No data to plot after filtering.")
-        return
-
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-
-    data_ldes = [df.loc[np.isclose(df["W_proxy"], x), "ldes_error"].dropna().values for x in x_levels]
-    data_mac  = [df.loc[np.isclose(df["W_proxy"], x), "macme"].dropna().values for x in x_levels]
-
-    offsets = np.array([-0.15, 0.15])
-    positions_ldes = np.arange(len(x_levels)) + offsets[0]
-    positions_mac  = np.arange(len(x_levels)) + offsets[1]
-
-    bp1 = ax.boxplot(data_ldes, positions=positions_ldes, widths=0.25, patch_artist=True, showfliers=False)
-    bp2 = ax.boxplot(data_mac,  positions=positions_mac,  widths=0.25, patch_artist=True, showfliers=False)
-
-    for elem in ["boxes", "caps", "whiskers", "medians"]:
-        for patch in bp1[elem]:
-            patch.set_color(COLOUR_LDES)
-        for patch in bp2[elem]:
-            patch.set_color(COLOUR_MACME)
-    for patch in bp1["boxes"]:
-        patch.set_facecolor(mcolors.to_rgba(COLOUR_LDES, 0.15))
-    for patch in bp2["boxes"]:
-        patch.set_facecolor(mcolors.to_rgba(COLOUR_MACME, 0.15))
-
-    # rng = np.random.default_rng(7)
-    # for i, x in enumerate(x_levels):
-    #     sub = df[np.isclose(df["W_proxy"], x)]
-
-    #     xs = np.full(len(sub), positions_ldes[i]) + rng.normal(0, 0.025, len(sub))
-    #     ys = sub["ldes_error"].values
-    #     w  = sub["W_proxy"].values
-    #     face = [COLOUR_LDES if np.isclose(val, 1.0, atol=1e-9) else "white" if np.isclose(val, 0.0, atol=1e-9) else COLOUR_LDES for val in w]
-    #     edge = [COLOUR_LDES if not np.isclose(val, 0.0, atol=1e-9) else COLOUR_W0_EDGE for val in w]
-    #     ax.scatter(xs, ys, s=18, marker=MARKER_LDES, facecolors=face, edgecolors=edge, linewidths=0.8, zorder=3)
-
-    #     xs = np.full(len(sub), positions_mac[i]) + rng.normal(0, 0.025, len(sub))
-    #     ys = sub["macme"].values
-    #     face = [COLOUR_MACME if np.isclose(val, 1.0, atol=1e-9) else "white" if np.isclose(val, 0.0, atol=1e-9) else COLOUR_MACME for val in w]
-    #     edge = [COLOUR_MACME if not np.isclose(val, 0.0, atol=1e-9) else COLOUR_W0_EDGE for val in w]
-    #     ax.scatter(xs, ys, s=18, marker=MARKER_MACME, facecolors=face, edgecolors=edge, linewidths=0.8, zorder=3)
-
-    _add_y0_line(ax)
-
-    ax.set_xticks(np.arange(len(x_levels)))
-    ax.set_xticklabels([f"{x:g}" for x in x_levels])
-    ax.set_xlabel("Proxy weight (W)")
-    ax.set_ylabel("Relative error")
-    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
-
-    legend_handles = [
-        Line2D([0], [0], marker=MARKER_LDES, color="none",
-               markerfacecolor=COLOUR_LDES, markeredgecolor=COLOUR_LDES,
-               label="LDES capacity error", markersize=6),
-        Line2D([0], [0], marker=MARKER_MACME, color="none",
-               markerfacecolor=COLOUR_MACME, markeredgecolor=COLOUR_MACME,
-               label="MACME", markersize=6),
-        # Line2D([0], [0], marker="o", color="none",
-        #        markerfacecolor="white", markeredgecolor=COLOUR_W0_EDGE,
-        #        label="$W_P = 0$", markersize=6),
-        # Line2D([0], [0], marker="o", color="none",
-        #        markerfacecolor="black", markeredgecolor="black",
-        #        label="$W_P = 1$", markersize=6),
-    ]
-    ax.legend(handles=legend_handles, frameon=False, loc="best")
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(axis="y", linestyle=":", alpha=0.4)
-
-    ax = add_title_and_icon(ax)
-
-    savefig(fig, path)
-    print(f"[fig3] Saved {path}")
-
-
-def fig4_error_vs_horizon(df_cem: pd.DataFrame, path: Path) -> None:
-    # Filter to W in {0,1} and reps in [45, 60]
-    df = df_cem.copy()
-    df = df[(df["number_reps"] >= 45) & (df["number_reps"] <= 180)]
-    df = df[df["W_proxy"].isin([0.0, 1.0])]
-    df = df.dropna(subset=["horizon"])
-
-    # Bucket horizons to '2', '5', '10' only
-    mapping = {2: "2", 5: "5", 10: "10"}
-    df["h_bucket"] = df["horizon"].round().astype(int).map(mapping)
-    df = df[df["h_bucket"].isin(["2", "5", "10"])]
-
-    if df.empty:
-        print("[fig4] No data to plot after filtering.")
-        return
-
-    horizons = ["2", "5", "10"]
-    x = np.arange(len(horizons))
-    # Adjacent box positions: left = W0, right = W1
-    pos_W0 = x - 0.15
-    pos_W1 = x + 0.15
-    width = 0.28
-
-    fig, axes = plt.subplots(2, 1, figsize=(fig_width, fig_height*2), sharey=True)
-    metrics = [
-        ("ldes_error", "LDES capacity error", COLOUR_LDES, axes[0]),
-        ("macme",      "MACME",              COLOUR_MACME, axes[1]),
-    ]
-
-    for colname, title, color, ax in metrics:
-        # Collect data arrays per horizon and W
-        data_W0 = [df[(df["h_bucket"] == h) & np.isclose(df["W_proxy"], 0.0)][colname].dropna().values
-                   for h in horizons]
-        data_W1 = [df[(df["h_bucket"] == h) & np.isclose(df["W_proxy"], 1.0)][colname].dropna().values
-                   for h in horizons]
-
-        # Plot W=0 (hollow) boxes
-        bp0 = ax.boxplot(
-            data_W0,
-            positions=pos_W0,
-            widths=width,
-            patch_artist=True,
-            showfliers=False
-        )
-        # Style W=0 boxes: white face, colored edges
-        for patch in bp0["boxes"]:
-            patch.set_facecolor("white")
-            patch.set_edgecolor(color)
-        for elem in ["caps", "whiskers", "medians"]:
-            for p in bp0[elem]:
-                p.set_color(color)
-
-        # Plot W=1 (filled) boxes
-        bp1 = ax.boxplot(
-            data_W1,
-            positions=pos_W1,
-            widths=width,
-            patch_artist=True,
-            showfliers=False
-        )
-        # Style W=1 boxes: light fill of the same color
-        for patch in bp1["boxes"]:
-            patch.set_facecolor(mcolors.to_rgba(color, 0.4))
-            patch.set_edgecolor(color)
-        for elem in ["caps", "whiskers", "medians"]:
-            for p in bp1[elem]:
-                p.set_color(color)
-
-        # Axis formatting
-        _add_y0_line(ax)
-        ax.set_xticks(x)
-        ax.set_xticklabels(horizons)
-        # ax.set_title(title)
-        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.grid(axis="y", linestyle=":", alpha=0.4)
-
-    axes[1].set_xlabel("Horizon (years)")
-    axes[0].set_ylabel("LDES capacity error")
-    axes[1].set_ylabel("MACME")
-
-    # Simple legend explaining W=0 vs W=1 encoding (hollow vs filled)
-    legend_handles = [
-        Line2D([0], [0], marker="s", color=COLOUR_LDES,
-               markerfacecolor="white", markeredgecolor=COLOUR_GREY_MEAN,
-               linestyle="", label="$W_P = 0$ (hollow)"),
-        Line2D([0], [0], marker="s", color=COLOUR_LDES,
-               markerfacecolor=mcolors.to_rgba(COLOUR_GREY_MEAN, 0.4),
-               markeredgecolor=COLOUR_GREY_MEAN, linestyle="", label="$W_P = 1$ (filled)"),
-    ]
-    axes[0].legend(handles=legend_handles, frameon=False, loc="best")
-
-    ax = add_title_and_icon(ax)
-
-    fig.tight_layout()
-    savefig(fig, path)
-
-
-
-def fig5_runtime_vs_horizon(df_runtime: pd.DataFrame, path: Path) -> None:
-    df = df_runtime.copy()
-    df = df.dropna(subset=["runtime_min", "horizon"])
-
-    # Horizon buckets as strings '2','5','10' (others dropped)
-    mapping = {2: "2", 5: "5", 10: "10"}
-    df["h_bucket"] = df["horizon"].astype(int).map(mapping)
-    df = df[df["h_bucket"].isin(["2", "5", "10"])]
-
-    if df.empty:
-        print("[fig5] No runtime data to plot.")
-        return
-
-    # --- NEW: aggregate by horizon bucket and number_reps ----------------------
-    # This gives one row per (h_bucket, k) combination
-    df_mean = (
-        df.groupby(["h_bucket", "number_reps"], dropna=False, as_index=False)["runtime_min"]
-          .mean()
-          .rename(columns={"runtime_min": "runtime_mean"})
-    )
-
-    # Colour map by number_reps (k); references (NaN) in grey
-    ks = df_mean["number_reps"]
-    unique_k = sorted([int(k) for k in ks.dropna().unique()])
+    unique_h = sorted(df["horizon_int"].dropna().unique().tolist())
     cmap = plt.get_cmap("plasma")
-    # make a colour lookup for each k
-    col_lut = {k: cmap(i / max(len(unique_k) - 1, 1)) for i, k in enumerate(unique_k)}
-    grey = "#808080"
+    col_lut = {h: cmap(i / max(len(unique_h) - 1, 1)) for i, h in enumerate(unique_h)}
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    horizons = ["2", "5", "10"]
-    xloc = {h: i for i, h in enumerate(horizons)}
 
-    # Fixed offsets per k so points for different k at the same horizon do not overlap
+    x_base = {"NL": 0.0, "BE": 1.0}
+    rng = np.random.default_rng(seed)
 
-    offset_value=0
-    if unique_k:
-        offsets = np.linspace(-offset_value, offset_value, len(unique_k))
-        k_offset = {k: offsets[i] for i, k in enumerate(unique_k)}
-    else:
-        k_offset = {}
-
-    for h in horizons:
-        sub = df_mean[df_mean["h_bucket"] == h]
-        if sub.empty:
+    for cc in COUNTRIES:
+        sub_cc = df[df["country"] == cc]
+        if sub_cc.empty:
             continue
 
-        xs, ys, cols = [], [], []
-        for _, row in sub.iterrows():
-            k = row["number_reps"]
-            base_x = xloc[h]
+        for h in unique_h:
+            sub = sub_cc[sub_cc["horizon_int"] == h]
+            if sub.empty:
+                continue
 
-            if pd.isna(k):
-                # Reference models: no k, keep them centred and in grey
-                x = base_x
-                c = grey
-            else:
-                k_int = int(k)
-                x = base_x + k_offset.get(k_int, 0.0)
-                c = col_lut.get(k_int, grey)
+            x0 = x_base[cc]
+            xs = x0 + rng.normal(0.0, jitter, size=len(sub))
+            ys = sub["ldes_error"].astype(float).values
 
-            xs.append(x)
-            ys.append(row["runtime_mean"])
-            cols.append(c)
-
-        ax.scatter(
-            xs,
-            ys,
-            s=fig_height * 4,
-            marker="o",
-            linewidths=0.2,
-            edgecolors="black",
-            alpha=0.9,
-            c=cols,
-            zorder=3,
-        )
-
-    ax.set_xticks(range(len(horizons)))
-    ax.set_xticklabels(horizons)
-    ax.set_xlim(-0.5, len(horizons) - 0.5)
-    ax.set_xlabel("Horizon (years)")
-    ax.set_ylabel("Runtime (minutes, log scale)")
-    ax.set_yscale("log")
-    ax.yaxis.set_major_locator(mtick.LogLocator(base=10.0))
-    ax.yaxis.set_major_formatter(mtick.FuncFormatter(_fmt_runtime_minutes))
-
-
-    # legend: build from unique k plus 'ref'
-    handles_k = []
-    for k in unique_k:
-        handles_k.append(
-            Line2D(
-                [0], [0],
+            ax.scatter(
+                xs, ys,
+                s=30,
                 marker="o",
-                color="none",
-                markerfacecolor=col_lut[k],
-                label=f"{k}",
-                markersize=6,
+                linewidths=0.3,
+                edgecolors="black",
+                alpha=0.9,
+                c=[col_lut[h]] * len(sub),
+                zorder=3,
             )
-        )
 
-    # Reverse so largest k appears at the top of the legend
-    handles_k.reverse()
-
-    ref_handle = Line2D(
-        [0], [0],
-        marker="o",
-        color="none",
-        markerfacecolor=grey,
-        label="ref",
-        markersize=6,
-    )
-
-    handles = handles_k + [ref_handle]
-
-    if handles:
-        ax.legend(
-            handles=handles,
-            title="Rep. days (k)",
-            frameon=False,
-            bbox_to_anchor=(1.02, 1),
-            loc="upper left",
-        )
-
-    ax.grid(axis="y", linestyle=":", alpha=0.6)
+    ax.axhline(0, color="black", linewidth=1, zorder=0)
+    ax.set_xlim(-0.5, 1.5)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(["NL", "BE"])
+    ax.set_ylabel("LDES capacity error")
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    ax.grid(axis="y", linestyle=":", alpha=0.4)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    savefig(fig, path)
+    title_h = ", ".join(str(h) for h in unique_h)
+    ax.set_title(f"LDES capacity error | W={weight:g}, reps={number_reps}, horizon={title_h}y")
 
-def fig6_error_vs_margin(df_margin: pd.DataFrame, path: Path) -> None:
-    """
-    Box plot of LDES capacity error vs. margin, split by TVP (NL vs GB).
+    legend_handles = [
+        Line2D([0], [0], marker="o", color="none",
+               markerfacecolor=col_lut[h], markeredgecolor="black",
+               label=f"{h}y", markersize=6)
+        for h in unique_h
+    ]
+    ax.legend(handles=legend_handles, frameon=False, loc="best", title="Horizon")
 
-    Assumes df_margin has:
-        - 'model_name' (with "m=..." in the string)
-        - 'tvp' (path to NL or GB time_varying_parameters.csv)
-        - 'ldes_error' (from CEM cache)
-    """
-    df = df_margin.copy()
+    savefig(fig, out_path, tight=True)
 
-    # Extract margin from model_name, e.g. "..., m=0.02"
-    df["margin"] = pd.to_numeric(
-        df["model_name"].astype(str).str.extract(
-            r"m\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)",
-            expand=False,
-        ),
-        errors="coerce",
-    )
 
-    # Map tvp path to simple label: NL vs GB
-    def _tvp_to_label(s: str) -> str:
-        s = str(s)
-        if s.endswith("_GB.csv"):
-            return "GB"
-        return "NL"
+# ------------------------- Plot 2: box (with optional points) ----------------
 
-    df["tvp_label"] = df["tvp"].apply(_tvp_to_label)
-
-    # Keep only rows where both margin and ldes_error are defined
-    df = df.dropna(subset=["margin", "ldes_error"])
+def plot_ldes_error_box(
+    df_all: pd.DataFrame,
+    weight: float,
+    number_reps: int,
+    horizons: Sequence[int],
+    out_path: Path,
+    show_points: bool = True,
+    jitter: float = 0.06,
+    seed: int = 42,
+    debug: bool = True,
+    whiskers: str = "iqr",  # "iqr" or "minmax"
+) -> None:
+    df = filter_for_params(df_all, weight, number_reps, horizons, debug=debug)
 
     if df.empty:
-        print("[fig6] No data to plot after filtering.")
+        print("[plot_box] No data after filtering.")
         return
 
-    # Sort margins numerically for x-axis
-    margins = sorted(df["margin"].unique().tolist())
+    unique_h = sorted(df["horizon_int"].dropna().unique().tolist())
+    cmap = plt.get_cmap("plasma")
+    col_lut = {h: cmap(i / max(len(unique_h) - 1, 1)) for i, h in enumerate(unique_h)}
 
-    # Build data arrays per margin & TVP
-    data_NL = [
-        df[(df["margin"] == m) & (df["tvp_label"] == "NL")]["ldes_error"].dropna().values
-        for m in margins
-    ]
-    data_GB = [
-        df[(df["margin"] == m) & (df["tvp_label"] == "GB")]["ldes_error"].dropna().values
-        for m in margins
-    ]
+    x_base = {"NL": 0.0, "BE": 1.0}
+
+    if len(unique_h) == 1:
+        h_offsets = {unique_h[0]: 0.0}
+        box_width = 0.45
+    else:
+        spread = 0.55
+        offsets = np.linspace(-spread / 2, spread / 2, len(unique_h))
+        h_offsets = {h: offsets[i] for i, h in enumerate(unique_h)}
+        box_width = min(0.18, 0.8 / len(unique_h))
+
+    boxes = []
+    positions = []
+    facecols = []
+
+    for cc in COUNTRIES:
+        for h in unique_h:
+            vals = df[(df["country"] == cc) & (df["horizon_int"] == h)]["ldes_error"].astype(float).values
+            if len(vals) == 0:
+                continue
+            boxes.append(vals)
+            positions.append(x_base[cc] + h_offsets[h])
+            facecols.append(col_lut[h])
+
+    if not boxes:
+        print("[plot_box] Nothing to plot (no non-empty groups).")
+        return
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-    # Positions: side-by-side boxes per margin value
-    x = np.arange(len(margins))
-    offsets = np.array([-0.15, 0.15])
-    pos_NL = x + offsets[0]
-    pos_GB = x + offsets[1]
-    width = 0.25
+    whis = 1.5
+    if whiskers == "minmax":
+        whis = (0, 100)
 
-    # NL boxes
-    bp_nl = ax.boxplot(
-        data_NL,
-        positions=pos_NL,
-        widths=width,
+    bp = ax.boxplot(
+        boxes,
+        positions=positions,
+        widths=box_width,
         patch_artist=True,
         showfliers=False,
-    )
-    # GB boxes
-    bp_gb = ax.boxplot(
-        data_GB,
-        positions=pos_GB,
-        widths=width,
-        patch_artist=True,
-        showfliers=False,
+        whis=whis,
+        medianprops=dict(color="black", linewidth=1.0),
+        whiskerprops=dict(color="black", linewidth=0.8),
+        capprops=dict(color="black", linewidth=0.8),
+        boxprops=dict(color="black", linewidth=0.8),
     )
 
-    # Colour styling: reuse existing colours
-    for elem in ["boxes", "caps", "whiskers", "medians"]:
-        for p in bp_nl[elem]:
-            p.set_color(COLOUR_LDES)   # NL
-        for p in bp_gb[elem]:
-            p.set_color(COLOUR_MACME)  # GB
+    for patch, fc in zip(bp["boxes"], facecols):
+        patch.set_facecolor(fc)
+        patch.set_alpha(0.45)
 
-    for patch in bp_nl["boxes"]:
-        patch.set_facecolor(mcolors.to_rgba(COLOUR_LDES, 0.15))
-    for patch in bp_gb["boxes"]:
-        patch.set_facecolor(mcolors.to_rgba(COLOUR_MACME, 0.15))
+    if show_points:
+        rng = np.random.default_rng(seed)
+        for cc in COUNTRIES:
+            for h in unique_h:
+                sub = df[(df["country"] == cc) & (df["horizon_int"] == h)]
+                if sub.empty:
+                    continue
+                x0 = x_base[cc] + h_offsets[h]
+                xs = x0 + rng.normal(0.0, jitter, size=len(sub))
+                ys = sub["ldes_error"].astype(float).values
+                ax.scatter(
+                    xs, ys,
+                    s=18,
+                    marker="o",
+                    linewidths=0.25,
+                    edgecolors="black",
+                    alpha=0.75,
+                    c=[col_lut[h]] * len(sub),
+                    zorder=3,
+                )
 
-    # Horizontal line at zero
-    _add_y0_line(ax)
-
-    # Axes and labels
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"{m:g}" for m in margins])
-    ax.set_xlabel("Margin $m$")
+    ax.axhline(0, color="black", linewidth=1, zorder=0)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(["NL", "BE"])
+    ax.set_xlim(-0.6, 1.6)
     ax.set_ylabel("LDES capacity error")
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    ax.yaxis.set_major_locator(mtick.MultipleLocator(0.1))
-
-    # Legend: NL vs GB
-    legend_handles = [
-        Line2D(
-            [0],
-            [0],
-            marker="s",
-            color="none",
-            markerfacecolor=mcolors.to_rgba(COLOUR_LDES, 0.4),
-            markeredgecolor=COLOUR_LDES,
-            label="NL",
-            markersize=6,
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="s",
-            color="none",
-            markerfacecolor=mcolors.to_rgba(COLOUR_MACME, 0.4),
-            markeredgecolor=COLOUR_MACME,
-            label="GB",
-            markersize=6,
-        ),
-    ]
-    ax.legend(handles=legend_handles, frameon=False, loc="best")
-
-    # Cosmetic stuff for consistency
+    ax.grid(axis="y", linestyle=":", alpha=0.4)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(axis="y", linestyle=":", alpha=0.4)
 
-    savefig(fig, path)
-    print(f"[fig6] Saved {path}")
+    title_h = ", ".join(str(h) for h in unique_h)
+    ax.set_title(f"LDES capacity error | W={weight:g}, reps={number_reps}, horizon={title_h}y")
+
+    if len(unique_h) > 1:
+        legend_handles = [
+            Line2D([0], [0], marker="s", color="none",
+                   markerfacecolor=col_lut[h], markeredgecolor="black",
+                   label=f"{h}y", markersize=8, alpha=0.6)
+            for h in unique_h
+        ]
+        ax.legend(handles=legend_handles, frameon=False, loc="best", title="Horizon")
+
+    savefig(fig, out_path, tight=True)
 
 
 # ------------------------- Main ----------------------------------------------
 
 def main():
-    # Parse logs for figure groups
-    df_f123 = parse_logs(LOGS_F123)  # for figs 1–3
-    df_f45  = parse_logs(LOGS_F45)   # for figs 4–5
-    df_f6   = parse_logs(LOGS_F6)    # for fig 6 
+    # Choose parameters
+    W_PROXY = 0.5
+    NUMBER_REPS = 45
+    HORIZONS = [2, 5, 10]
 
-    # Union for CEM cache (ids needed for figs 1–4 and 6)
-    df_union_cem = (
-        pd.concat([df_f123, df_f45, df_f6], ignore_index=True)
-        .drop_duplicates(subset=["id"], keep="first")
-    )
+    # Output
+    OUT_STRIP = OUT_DIR / f"ldes_error_strip_W{W_PROXY:g}_k{NUMBER_REPS}_H{'-'.join(map(str,HORIZONS))}.pdf"
+    OUT_BOX   = OUT_DIR / f"ldes_error_box_W{W_PROXY:g}_k{NUMBER_REPS}_H{'-'.join(map(str,HORIZONS))}.pdf"
 
-    # Build caches once
-    try:
-        df_cem_cache = build_or_load_cem_cache(df_union_cem, MODELS_DIR, CACHE_CEM)
-    except Exception as e:
-        print(f"[main] CEM cache build failed: {e}")
-        df_cem_cache = pd.DataFrame(
-            columns=[
-                "id",
-                "horizon",
-                "number_reps",
-                "W_proxy",
-                "ldes_error",
-                "macme",
-                "abs_ldes_error",
-            ]
-        )
+    # Load once
+    df_all = load_logs_with_cache(debug=True)
 
-    try:
-        # Only need runtime for the fig 4–5 ids
-        df_runtime_cache = build_or_load_runtime_cache(df_f45, MODELS_DIR, CACHE_RUNTIME)
-    except Exception as e:
-        print(f"[main] Runtime cache build failed: {e}")
-        df_runtime_cache = pd.DataFrame(
-            columns=["id", "runtime_min", "horizon", "number_reps"]
-        )
-
-    # Merge caches into per-figure views
-    df_f123_ready = df_f123.merge(df_cem_cache, on="id", suffixes=("", "_c"))
-    df_f45_ready  = df_f45.merge(df_cem_cache,  on="id", suffixes=("", "_c"))
-    df_f6_ready   = df_f6.merge(df_cem_cache,   on="id", suffixes=("", "_c"))
-
-    # Build the set of IDs we want in Fig 5: logged + their references
-    req_ids = set(df_f45["id"].astype(str))
-    ref_ids = []
-    for dates in df_f45["dates"].astype(str):
-        years = re.findall(r"\d{4}", dates)
-        if len(years) >= 2:
-            ref_ids.append(f"standard_{years[0]}_{years[1]}_reference")
-    req_ids.update(ref_ids)
-
-    # Pull those rows directly from the *runtime cache*
-    keys = df_f45[["dates", "tvp"]].drop_duplicates()
-    df_run_ready = df_runtime_cache.merge(keys, on=["dates", "tvp"], how="inner")
-
-    # Generate figures
-    fig1_heatmap_10y(df_f123_ready, FIG1_HEATMAP_10Y)
-    fig2_box_by_reps(df_f123_ready, FIG2_ERR_VS_REPS)
-    fig3_box_by_proxy(df_f123_ready, FIG3_ERR_VS_PROXY)
-    
-    fig4_error_vs_horizon(df_f45_ready,  FIG4_ERR_VS_HORIZON)
-    fig5_runtime_vs_horizon(df_run_ready, FIG5_RUNTIME_VS_HOR)
-    fig6_error_vs_margin(df_f6_ready, FIG6_ERR_VS_MARGIN)
-
-    print(
-        "\nAll done.\n"
-        f"  - {FIG1_HEATMAP_10Y}\n"
-        f"  - {FIG2_ERR_VS_REPS}\n"
-        f"  - {FIG3_ERR_VS_PROXY}\n"
-        f"  - {FIG4_ERR_VS_HORIZON}\n"
-        f"  - {FIG5_RUNTIME_VS_HOR}\n"
-        f"  - {FIG6_ERR_VS_MARGIN}\n"
-    )
+    # Plot
+    plot_ldes_error_strip(df_all, W_PROXY, NUMBER_REPS, HORIZONS, OUT_STRIP, debug=True)
+    # plot_ldes_error_box(df_all, W_PROXY, NUMBER_REPS, HORIZONS, OUT_BOX, show_points=True, whiskers="iqr", debug=True)
 
 if __name__ == "__main__":
     main()
